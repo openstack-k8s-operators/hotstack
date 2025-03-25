@@ -199,9 +199,15 @@ stages:
   - name: Dataplane nodeset
     manifest: manifests/dataplane/nodeset.yaml
     wait_conditions:
-      - "/bin/false"
+      - >-
+        oc wait -n openstack openstackdataplanenodesets.dataplane.openstack.org
+        --for condition=SetupReady
+        --timeout=10m
 
   - name: Dataplane Deployment
     manifest: manifests/dataplane/deployment.yaml
     wait_conditions:
-      - "/bin/false"
+      - >-
+        oc wait -n openstack openstackdataplanedeployments.dataplane.openstack.org
+        --for condition=Ready
+        --timeout=40m
