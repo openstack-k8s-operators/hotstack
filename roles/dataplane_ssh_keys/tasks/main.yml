@@ -1,0 +1,54 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Ensure Dataplane ssh keypair exists
+  register: _dataplane_ssh_key
+  community.crypto.openssh_keypair:
+    path: >-
+      {{ 
+        [ansible_user_dir, '.ssh', dataplane_ssh_key.name]
+        | ansible.builtin.path_join 
+      }}
+    type: "{{ dataplane_ssh_key.type }}"
+    size: "{{ dataplane_ssh_key.size }}"
+
+- name: Ensure Nova migration ssh keypair exists
+  register: _nova_migration_ssh_key
+  community.crypto.openssh_keypair:
+    path: >-
+      {{ 
+        [ansible_user_dir, '.ssh', nova_migration_ssh_key.name]
+        | ansible.builtin.path_join
+      }}
+    type: "{{ nova_migration_ssh_key.type }}"
+    size: "{{ nova_migration_ssh_key.size }}"
+
+- name: Set SSH public key facts
+  ansible.builtin.set_fact:
+    dataplane_ssh_private_key_file: "{{ _dataplane_ssh_key.filename }}"
+    dataplane_ssh_public_key: "{{ _dataplane_ssh_key.public_key }}"
+    nova_migration_ssh_private_key_file: "{{ _nova_migration_ssh_key.filename }}"
+    nova_migration_ssh_public_key: "{{ _nova_migration_ssh_key.public_key }}"
+
+- name: Store SSH public key facts in file
+  ansible.builtin.copy:
+    content: |
+      ---
+      dataplane_ssh_private_key_file: "{{ _dataplane_ssh_key.filename }}"
+      dataplane_ssh_public_key: "{{ _dataplane_ssh_key.public_key }}"
+      nova_migration_ssh_private_key_file: "{{ _nova_migration_ssh_key.filename }}"
+      nova_migration_ssh_public_key: "{{ _nova_migration_ssh_key.public_key }}"
+    dest: "dataplane_ssh_keys_vars.yaml"

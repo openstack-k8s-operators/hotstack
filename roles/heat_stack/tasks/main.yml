@@ -1,0 +1,76 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Assert config is defined
+  ansible.builtin.assert:
+    that:
+      - stack_name is defined
+      - stack_name | length > 0
+      - template_path is defined
+      - template_path | length > 0
+      - controller_ssh_pub_key is defined
+      - dataplane_ssh_public_key is defined
+
+- name: Debug Stack parameters
+  ansible.builtin.debug:
+    msg: 
+      cloud: "{{ os_cloud }}"
+      name: "{{ stack_name }}"
+      template: "{{ template_path }}"
+      parameters: "{{ stack_parameters }}"
+      
+- name: Create stack
+  openstack.cloud.stack:
+    cloud: "{{ os_cloud }}"
+    name: "{{ stack_name }}"
+    state: present
+    template: "{{ template_path }}"
+    parameters: "{{ stack_parameters }}"
+    wait: false
+
+- name: Wait for stack to complete
+  register: _stack_info
+  openstack.cloud.stack_info:
+    cloud: "{{ os_cloud }}"
+    name: "{{ stack_name }}"
+  retries: 300
+  delay: 10
+  until: _stack_info.stacks[0].status in ['CREATE_COMPLETE', 'UPDATE_COMPLETE', 'CREATE_FAILED', 'UPDATE_FAILED']
+
+- name: Debug - stack_info
+  when: _stack_info.stacks[0].status not in ['CREATE_COMPLETE', 'UPDATE_COMPLETE']
+  ansible.builtin.debug:
+    msg: "{{ _stack_info }}"
+
+- name: Stop if stack not complete
+  when: _stack_info.stacks[0].status not in ['CREATE_COMPLETE', 'UPDATE_COMPLETE']
+  ansible.builtin.fail:
+    msg: "Failing - stack create not complete in time, or failed"
+
+- name: Get stack outputs
+  register: _stack_outputs
+  get_all_stack_outputs:
+    cloud: "{{ os_cloud }}"
+    stack_uuid: "{{ _stack_info.stacks[0].id }}"
+
+- name: Set stack outputs facts
+  ansible.builtin.set_fact: 
+    stack_outputs: "{{ _stack_outputs.outputs }}"
+
+- name: Store stack outputs in file
+  ansible.builtin.copy:
+    content: "{{ stack_outputs | to_nice_yaml(indent=2) }}"
+    dest: "{{ stack_name }}-outputs.yaml"

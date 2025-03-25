@@ -1,0 +1,27 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bmh1-preprovision-network-data
+  namespace: openstack
+stringData:
+  nmstate: |
+    interfaces:
+      - name: enp3s0
+        type: ethernet
+        state: up
+        ipv4:
+          enabled: true
+          address:
+            - ip: 172.25.1.100
+              prefix-length: 24
+    dns-resolver:
+      config:
+        server:
+          - 192.168.32.254
+    routes:
+      config:
+        - destination: 0.0.0.0/0
+          next-hop-address: 172.25.1.1
+          next-hop-interface: enp3s0
+type: Opaque

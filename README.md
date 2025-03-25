@@ -1,0 +1,154 @@
+# HotStack
+
+This repository hosts tooling for a deploying labs for RHOSO deployment testing/
+development on Openstack cloud infrastucture.
+
+## Roles
+* **dataplane_ssh_keys**: Create SSH keys for dataplane and Nova Migration. 
+  See docs [here](roles/dataplane_ssh_keys/README.md).
+* **heat_stack**: A role to deploy infrastructure on an Openstack cloud using
+  a Heat template as input. See docs [here](roles/heat_stack/README.md).
+* **ocp_agent_installer**: A role running the Openshift Agent installer.
+  See docs [here](roles/ocp_agent_installer/README.md)
+* **controller**: A role to wait add the controller to the inventory, wait for
+  it to be reachable and bootstrap. See docs [here](roles/controller/README.md).
+* **hotloop**: A a simple "stages" loop, to run commands,
+  apply kubernetes manifests and run wait conditions. See docs
+  [here](roles/hotloop/README.md).
+* **redfish_virtual_bmc**: Role to deploy sushy-emulator (RedFish Virtual BMC)
+  service on the Openshift cluster. See docs [here](roles/redfish_virtual_bmc/README.md).
+
+## Scenarios
+
+The [scenarios](scenarios/) folder contains examples to create the
+resources in the Openstack cloud using the `heat_template.yaml`, Kubernetes
+manifests (CR's), bootsrap variables for the [bootstrap.yml] (./bootstrap.yml)
+playbook and automation variables to feed the `hotloop` role.
+
+In the Heat stack output the following is made available, for use by the
+roles to deploy RHOSO, run tests etc.
+
+```
++-------------------------+-------------------------------------------------------------------------------------------+
+| output_key              | description                                                                               |
++-------------------------+-------------------------------------------------------------------------------------------+
+| ocp_install_config      | OCP install-config.yaml                                                                   |
+| ocp_agent_config        | OCP agent-config.yaml                                                                     |
+| ansible_inventory       | Ansible inventory                                                                         |
+| controller_floating_ip  | Controller Floating IP                                                                    |
+| controller_ansible_host | Controller ansible host, this struct can be passed to the ansible.builtin.add_host module |
+| sushy_emulator_uuids    | UUIDs of instances to manage with sushy-tools - RedFish virtual BMC (TODO)                |
++-------------------------+-------------------------------------------------------------------------------------------+
+```
+
+This output is fed to the ansible roles `controller` and `ocp_agent_installer`
+to install OCP.
+
+
+## TODO
+
+* Add more scenarios, for other arhcitectures
+* Figure out snapshots of OCP + automate the process
+* IPv6
+
+## Pre-requisites
+
+### iPXE image
+
+The ocp_agent_installer is using the "PXE bootstrap-artifacts", so the OCP
+instances must do a network boot. To enable this an ipxe USB image must be
+available in glance on the cloud.
+
+See documentation [here](./ipxe/README.md) for details on building the
+ipxe disk image and uploading it to the cloud.
+
+### Image for the "controller" node must be available in glance on the cloud
+
+The image must have some packages pre-seeded, for example dnsmasq must be
+installed so that the DNS service can be initialized without the need to
+download packages, since it is using itself as the resolver ...
+
+See documentation [here](./images/README.md)
+
+### An xxlarge flavor (much memory)
+
+Create the `m1.xxlarge` flavor with 32 GB of ram.
+
+```bash
+openstack flavor create m1.xxlarge --public --vcpus 12 --ram 32768 --disk 160
+```
+
+### Cloud secret
+
+Create a file containing cloud secret, for example `cloud-secret.yaml`, regular
+user of application credential can be used.
+
+To create an application credential:
+```bash
+openstack application credential create --unrestricted hotstack-app-credential
+```
+
+Example cloud-secrets variable file:
+```
+cloud_secrets:
+  auth_url: http://10.1.200.21:5000
+  application_credential_id: <APP_CREDENTIAL_ID>
+  application_credential_secret: <SECRET>
+  region_name: RegionOne
+  interface: public
+  identity_api_version: 3
+  auth_type: v3applicationcredential
+```
+
+## Bootstrap playbook
+
+The [bootstrap.yml](./bootstrap.yml) example playbook can be used to deploy the
+virtual infrastructure and RHOSO deployment scenario on an Openstack Cloud. It is
+essentially a wrapper, importing the playbooks for infra, controller bootstrap,
+OCP cluster install etc.
+
+```yaml
+- name: Bootstrap virtual infrastructure on Openstack cloud
+  ansible.builtin.import_playbook: 01-infra.yml
+
+- name: Bootstrap controller node
+  ansible.builtin.import_playbook: 02-bootstrap_controller.yml
+
+- name: Install Openshift Container Platform
+  ansible.builtin.import_playbook: 03-install_ocp.yml
+
+- name: Deploy RedFish Virtual BMC
+  ansible.builtin.import_playbook: 04_redfish_virtual_bmc.yml
+
+- name: Deploy RHOSO
+  ansible.builtin.import_playbook: 05_deploy_rhoso.yml
+```
+
+For example to spin up a uni01alpha like environment, the following command
+can be used:
+
+```bash
+ansible-playbook -i inventory.yml bootstrap.yml \
+  -e @scenarios/uni01alpha/bootstrap_vars.yml \
+  -e @/home/cloud-user/cloud-secrets.yaml \
+  -e scenario_dir=./scenarios
+```
+
+Edit or override the variables in the `bootstrap_vars.yml` to select the
+"scenario" template, set ssh-key, ntp/dns servers, location of pull-secret
+file etc.
+
+## Running tests
+
+The [06-test-operator.yml](./06-test-operator.yml) playbook will
+run the test automation defined in the [test-operator](
+scenarios/uni01alpha/test-operator) directory of a the scenario.
+
+## Cleanup
+
+To clean up the environment, delete the stack:
+
+```bash
+openstack stack delete <stack_name> -y --wait
+```
+

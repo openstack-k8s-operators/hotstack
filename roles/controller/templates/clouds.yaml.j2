@@ -1,0 +1,21 @@
+---
+clouds:
+  default:
+    identity_api_version: {{ cloud_secrets.identity_api_version }}
+    region_name: {{ cloud_secrets.region_name }}
+{% if cloud_secrets.ca_cert_path is defined %}
+    cacert: {{ cloud_secrets.ca_cert_path }}
+{% endif %}
+    auth_type: {{ cloud_secrets.auth_type }}
+    auth:
+      auth_url: {{ cloud_secrets.auth_url }}
+{% if cloud_secrets.auth_type == 'v3password' %}
+      username: {{ cloud_secrets.username }}
+      password: {{ cloud_secrets.password }}
+      project_name: {{ cloud_secrets.project_name }}
+      user_domain_name: {{ cloud_secrets.user_domain_name }}
+      project_domain_name: {{ cloud_secrets.project_domain_name }}
+{% elif cloud_secrets.auth_type == 'v3applicationcredential' %}
+      application_credential_id: {{ cloud_secrets.application_credential_id }}
+      application_credential_secret: {{ cloud_secrets.application_credential_secret }}
+{% endif %}

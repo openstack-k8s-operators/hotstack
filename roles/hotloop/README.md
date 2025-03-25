@@ -1,0 +1,154 @@
+# hotloop - ansible role
+
+Implements a simple "stages" loop, to run commands, apply kubernetes manifests
+and run wait conditions.
+
+The "stages" are driven by automation vars, examples is available in the
+scenarios repository, see [here](scenarios/uni01alpha/automation-vars.yml).
+
+Scenarios also containe a [manifests](scenarios/uni01alpha/manifests/)
+directory with CRs that will be applied in the order defined in automation
+vars.
+
+Schema for a stage item is:
+* `name`: (string) A name for the stage, used in task names for UI purpose
+  only.
+* `cmd`: (string) A command to run for the stage.
+* `script`: (string) A shell script to run for the stage.
+  * If commands must run after applying manifests, use a separate stage.
+* `manifest`: (string) Path to a static manfiest file to apply with
+  `oc apply -f <manifest.yaml>`
+* `j2_manifest`: (string) Path to a dynamic manifest, Jinja2 template, to
+  apply with `oc apply -f <manifest.yaml>`.
+  * **Currently only used for operator image and channel, extensive usage discurraged.**
+  * If both a static and dynamic manifest is defined in the same stage, the
+    static one is applied first - then the dynamic (Jinja2) manifest is applied
+* `wait_conditions` (list) A list of commands to run after applying the
+  manifest, i.e `oc wait --for <condition>`
+
+> **_NOTE_**: Stage items are applied the actions in the following order:
+> `cmd` -> `script` -> `manifest` -> `j2_manifest` -> `wait_conditions`.
+
+Example:
+```yaml
+---
+stages:
+  - name: Node label cinder-lvm
+    documentation: |
+      The LVM backend for Cinder is a special case as the storage data is on
+      the OpenShift node and has no external storage systems. This has several
+      implications
+    
+      * To prevent issues with exported volumes, cinder-operator automatically
+        uses the host network. The backend is configured to use the host's
+        VLAN IP address. This means that the cinder-volume service doesn't
+        need any networkAttachments.
+      * There can only be one node with the label openstack.org/cinder-lvm=.
+        Apply the label using the command::
+          ``oc label node <nodename> openstack.org/cinder-lvm=``
+    cmd: "oc label node master-0 openstack.org/cinder-lvm="
+
+  - name: Common OLM
+    documentation: |
+      Install the OpenStack K8S operators and their dependencies. (Namespaces, 
+      OperatorGroup, and Subscription CRs.)
+
+      Once these CRs are created, run the `oc wait` commands to confirm that
+      each step of this procedure is complete.
+    j2_manifest: ../common/olm.yaml.j2
+    wait_conditions:
+      - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces openstack-operators --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces openstack --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait -n cert-manager-operator pod --for condition=Ready -l name=cert-manager-operator --timeout=300s"
+      - "oc wait -n cert-manager pod -l app=cainjector --for condition=Ready --timeout=300s"
+      - "oc wait -n cert-manager pod -l app=webhook --for condition=Ready --timeout=300s"
+      - "oc wait -n cert-manager pod -l app=cert-manager --for condition=Ready --timeout=300s"
+      - "oc wait -n metallb-system pod -l control-plane=controller-manager --for condition=Ready --timeout=300s"
+      - "oc wait -n metallb-system pod -l component=webhook-server --for condition=Ready --timeout=300s"
+      - "oc wait -n openshift-nmstate deployments/nmstate-operator --for condition=Available --timeout=300s"
+      - "oc wait -n openstack-operators -l openstack.org/operator-name deployment --for condition=Available --timeout=300s"
+      - "oc wait -n openstack-operators -l app.kubernetes.io/name=rabbitmq-cluster-operator deployment --for condition=Available --timeout=300s"
+      - "oc wait -n openstack-operators -l app.kubernetes.io/instance=webhook-service service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+
+  - name: Common MetalLB
+    manifest: ../common/metallb.yaml
+    wait_conditions:
+      - "oc wait pod -n metallb-system -l component=speaker --for condition=Ready --timeout=300s"
+
+  - name: Common NMState
+    manifest: ../common/nmstate.yaml
+    wait_conditions:
+      - "oc wait pod -n openshift-nmstate -l component=kubernetes-nmstate-handler --for condition=Ready --timeout=300s"
+      - "oc wait deployments/nmstate-webhook -n openshift-nmstate --for condition=Available --timeout=300s"
+
+  - name: NodeNetworkConfigurationPolicy (nncp)
+    manifest: manifests/control-plane/nncp/nncp.yaml
+    wait_conditions:
+      - >-
+        oc -n openstack wait nncp
+        -l osp/nncm-config-type=standard
+        --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
+        --timeout=5m
+
+  - name: Dataplane SSH key secret
+    cmd: >-
+      oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret
+      --save-config --dry-run=client
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_rsa
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_rsa.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >- 
+        oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
+        --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
+        --timeout=30s
+  
+  - name: Nova migration SSH key secret
+    cmd: >-
+      oc create -n openstack secret generic nova-migration-ssh-key
+      --save-config --dry-run=client
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_nova_migrate.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >-
+        oc wait -n openstack secret nova-migration-ssh-key
+        --for jsonpath='{.metadata.name}=nova-migration-ssh-key'
+        --timeout=30s
+```
+
+## Example playbook
+
+```yaml
+- name: Deploy RHOSO
+  hosts: localhost
+  gather_facts: true
+  strategy: linear
+  pre_tasks:
+    - name: Load stack outputs from file
+      ansible.builtin.include_vars:
+        file: "{{ stack_name }}-outputs.yaml"
+        name: stack_outputs
+    
+    - name: Add controller-0 to the Ansible inventory
+      ansible.builtin.add_host: "{{ stack_outputs.controller_ansible_host }}"
+  
+    - name: Load dataplane SSH keys vars
+      ansible.builtin.include_vars:
+        file: dataplane_ssh_keys_vars.yaml
+
+    - name: Load automation vars
+      ansible.builtin.include_vars:
+        file: "{{ automation_vars_file }}"
+        name: automation
+
+  roles:
+    - role: hotloop
+      delegate_to: controller-0
+      vars:
+        work_dir: "{{ scenario_dir }}/{{ scenario }}"
+        automation: "{{ automation }}"
+```

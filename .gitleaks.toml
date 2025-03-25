@@ -1,0 +1,9 @@
+[allowlist]
+  description = "Global Allowlist"
+
+  paths = [
+    # Ignore control-plane.yaml 
+    '''\.*/control-plane.yaml''',
+    '''\.*/defaults/main.yml''',
+  ]
+

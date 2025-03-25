@@ -1,0 +1,2 @@
+PyYAML  # MIT
+sphinx>=2.0.0 # BSD

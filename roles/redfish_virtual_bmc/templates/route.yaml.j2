@@ -1,0 +1,15 @@
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: sushy-emulator-route
+  namespace: sushy-emulator
+  labels:
+    name: sushy-emulator
+spec:
+  host: sushy-emulator.{{ ingress_domain }}
+  port:
+    targetPort: 8000
+  to:
+    kind: Service
+    name: sushy-emulator-service

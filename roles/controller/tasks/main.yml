@@ -1,0 +1,129 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Assert config is defined
+  ansible.builtin.assert:
+    that:
+      - controller_ansible_host is defined
+      - controller_ansible_host | length > 0
+      - ansible_inventory is defined
+      - ansible_inventory | length > 0
+
+- name: Add controller-0 to the Ansible inventory
+  ansible.builtin.add_host: "{{ controller_ansible_host }}"
+
+- name: Block delegated to controller-0
+  delegate_to: "{{ controller_ansible_host.name }}"
+  block:
+    - name: Wait for controller-0 to be ready
+      ansible.builtin.wait_for_connection:
+        sleep: 2
+        timeout: 300
+
+    - name: Ensure data directory exists
+      ansible.builtin.file:
+        path: "{{ data_dir }}"
+        state: directory
+        mode: '0755'
+    
+    - name: Write ansible inventory to file on controller-0
+      ansible.builtin.copy:
+        content: "{{ ansible_inventory | to_nice_yaml(indent=2) }}"
+        dest: >-
+          {{ 
+            [data_dir, 'ansible-inventory.yml']
+            | ansible.builtin.path_join
+          }}
+        mode: '0644'
+
+    - name: Copy Dataplane ssh private key to controller
+      ansible.builtin.copy:
+        src: "{{ dataplane_ssh_private_key_file }}"
+        dest: >-
+          {{ 
+            [ssh_key_dir, 'id_rsa']
+            | ansible.builtin.path_join
+          }}
+        mode: '0600'
+
+    - name: Copy Dataplane ssh public key to controller
+      ansible.builtin.copy:
+        content: "{{ dataplane_ssh_public_key }}"
+        dest: >-
+          {{ 
+            [ssh_key_dir, 'id_rsa.pub']
+            | ansible.builtin.path_join
+          }}
+        mode: '0644'
+
+    - name: Copy Nova migrate ssh private key to controller
+      ansible.builtin.copy:
+        src: "{{ nova_migration_ssh_private_key_file }}"
+        dest: >-
+          {{ 
+            [ssh_key_dir, 'id_nova_migrate']
+            | ansible.builtin.path_join
+          }}
+        mode: '0600'
+
+    - name: Copy Nova migrate ssh public key to controller
+      ansible.builtin.copy:
+        content: "{{ nova_migration_ssh_public_key }}"
+        dest: >-
+          {{ 
+            [ssh_key_dir, 'id_nova_migrate.pub']
+            | ansible.builtin.path_join
+          }}
+        mode: '0644'
+
+    - name: Copy dataplane authorized keys to controller
+      ansible.builtin.copy:
+        content: |
+          "{{ dataplane_ssh_public_key }}"
+          "{{ nova_migration_ssh_public_key }}"
+        dest: >-
+          {{ 
+            [ssh_key_dir, 'dataplane_authorized_keys']
+            | ansible.builtin.path_join
+          }}
+        mode: '0644'
+
+    - name: Ensure cloud config directory exists
+      ansible.builtin.file:
+        path: "{{ cloud_config_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Template the clouds.yaml
+      ansible.builtin.template:
+        src: clouds.yaml.j2
+        dest: >-
+          {{ 
+            [cloud_config_dir, 'clouds.yaml']
+            | ansible.builtin.path_join
+          }}
+
+    - name: Write Ironic nodes YAML
+      when:
+        - stack_outputs.ironic_nodes is defined
+        - stack_outputs.ironic_nodes | length > 0
+      ansible.builtin.copy:
+        content: "{{ stack_outputs.ironic_nodes | to_nice_yaml(indent=2) }}"
+        dest: >-
+          {{ 
+            [data_dir, 'ironic_nodes.yaml']
+            | ansible.builtin.path_join
+          }}

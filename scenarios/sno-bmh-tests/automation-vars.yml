@@ -1,0 +1,207 @@
+---
+stages:
+  - name: TopoLVM common
+    documentation: |
+      Install the TopoLVM Container Storage Interface (CSI) driver on the OCP
+      cluster.
+
+      It uses LVMS (Logical Volume Manager Storage) to dynamically provision
+      local storage built from block devices on OCP nodes.
+
+      After you have installed LVM Storage, you must create an LVMCluster custom resource (CR).
+    manifest: ../common/topolvm.yaml
+    wait_conditions:
+      - "oc wait namespaces openshift-storage --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - >-
+        oc wait -n openshift-storage operatorgroups.operators.coreos.com openshift-storage-operatorgroup
+        --for jsonpath='{.status.namespaces}' --timeout=30s
+      - >-
+        oc wait -n openshift-storage ClusterServiceVersion 
+        -l operators.coreos.com/lvms-operator.openshift-storage 
+        --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
+  
+  - name: TopoLVM LVMCluster
+    documentation: |
+      Create a TopoLVM - LVMCluster on the Openshift cluster.
+
+      Configure the LVMCluster custom resource (CR) to perform the following
+      actions:
+
+      * Create LVM volume groups that you can use to provision persistent
+        volume claims (PVCs).
+      * Configure a list of devices that you want to add to the LVM volume
+        groups.
+    manifest: ../common/topolvmcluster.yaml
+    wait_conditions:
+      - "oc wait -n openshift-storage lvmcluster.lvm.topolvm.io/lvmcluster --for jsonpath='{.status.state}=Ready' --timeout=300s"
+
+  - name: Node label cinder-lvm
+    documentation: |
+      The LVM backend for Cinder is a special case as the storage data is on
+      the OpenShift node and has no external storage systems. This has several
+      implications.
+      
+      * To prevent issues with exported volumes, cinder-operator automatically
+        uses the host network. The backend is configured to use the host's
+        VLAN IP address. This means that the cinder-volume service doesn't
+        need any networkAttachments.
+      * There can only be one node with the label openstack.org/cinder-lvm=.
+        Apply the label using the command: ``oc label node <nodename> openstack.org/cinder-lvm=``
+    cmd: "oc label node master-0 openstack.org/cinder-lvm="
+
+  - name: Metal platform Provisioning CR
+    documentation: |
+      Create a Provisioning custom resource (CR) to enable OCP Metal platform components
+    manifest: ../common/provisioning.yaml
+    wait_conditions:
+      - "oc wait pods -n openshift-machine-api -l k8s-app=metal3 --for condition=Ready --timeout=300s"
+
+  - name: Common OLM
+    documentation: |
+      Install the OpenStack K8S operators and their dependencies. (Namespaces, 
+      OperatorGroup, and Subscription CRs.)
+
+      Once these CRs are created, run the `oc wait` commands to confirm that
+      each step of this procedure is complete.
+    j2_manifest: ../common/olm.yaml.j2
+    wait_conditions:
+      - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces openstack-operators --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces openstack --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait -n cert-manager-operator pod --for condition=Ready -l name=cert-manager-operator --timeout=300s"
+      - "oc wait -n cert-manager pod -l app=cainjector --for condition=Ready --timeout=300s"
+      - "oc wait -n cert-manager pod -l app=webhook --for condition=Ready --timeout=300s"
+      - "oc wait -n cert-manager pod -l app=cert-manager --for condition=Ready --timeout=300s"
+      - "oc wait -n metallb-system pod -l control-plane=controller-manager --for condition=Ready --timeout=300s"
+      - "oc wait -n metallb-system pod -l component=webhook-server --for condition=Ready --timeout=300s"
+      - "oc wait -n openshift-nmstate deployments/nmstate-operator --for condition=Available --timeout=300s"
+
+  - name: Common MetalLB
+    manifest: ../common/metallb.yaml
+    wait_conditions:
+      - "oc wait -n metallb-system pod -l component=speaker --for condition=Ready --timeout=300s"
+  
+  - name: Common NMState
+    manifest: ../common/nmstate.yaml
+    wait_conditions:
+      - "oc wait -n openshift-nmstate pod -l component=kubernetes-nmstate-handler --for condition=Ready --timeout=300s"
+      - "oc wait -n openshift-nmstate deployments/nmstate-webhook --for condition=Available --timeout=300s"
+
+  - name: Openstack
+    manifest: ../common/openstack.yaml
+    wait_conditions:
+      - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=300s"
+      - "oc wait -n openstack-operators pod --for condition=Ready -l openstack.org/operator-name=openstack-controller --timeout=300s"
+      - "oc wait -n openstack-operators -l openstack.org/operator-name deployment --for condition=Available --timeout=300s"
+      - "oc wait -n openstack-operators -l app.kubernetes.io/name=rabbitmq-cluster-operator deployment --for condition=Available --timeout=300s"
+      - "oc wait -n openstack-operators service infra-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+      - "oc wait -n openstack-operators service openstack-baremetal-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+      - "oc wait -n openstack-operators service openstack-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+      - "sleep 120" # The {.status.loadBalancer} wait conditions are not working?
+
+  - name: NodeNetworkConfigurationPolicy (nncp)
+    manifest: manifests/control-plane/networking/nncp.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack nncp -l osp/nncm-config-type=standard
+        --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
+        --timeout=5m
+
+  - name: NetworkAttchmentDefinition (NAD)
+    manifest: manifests/control-plane/networking/nad.yaml
+
+  - name: MetalLB - L2Advertisement and IPAddressPool
+    manifest: manifests/control-plane/networking/metallb.yaml
+
+  - name: Netcofnig
+    manifest: manifests/control-plane/networking/netconfig.yaml
+
+  - name: OpenstackControlPlane secrets
+    manifest: manifests/control-plane/secrets.yaml
+
+  - name: OpenstackControlPlane
+    manifest: manifests/control-plane/control-plane.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack openstackcontrolplane controlplane
+        --for condition=Ready --timeout=60m
+
+  - name: Dataplane SSH key secret
+    cmd: >-
+      oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret
+      --save-config --dry-run=client
+      --from-file=authorized_keys=/home/zuul/.ssh/id_rsa.pub
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_rsa
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_rsa.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >- 
+        oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
+        --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
+        --timeout=30s
+  
+  - name: Nova migration SSH key secret
+    cmd: >-
+      oc create -n openstack secret generic nova-migration-ssh-key
+      --save-config --dry-run=client
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_nova_migrate.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >-
+        oc wait -n openstack secret nova-migration-ssh-key
+        --for jsonpath='{.metadata.name}=nova-migration-ssh-key'
+        --timeout=30s
+  
+  - name: Dataplane Secrets
+    manifest: manifests/dataplane/secrets.yaml
+
+  - name: BaremetalHosts BMC secret
+    cmd: >-
+      oc create -n openstack secret generic bmc-secret
+      --save-config --dry-run=client
+      --from-literal=username=admin
+      --from-literal=password=password
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >-
+        oc wait -n openstack secret bmc-secret
+        --for jsonpath='{.metadata.name}=bmc-secret'
+        --timeout=30s
+
+  - name: BaremetalHosts preProvisioningNetworkData secrets
+    manifest: manifests/dataplane/pre_provisioning_network_data.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack secret bmh1-preprovision-network-data
+        --for jsonpath='{.metadata.name}=bmh1-preprovision-network-data'
+        --timeout=30s
+
+  - name: BaremetalHosts CRs
+    j2_manifest: manifests/dataplane/baremetal_hosts.yaml.j2
+    wait_conditions:
+      - sleep 20
+      - >-
+        oc wait -n openstack baremetalhosts.metal3.io bmh0
+        --for jsonpath='{.status.provisioning.state}=available'
+        --timeout=300s
+      - >-
+        oc wait -n openstack baremetalhosts.metal3.io bmh1
+        --for jsonpath='{.status.provisioning.state}=available'
+        --timeout=300s
+      - >-
+        oc wait -n openstack baremetalhosts.metal3.io bmh2
+        --for jsonpath='{.status.provisioning.state}=available'
+        --timeout=300s
+
+  - name: Dataplane nodeset
+    manifest: manifests/dataplane/nodeset.yaml
+    wait_conditions:
+      - "/bin/false"
+
+  - name: Dataplane Deployment
+    manifest: manifests/dataplane/deployment.yaml
+    wait_conditions:
+      - "/bin/false"

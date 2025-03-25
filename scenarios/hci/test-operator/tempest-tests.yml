@@ -1,0 +1,11 @@
+---
+apiVersion: test.openstack.org/v1beta1
+kind: Tempest
+metadata:
+  name: tempest-tests
+  namespace: openstack
+spec:
+  networkAttachments:
+    - ctlplane
+  storageClass: lvms-local-storage
+  

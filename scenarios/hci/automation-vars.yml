@@ -1,0 +1,111 @@
+---
+stages:
+  - name: TopoLVM common
+    manifest: ../common/topolvm.yaml
+    wait_conditions:
+      - "oc wait namespaces openshift-storage --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - >-
+        oc wait -n openshift-storage operatorgroups.operators.coreos.com openshift-storage-operatorgroup
+        --for jsonpath='{.status.namespaces}' --timeout=30s
+      - >-
+        oc wait -n openshift-storage ClusterServiceVersion 
+        -l operators.coreos.com/lvms-operator.openshift-storage 
+        --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
+  
+  - name: TopoLVM LVMCluster
+    manifest: manifests/topolvm/lvmcluster.yaml
+    wait_conditions:
+      - "oc wait -n openshift-storage lvmcluster.lvm.topolvm.io/lvmcluster --for jsonpath='{.status.state}=Ready' --timeout=300s"
+
+  - name: Common OLM
+    j2_manifest: ../common/olm.yaml.j2
+    wait_conditions:
+      - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces openstack-operators --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces openstack --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait -n cert-manager-operator pod --for condition=Ready -l name=cert-manager-operator --timeout=300s"
+      - "oc wait -n cert-manager pod -l app=cainjector --for condition=Ready --timeout=300s"
+      - "oc wait -n cert-manager pod -l app=webhook --for condition=Ready --timeout=300s"
+      - "oc wait -n cert-manager pod -l app=cert-manager --for condition=Ready --timeout=300s"
+      - "oc wait -n metallb-system pod -l control-plane=controller-manager --for condition=Ready --timeout=300s"
+      - "oc wait -n metallb-system pod -l component=webhook-server --for condition=Ready --timeout=300s"
+      - "oc wait -n openshift-nmstate deployments/nmstate-operator --for condition=Available --timeout=300s"
+
+  - name: Common MetalLB
+    manifest: ../common/metallb.yaml
+    wait_conditions:
+      - "oc wait -n metallb-system pod -l component=speaker --for condition=Ready --timeout=300s"
+
+  - name: Common NMState
+    manifest: ../common/nmstate.yaml
+    wait_conditions:
+      - "oc wait -n openshift-nmstate pod -l component=kubernetes-nmstate-handler --for condition=Ready --timeout=300s"
+      - "oc wait -n openshift-nmstate deployments/nmstate-webhook --for condition=Available --timeout=300s"
+
+  - name: Openstack
+    manifest: ../common/openstack.yaml
+    wait_conditions:
+      - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=300s"
+      - "oc wait -n openstack-operators pod --for condition=Ready -l openstack.org/operator-name=openstack-controller --timeout=300s"
+      - "oc wait -n openstack-operators -l openstack.org/operator-name deployment --for condition=Available --timeout=300s"
+      - "oc wait -n openstack-operators -l app.kubernetes.io/name=rabbitmq-cluster-operator deployment --for condition=Available --timeout=300s"
+      - "oc wait -n openstack-operators service infra-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+      - "oc wait -n openstack-operators service openstack-baremetal-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+      - "oc wait -n openstack-operators service openstack-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+
+  - name: NodeNetworkConfigurationPolicy (nncp)
+    manifest: manifests/control-plane/nncp/nncp.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack nncp -l osp/nncm-config-type=standard
+        --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
+        --timeout=5m
+
+  - name: OpenstackControlPlane
+    manifest: manifests/control-plane/control-plane.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack openstackcontrolplane controlplane
+        --for condition=Ready --timeout=60m
+
+  - name: Dataplane SSH key secret
+    cmd: >-
+      oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret
+      --save-config --dry-run=client
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_rsa
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_rsa.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >- 
+        oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
+        --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
+        --timeout=30s
+  
+  - name: Nova migration SSH key secret
+    cmd: >-
+      oc create -n openstack secret generic nova-migration-ssh-key
+      --save-config --dry-run=client
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_nova_migrate.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >-
+        oc wait -n openstack secret nova-migration-ssh-key
+        --for jsonpath='{.metadata.name}=nova-migration-ssh-key'
+        --timeout=30s
+
+  - name: EDPM nodeset (pre-ceph)
+    manifest: manifests/edpm-pre-ceph/nodeset/nodeset.yaml
+    wait_conditions:
+      - >-
+        oc -n openstack wait openstackdataplanenodeset openstack-edpm
+        --for condition=SetupReady --timeout=10m
+  
+  - name: EDPM deployment (pre-ceph)
+    manifest: manifests/edpm-pre-ceph/deployment/deployment.yaml
+    wait_conditions:
+      - >-
+        oc -n openstack wait openstackdataplanedeployment edpm-deployment-pre-ceph
+        --for condition=Ready --timeout=40m

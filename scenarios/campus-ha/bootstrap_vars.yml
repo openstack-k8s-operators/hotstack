@@ -1,0 +1,36 @@
+os_cloud: default
+os_keypair: default
+controller_ssh_pub_key: "{{ lookup('ansible.builtin.file', '~/.ssh/id_rsa.pub') }}"
+
+scenario: campus-ha
+scenario_dir: scenarios
+template_path: "{{ scenario_dir }}/{{ scenario }}/heat_template.yaml"
+automation_vars_file: "{{ scenario_dir }}/{{ scenario }}/automation-vars.yml"
+
+ntp_servers: []
+dns_servers:
+  - 8.8.8.8
+  - 8.8.4.4
+
+pull_secret_file: ~/pull-secret.txt
+
+ovn_k8s_gateway_config_host_routing: true
+enable_iscsi: true
+iscsi_roles:
+  - worker
+
+enable_multipath: true
+multipath_roles:
+  - worker
+
+cinder_volume_roles:
+  - worker
+cinder_volume_pvs:
+  - /dev/vdc
+  - /dev/vdd
+  - /dev/vde
+
+zuul:
+  build: 1dcaf86e72ec4400a8012f3892d815be
+
+stack_name: "hotstack-{{ scenario }}-{{ zuul.build[:8] | default('no-zuul') }}"

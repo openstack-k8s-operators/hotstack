@@ -1,0 +1,96 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Create tempdir
+  register: _tempdir
+  ansible.builtin.tempfile:
+    state: directory
+
+- name: Sushy-emulator main block
+  block:
+    - name: Install package requirements for agent installer
+      become: true
+      ansible.builtin.dnf:
+        name: httpd-tools
+        state: present
+    - name: Generate htpasswd
+      register: _htpasswd
+      ansible.builtin.command:
+        cmd: "htpasswd -nbB {{ redfish_username | quote }} {{ redfish_password | quote }}"
+
+    - name: Copy files to tempdir
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: >-
+          {{ 
+            [
+              _tempdir.path,
+              item
+            ] | ansible.builtin.path_join
+          }}
+      loop:
+        - automation-vars.yml
+        - namespace.yaml
+        - deployment.yaml
+        - service.yaml
+
+    - name: Template the ConfigMap
+      ansible.builtin.template:
+        src: config_map.yaml.j2
+        dest: >-
+          {{ 
+            [
+              _tempdir.path,
+              'config_map.yaml'
+            ] | ansible.builtin.path_join
+          }}
+
+    - name: Template the Route
+      ansible.builtin.template:
+        src: route.yaml.j2
+        dest: >-
+          {{ 
+            [
+              _tempdir.path,
+              'route.yaml'
+            ] | ansible.builtin.path_join 
+          }}
+
+    - name: Load automation vars
+      ansible.builtin.include_vars:
+        file: >-
+          {{ 
+            [
+              _tempdir.path,
+              'automation-vars.yml'
+            ] | ansible.builtin.path_join 
+          }}
+        name: automation
+
+    - name: Run the hotloop
+      ansible.builtin.include_role:
+        name: hotloop
+        apply:
+          delegate_to: controller-0
+          vars:
+            work_dir: "{{ _tempdir.path }}"
+            manifests_dir: "{{ sushy_emulator_manifests }}"
+  always:
+    - name: Clean up the tempdir
+      when: _tempdir.path is defined
+      ansible.builtin.file:
+        path: "{{ _tempdir.path }}"
+        state: absent

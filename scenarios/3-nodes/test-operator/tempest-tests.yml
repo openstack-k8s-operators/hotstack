@@ -1,0 +1,79 @@
+---
+apiVersion: test.openstack.org/v1beta1
+kind: Tempest
+metadata:
+  name: tempest-tests
+  namespace: openstack
+spec:
+  workflow:
+    - stepName: multi-thread-testing
+      tempestconfRun:
+        overrides: |
+          auth.tempest_roles swiftoperator
+          barbican_tempest.enable_multiple_secret_stores true
+          compute-feature-enabled.allow_port_security_disabled true
+          compute-feature-enabled.attach_encrypted_volume true
+          compute-feature-enabled.block_migrate_cinder_iscsi false
+          compute-feature-enabled.block_migration_for_live_migration true
+          compute-feature-enabled.can_migrate_between_any_hosts false
+          compute-feature-enabled.cold_migration true
+          compute-feature-enabled.console_output false
+          compute-feature-enabled.dhcp_domain ''
+          compute-feature-enabled.ide_bus False
+          compute-feature-enabled.live_migration true
+          compute-feature-enabled.vnc_console true
+          compute-feature-enabled.volume_multiattach true
+          compute.fixed_network_name private
+          compute.hypervisor_type QEMU
+          compute.migration_dest_host compute-1.ctlplane.example.com
+          compute.migration_source_host compute-0.ctlplane.example.com
+          compute.target_hosts_to_avoid compute-ironic
+          heat_plugin.vm_to_heat_api_insecure true
+          identity-feature-enabled.application_credentials true
+          identity.v2_admin_endpoint_type public
+          identity.v3_endpoint_type public
+          image_signature_verification.certificate_validation False
+          image_signature_verification.enforced False
+          load_balancer.test_server_path /usr/libexec/octavia-tempest-plugin-tests-httpd
+          network-feature-enabled.port_security true
+          neutron_plugin_options.advanced_image_flavor_ref 22222222-2222-2222-2222-222222222222
+          neutron_plugin_options.advanced_image_ref 11111111-1111-1111-1111-111111111111
+          neutron_plugin_options.advanced_image_ssh_user 'cloud-user'
+          neutron_plugin_options.available_type_drivers 'geneve'
+          neutron_plugin_options.create_shared_resources true
+          neutron_plugin_options.firewall_driver ovn
+          neutron_plugin_options.ipv6_metadata false
+          neutron_plugin_options.is_igmp_snooping_enabled true
+          service_available.ceilometer true
+          service_available.sg_core true
+          telemetry.ceilometer_polling_interval 120
+          telemetry.prometheus_scrape_interval 30
+          telemetry.prometheus_service_url "https://metric-storage-prometheus.openstack.svc.cluster.local:9090"
+          telemetry.sg_core_service_url "https://ceilometer-internal.openstack.svc.cluster.local:3000"
+          validation.allowed_network_downtime 15
+          validation.image_alt_ssh_password cubswin:)
+          validation.image_alt_ssh_user cirros
+          validation.image_ssh_password cubswin:)
+          validation.image_ssh_user cirros
+          validation.run_validation true
+          volume-feature-enabled.extend_attached_volume true
+          volume-feature-enabled.manage_snapshot true
+          volume-feature-enabled.manage_volume true
+          volume-feature-enabled.volume_revert true
+          volume.storage_protocol 'iSCSI'
+          volume.volume_type_multiattach 'multiattach'
+      tempestRun:
+        includeList: |
+          ^.*smoke.*
+          ^barbican_tempest_plugin.tests.scenario
+          ^tempest.scenario.test_dashboard_basic_ops.TestDashboardBasicOps.test_basic_scenario
+          ^tempest.scenario.test_encrypted_cinder_volumes.*
+          ^tempest.scenario.test_minimum_basic.*
+          ^tempest.scenario.test_network_advanced_server_ops
+          ^tempest.scenario.test_network_basic_ops
+          ^tempest.scenario.test_network_v6
+          ^tempest.scenario.test_object_storage_basic_ops.*
+          ^tempest.scenario.test_security_groups_basic_ops
+          ^tempest.scenario.test_snapshot_pattern.*
+          ^tempest.scenario.test_stamp_pattern.*
+          ^tempest.scenario.test_volume_.*

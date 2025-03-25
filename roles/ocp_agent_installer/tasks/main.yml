@@ -1,0 +1,156 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Assert config is defined
+  ansible.builtin.assert:
+    that:
+      - install_config is defined
+      - install_config | length > 0
+      - agent_config is defined
+      - agent_config | length > 0
+      - pull_secret is defined
+      - pull_secret | length > 0
+
+- name: Ensure directory exists
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ bin_dir }}"
+    - "{{ kube_config_dir }}"
+    - "{{ cluster_dir }}"
+    - "{{ manifests_dir }}"
+    - "{{ agent_installer_dir }}"
+    - "{{ cluster_custom_config_dir }}"
+    - "{{ butane_dir }}"
+    - "{{ machine_configs_dir }}"
+    - "{{ config_assets_dir }}"
+
+- name: Install package requirements for agent installer
+  become: true
+  ansible.builtin.dnf:
+    name:
+      - nmstate
+      - butane
+    state: present
+
+- name: Run tasks/install_client.yml
+  ansible.builtin.include_tasks: install_client.yml
+
+- name: Run tasks/install_installer.yml
+  ansible.builtin.include_tasks: install_installer.yml
+
+- name: Write OCP install-config.yaml
+  ansible.builtin.copy:
+    content: >-
+      {{ 
+        install_config | to_nice_yaml(indent=2)
+      }}
+    dest: >-
+      {{ 
+        [
+          cluster_dir,
+          'install-config.yaml'
+        ] | ansible.builtin.path_join
+      }}
+    mode: '0644'
+
+- name: Replace pull secret in install-config.yaml
+  ansible.builtin.replace:
+    path: >-
+      {{ 
+        [
+          cluster_dir, 'install-config.yaml'
+        ] | ansible.builtin.path_join
+      }}
+    regexp: '^pullSecret: _replaced_$'
+    replace: |
+      pullSecret: '{{ pull_secret | b64decode }}'
+
+- name: Write OCP agent-config.yaml
+  ansible.builtin.copy:
+    content: >-
+      {{
+        agent_config | to_nice_yaml(indent=2)
+      }}
+    dest: >-
+      {{ 
+        [
+          cluster_dir,
+          'agent-config.yaml'
+        ] | ansible.builtin.path_join
+      }}
+    mode: '0644'
+
+- name: Include tasks to generate machine configs
+  ansible.builtin.include_tasks: machine_configs.yml
+
+- name: Include tasks to generate config assets
+  ansible.builtin.include_tasks: config_assets.yml
+
+- name: Copy machine_configs to manifests dir
+  ansible.builtin.copy:
+    remote_src: true
+    src: "{{ machine_configs_dir }}/"
+    dest: "{{ manifests_dir }}/"
+
+- name: Copy conifg assets to manifests dir
+  ansible.builtin.copy:
+    remote_src: true
+    src: "{{ config_assets_dir }}/"
+    dest: "{{ manifests_dir }}/"
+
+- name: Run tasks/pxe_assets.yml
+  when: bootstrap_assets == 'pxe'
+  ansible.builtin.include_tasks: pxe_assets.yml
+
+- name: Run tasks/iso_assets.yml
+  when: bootstrap_assets == 'iso'
+  ansible.builtin.include_tasks: iso_assets.yml
+
+- name: Copy auth/kubeconfig to ~/.kube/config
+  ansible.builtin.copy:
+    remote_src: true
+    src: >-
+      {{ 
+        [
+          cluster_dir,
+          'auth',
+          'kubeconfig'
+        ] | ansible.builtin.path_join
+      }}
+    dest: >-
+      {{ 
+        [
+          kube_config_dir,
+          'config'
+        ] | ansible.builtin.path_join
+      }}
+
+- name: Wait for bootstrap-complete
+  ansible.builtin.command:
+    cmd: >
+      {{ bin_dir }}/openshift-install --dir {{ cluster_dir }} agent wait-for bootstrap-complete --log-level=info
+
+- name: Wait for install-complete
+  ansible.builtin.command:
+    cmd: >
+      {{ bin_dir }}/openshift-install --dir {{ cluster_dir }} agent wait-for install-complete
+
+- name: Add ingress certificate to CA trust
+  when: add_ingress_cert_to_ca_trust | bool
+  ansible.builtin.include_tasks: ingress_cert.yml

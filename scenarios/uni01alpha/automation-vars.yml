@@ -1,0 +1,197 @@
+---
+stages:
+  - name: TopoLVM CSI driver
+    documentation: |
+      Install the TopoLVM Container Storage Interface (CSI) driver on the OCP
+      cluster.
+
+      It uses LVMS (Logical Volume Manager Storage) to dynamically provision
+      local storage built from block devices on OCP nodes.
+
+      After you have installed LVM Storage, you must create an LVMCluster custom resource (CR).
+    manifest: ../common/topolvm.yaml
+    wait_conditions:
+      - "oc wait namespaces openshift-storage --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - >-
+        oc wait -n openshift-storage operatorgroups.operators.coreos.com openshift-storage-operatorgroup
+        --for jsonpath='{.status.namespaces}' --timeout=30s
+      - >-
+        oc wait -n openshift-storage ClusterServiceVersion 
+        -l operators.coreos.com/lvms-operator.openshift-storage 
+        --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
+  
+  - name: TopoLVM LVMCluster
+    documentation: |
+      Create a TopoLVM - LVMCluster on the Openshift cluster.
+
+      Configure the LVMCluster custom resource (CR) to perform the following
+      actions:
+
+      * Create LVM volume groups that you can use to provision persistent
+        volume claims (PVCs).
+      * Configure a list of devices that you want to add to the LVM volume
+        groups.
+    manifest: ../common/topolvmcluster.yaml
+    wait_conditions:
+      - "oc wait -n openshift-storage lvmcluster.lvm.topolvm.io/lvmcluster --for jsonpath='{.status.state}=Ready' --timeout=300s"
+
+  - name: Node label cinder-lvm
+    documentation: |
+      The LVM backend for Cinder is a special case as the storage data is on
+      the OpenShift node and has no external storage systems. This has several
+      implications.
+      
+      * To prevent issues with exported volumes, cinder-operator automatically
+        uses the host network. The backend is configured to use the host's
+        VLAN IP address. This means that the cinder-volume service doesn't
+        need any networkAttachments.
+      * There can only be one node with the label openstack.org/cinder-lvm=.
+        Apply the label using the command: ``oc label node <nodename> openstack.org/cinder-lvm=``
+    cmd: "oc label node master-0 openstack.org/cinder-lvm="
+
+  - name: OLM
+    documentation: |
+      Install the OpenStack K8S operators and their dependencies. (Namespaces, 
+      OperatorGroup, and Subscription CRs.)
+
+      Once these CRs are created, run the `oc wait` commands to confirm that
+      each step of this procedure is complete.
+    j2_manifest: ../common/olm.yaml.j2
+    wait_conditions:
+      - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces openstack-operators --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces openstack --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait -n cert-manager-operator pod --for condition=Ready -l name=cert-manager-operator --timeout=300s"
+      - "oc wait -n cert-manager pod -l app=cainjector --for condition=Ready --timeout=300s"
+      - "oc wait -n cert-manager pod -l app=webhook --for condition=Ready --timeout=300s"
+      - "oc wait -n cert-manager pod -l app=cert-manager --for condition=Ready --timeout=300s"
+      - "oc wait -n metallb-system pod -l control-plane=controller-manager --for condition=Ready --timeout=300s"
+      - "oc wait -n metallb-system pod -l component=webhook-server --for condition=Ready --timeout=300s"
+      - "oc wait -n openshift-nmstate deployments/nmstate-operator --for condition=Available --timeout=300s"
+
+  - name: MetalLB
+    manifest: ../common/metallb.yaml
+    wait_conditions:
+      - "oc wait -n metallb-system pod -l component=speaker --for condition=Ready --timeout=300s"
+
+  - name: NMState
+    manifest: ../common/nmstate.yaml
+    wait_conditions:
+      - "oc wait -n openshift-nmstate pod -l component=kubernetes-nmstate-handler --for condition=Ready --timeout=300s"
+      - "oc wait -n openshift-nmstate deployments/nmstate-webhook --for condition=Available --timeout=300s"
+
+  - name: Openstack
+    manifest: ../common/openstack.yaml
+    wait_conditions:
+      - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=300s"
+      - "oc wait -n openstack-operators pod --for condition=Ready -l openstack.org/operator-name=openstack-controller --timeout=300s"
+      - "oc wait -n openstack-operators -l openstack.org/operator-name deployment --for condition=Available --timeout=300s"
+      - "oc wait -n openstack-operators -l app.kubernetes.io/name=rabbitmq-cluster-operator deployment --for condition=Available --timeout=300s"
+      - "oc wait -n openstack-operators service infra-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+      - "oc wait -n openstack-operators service openstack-baremetal-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+      - "oc wait -n openstack-operators service openstack-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+      - "sleep 120" # The {.status.loadBalancer} wait conditions are not working?
+
+  - name: NodeNetworkConfigurationPolicy (nncp)
+    manifest: manifests/control-plane/nncp/nncp.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack nncp -l osp/nncm-config-type=standard
+        --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
+        --timeout=5m
+
+  - name: OpenstackControlPlane
+    manifest: manifests/control-plane/control-plane.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack openstackcontrolplane controlplane
+        --for condition=Ready --timeout=60m
+
+  - name: Dataplane SSH key secret
+    cmd: >-
+      oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret
+      --save-config --dry-run=client
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_rsa
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_rsa.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >- 
+        oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
+        --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
+        --timeout=30s
+  
+  - name: Nova migration SSH key secret
+    cmd: >-
+      oc create -n openstack secret generic nova-migration-ssh-key
+      --save-config --dry-run=client
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_nova_migrate.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >-
+        oc wait -n openstack secret nova-migration-ssh-key
+        --for jsonpath='{.metadata.name}=nova-migration-ssh-key'
+        --timeout=30s
+  
+  - name: Networker nodeset
+    manifest: manifests/networker/nodeset/nodeset.yaml
+      
+  - name: EDPM nodeset
+    manifest: manifests/edpm/edpm.yaml
+  
+  - name: Wait for nodesets (Networker and EDPM)
+    wait_conditions:
+      - >-
+        oc wait -n openstack openstackdataplanenodeset networker-nodes
+        --for condition=SetupReady --timeout=10m
+      - >-
+        oc -n openstack wait openstackdataplanenodeset openstack-edpm
+        --for condition=SetupReady --timeout=10m
+
+  - name: Networker deployment
+    manifest: manifests/networker/networker.yaml
+
+  - name: EDPM deployment
+    manifest: manifests/dataplane.yaml
+    
+  - name: Wait for deployments (Networker and EDPM)
+    wait_conditions:
+      - >-
+        oc wait -n openstack openstackdataplanedeployment networker-deploy
+        --for condition=Ready --timeout=40m
+      - >-
+        oc -n openstack wait openstackdataplanedeployment edpm-deployment
+        --for condition=Ready --timeout=40m
+
+  - name: Wait for expected compute services (OSPRH-10942)
+    script: | 
+      set -xe -o pipefail
+      COMPUTES=3
+      RETRIES=10
+      COUNTER=0
+      oc project openstack
+      until [ $(oc rsh openstackclient openstack compute service list --service nova-compute -f value | wc -l) -eq "$COMPUTES" ]; do
+        if [[ "$COUNTER" -ge "$RETRIES" ]]; then
+          exit 1
+        fi
+        COUNTER=$[$COUNTER +1]
+        sleep 10
+      done
+
+  - name: Run nova-manage discover_hosts and wait for host records (OSPRH-10942)
+    script: | 
+      set -xe -o pipefail
+      COMPUTES={{ 2 | int + 4 }}
+      RETRIES=10
+      COUNTER=0
+      oc project openstack
+      until [ $(oc rsh nova-cell1-conductor-0 nova-manage cell_v2 list_hosts | wc -l) -eq "$COMPUTES" ]; do
+        if [[ "$COUNTER" -ge "$RETRIES" ]]; then
+          exit 1
+        fi
+        oc rsh nova-cell1-conductor-0 nova-manage cell_v2 discover_hosts --verbose
+        COUNTER=$[$COUNTER +1]
+        sleep 10
+      done

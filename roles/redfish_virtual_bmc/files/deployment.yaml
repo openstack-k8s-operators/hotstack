@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sushy-emulator
+  namespace: sushy-emulator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sushy-emulator
+  triggers:
+  - type: "ConfigChange"
+  strategy:
+    type: Recreate
+  paused: false
+  revisionHistoryLimit: 2
+  minReadySeconds: 0
+  template:
+    metadata:
+      annotations: {}
+      labels:
+        app: sushy-emulator
+        name: sushy-emulator
+    spec:
+      volumes:
+      - name: sushy-emulator-config
+        configMap:
+          name: sushy-emulator-config
+          defaultMode: 0644 # u=rw,g=r,o=r
+          items:
+          - key: config
+            path: config.conf
+          - key: htpasswd
+            path: .htpasswd
+            mode: 0600 # u=rw,g=r,o=r
+      - name: os-client-config
+        secret:
+          secretName: os-client-config
+          defaultMode: 0644 # u=rw,g=r,o=r
+          items:
+          - key: openstack-clouds-yaml
+            path: clouds.yaml
+      containers:
+      - name: sushy-emulator
+        image: quay.io/rhn_gps_hjensas/sushy-tools:dev-1740174755
+        command: ["/usr/local/bin/sushy-emulator", "--config", "/etc/sushy-emulator/config.conf"]
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - name: sushy-emulator-config
+          mountPath: /etc/sushy-emulator/
+        - name: os-client-config
+          mountPath: /etc/openstack/
+        readinessProbe:
+          httpGet:
+            path: redfish/v1
+            port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: redfish/v1
+            port: 8000
+            initialDelaySeconds: 10
+            failureThreshold: 30
+            periodSeconds: 10
+        startupProbe:
+          httpGet:
+            path: redfish/v1
+            port: 8000
+            failureThreshold: 30
+            initialDelaySeconds: 10

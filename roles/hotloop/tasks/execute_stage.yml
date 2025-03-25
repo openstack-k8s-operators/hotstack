@@ -1,0 +1,47 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: "Stage: {{ item.name }} :: Run command"
+  when: item.cmd is defined
+  ansible.builtin.shell:
+     cmd: "{{ item.cmd }}"
+
+- name: "Stage: {{ item.name }} :: Run script"
+  when: item.script is defined
+  ansible.builtin.shell:
+     cmd: "{{ item.script }}"
+
+- name: "Stage: {{ item.name }} :: Apply static manifest"
+  when: item.manifest is defined
+  ansible.builtin.include_tasks: static_manifest.yml
+
+- name: "Stage: {{ item.name }} :: Apply templates manifest"
+  when: item.j2_manifest is defined
+  ansible.builtin.include_tasks: template_manifest.yml
+
+# TODO(hjensas): When we have https://github.com/kubernetes/kubernetes/pull/125868
+# the retries can be replaced with `oc wait --for=create --timeout=300s`
+- name: "Stage: {{ item.name }} :: Wait conditions"
+  when: item.wait_conditions is defined
+  register: _wait_result
+  ansible.builtin.command:
+    cmd: "{{ wait_cmd }}"
+  loop: "{{ item.wait_conditions }}"
+  loop_control:
+    loop_var: wait_cmd
+  until: _wait_result.rc == 0
+  retries: "{{ wait_condition_retries }}"
+  delay: "{{ wait_condition_retry_delay }}"
