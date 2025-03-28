@@ -30,6 +30,10 @@ data:
     # import OpenStack cloud virtual media
     SUSHY_EMULATOR_OS_VMEDIA_IMAGE_FILE_UPLOAD = True
 
+    # When set to true, the instance rebuild on virtual media eject
+    # is delayed until the next a RedFish power action.
+    SUSHY_EMULATOR_OS_VMEDIA_DELAY_EJECT = True
+
     # Instruct the libvirt driver to ignore any instructions to
     # set the boot device. Allowing the UEFI firmware to instead
     # rely on the EFI Boot Manager
