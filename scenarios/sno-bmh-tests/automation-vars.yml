@@ -54,6 +54,7 @@ stages:
       Create a Provisioning custom resource (CR) to enable OCP Metal platform components
     manifest: ../common/provisioning.yaml
     wait_conditions:
+      - "sleep 30"
       - "oc wait pods -n openshift-machine-api -l k8s-app=metal3 --for condition=Ready --timeout=300s"
 
   - name: Common OLM
