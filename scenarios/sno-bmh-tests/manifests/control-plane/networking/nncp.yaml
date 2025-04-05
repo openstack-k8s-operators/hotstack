@@ -89,7 +89,16 @@ spec:
     route-rules:
       config: []
     routes:
-      config: []
+      config:
+        - destination: 192.168.123.0/24
+          next-hop-address: 192.168.122.1
+          next-hop-interface: ospbr
+        - destination: 192.168.124.0/24
+          next-hop-address: 192.168.122.1
+          next-hop-interface: ospbr
+        - destination: 192.168.125.0/24
+          next-hop-address: 192.168.122.1
+          next-hop-interface: ospbr
   nodeSelector:
     kubernetes.io/hostname: master-0
     node-role.kubernetes.io/worker: ""
