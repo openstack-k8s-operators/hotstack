@@ -584,7 +584,7 @@ resources:
         - device_type: disk
           boot_index: 1
           image_id: {get_param: [bmh_params, image]}
-          volume_size: 40
+          volume_size: 60
           delete_on_termination: true
         - device_type: cdrom
           disk_bus: scsi
@@ -649,7 +649,7 @@ resources:
         - device_type: disk
           boot_index: 1
           image_id: {get_param: [bmh_params, image]}
-          volume_size: 40
+          volume_size: 60
           delete_on_termination: true
         - device_type: cdrom
           disk_bus: scsi
@@ -718,7 +718,7 @@ resources:
         - device_type: disk
           boot_index: 1
           image_id: {get_param: [bmh_params, image]}
-          volume_size: 40
+          volume_size: 60
           delete_on_termination: true
         - device_type: cdrom
           disk_bus: scsi
