@@ -16,7 +16,7 @@ spec:
     cloudUserName: cloud-admin
     bmhLabelSelector:
       app: openstack
-    ctlplaneInterface: eth0
+    ctlplaneInterface: enp4s0
     dnsSearchDomains:
       - osptest.openstack.org
   nodeTemplate:
@@ -85,7 +85,7 @@ spec:
         edpm_sshd_configure_firewall: true
         gather_facts: false
         neutron_physical_bridge_name: br-ex
-        neutron_public_interface_name: eth1
+        neutron_public_interface_name: enp4s0
         timesync_ntp_servers:
         - hostname: pool.ntp.org
     ansibleSSHPrivateKeySecret: dataplane-ansible-ssh-private-key-secret
@@ -133,6 +133,48 @@ spec:
       hostName: edpm-compute-2
       bmhLabelSelector:
         nodeName: bmh2
+      ctlplaneInterface: enp3s0
+      ansible:
+        ansibleVars:
+          neutron_public_interface_name: enp3s0
+          edpm_network_config_template: |
+            ---
+            {% set mtu_list = [ctlplane_mtu] %}
+            {% for network in nodeset_networks %}
+            {{ mtu_list.append(lookup('vars', networks_lower[network] ~ '_mtu')) }}
+            {%- endfor %}
+            {% set min_viable_mtu = mtu_list | max %}
+            network_config:
+              - type: ovs_bridge
+                name: {{ neutron_physical_bridge_name }}
+                mtu: {{ min_viable_mtu }}
+                use_dhcp: false
+                dns_servers: {{ ctlplane_dns_nameservers }}
+                domain: {{ dns_search_domains }}
+                members:
+                  - type: interface
+                    name: nic1
+                    mtu: {{ min_viable_mtu }}
+                    primary: true
+                  - type: vlan
+                    mtu: {{ ctlplane_mtu }}
+                    vlan_id: {{ ctlplane_vlan_id }}
+                    addresses:
+                      - ip_netmask: {{ ctlplane_ip }}/{{ ctlplane_cidr }}
+                    routes: {{ ctlplane_host_routes }}
+            {% for network in nodeset_networks %}
+                  - type: vlan
+                    mtu: {{ lookup('vars', networks_lower[network] ~ '_mtu') }}
+                    vlan_id: {{ lookup('vars', networks_lower[network] ~ '_vlan_id') }}
+                    addresses:
+                      - ip_netmask: >-
+                          {{
+                            lookup('vars', networks_lower[network] ~ '_ip')
+                          }}/{{
+                            lookup('vars', networks_lower[network] ~ '_cidr')
+                          }}
+                    routes: {{ lookup('vars', networks_lower[network] ~ '_host_routes') }}
+            {% endfor %}
       networks:
       - defaultRoute: true
         name: ctlplane
