@@ -7,7 +7,28 @@ metadata:
   namespace: openstack
 spec:
   barbican:
-    enabled: false
+    apiOverride:
+      route: {}
+    template:
+      barbicanAPI:
+        override:
+          service:
+            internal:
+              metadata:
+                annotations:
+                  metallb.universe.tf/address-pool: internalapi
+                  metallb.universe.tf/allow-shared-ip: internalapi
+                  metallb.universe.tf/loadBalancerIPs: 172.17.0.80
+              spec:
+                type: LoadBalancer
+        replicas: 1
+      barbicanKeystoneListener:
+        replicas: 1
+      barbicanWorker:
+        replicas: 1
+      databaseInstance: openstack
+      preserveJobs: false
+      secret: osp-secret
   ceilometer:
     enabled: false
   cinder:
@@ -199,6 +220,7 @@ spec:
         [ovn]
         ovsdb_probe_interval = 60000
         ovn_emit_need_to_frag = true
+        enable_distributed_floating_ip = false
 
         [ml2]
         global_physnet_mtu = 1442
@@ -270,6 +292,8 @@ spec:
         networkAttachment: tenant
         nicMappings:
           datacentre: ocpbr
+        external-ids:
+          enable-chassis-as-gateway: true
       ovnDBCluster:
         ovndbcluster-nb:
           dbType: NB
