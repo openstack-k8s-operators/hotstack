@@ -30,3 +30,5 @@
           ntp_servers: "{{ ntp_servers }}"
           controller_ssh_pub_key: "{{ controller_ssh_pub_key }}"
           dataplane_ssh_pub_key: "{{ dataplane_ssh_public_key }}"
+          router_external_network: "{{ os_router_external_network | default('public') }}"
+          floating_ip_network: "{{ os_floating_network | default('public') }}"

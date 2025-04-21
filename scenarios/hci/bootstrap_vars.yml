@@ -1,5 +1,8 @@
 os_cloud: default
 os_keypair: default
+os_floating_network: public
+os_router_external_network: public
+
 controller_ssh_pub_key: "{{ lookup('ansible.builtin.file', '~/.ssh/id_rsa.pub') }}"
 
 scenario: hci

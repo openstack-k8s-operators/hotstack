@@ -49,7 +49,9 @@ parameters:
   router_external_network:
     type: string
     default: public
-
+  floating_ip_network:
+    type: string
+    default: public
 
 resources:
   #
@@ -345,7 +347,7 @@ resources:
      depends_on: machine-net-router-interface
      type: OS::Neutron::FloatingIP
      properties:
-       floating_network: public
+       floating_network: {get_param: floating_ip_network}
        port_id: {get_resource: controller-machine-port}
 
   controller:
