@@ -33,7 +33,7 @@
 
     - name: Load automation vars for common
       ansible.builtin.include_vars:
-        file: "{{ automation_vars_file_common }}"
+        file: "{{ automation_vars_file }}"
         name: automation
 
   roles:

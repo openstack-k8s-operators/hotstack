@@ -9,9 +9,7 @@ scenario: multi-ns
 scenario_dir: ~/hotstack-scenarios
 
 template_path: "{{ scenario_dir }}/{{ scenario }}/heat_template.yaml"
-automation_vars_file_common: "{{ scenario_dir }}/{{ scenario }}/automation-vars.yml"
-automation_vars_file_a: "{{ scenario_dir }}/{{ scenario }}/automation-vars-a.yml"
-automation_vars_file_b: "{{ scenario_dir }}/{{ scenario }}/automation-vars-b.yml"
+automation_vars_file: "{{ scenario_dir }}/{{ scenario }}/automation-vars.yml"
 test_operator_automation_vars_file: "{{ scenario_dir }}/{{ scenario }}/test-operator/automation-vars.yml"
 
 openstack_operators_image: quay.io/openstack-k8s-operators/openstack-operator-index:latest
