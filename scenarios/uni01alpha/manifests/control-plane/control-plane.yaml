@@ -211,7 +211,6 @@ spec:
         storageRequest: 10G
     uniquePodNames: true
   heat:
-    enabled: false
     apiOverride:
       route: {}
     cnfAPIOverride:

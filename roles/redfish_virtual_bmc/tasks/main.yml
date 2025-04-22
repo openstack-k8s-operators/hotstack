@@ -35,7 +35,7 @@
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: >-
-          {{ 
+          {{
             [
               _tempdir.path,
               item
@@ -51,7 +51,7 @@
       ansible.builtin.template:
         src: config_map.yaml.j2
         dest: >-
-          {{ 
+          {{
             [
               _tempdir.path,
               'config_map.yaml'
@@ -62,21 +62,21 @@
       ansible.builtin.template:
         src: route.yaml.j2
         dest: >-
-          {{ 
+          {{
             [
               _tempdir.path,
               'route.yaml'
-            ] | ansible.builtin.path_join 
+            ] | ansible.builtin.path_join
           }}
 
     - name: Load automation vars
       ansible.builtin.include_vars:
         file: >-
-          {{ 
+          {{
             [
               _tempdir.path,
               'automation-vars.yml'
-            ] | ansible.builtin.path_join 
+            ] | ansible.builtin.path_join
           }}
         name: automation
 

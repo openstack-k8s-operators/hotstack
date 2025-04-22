@@ -28,12 +28,12 @@ except ImportError:
 
 
 ANSIBLE_METADATA = {
-    'metadata_version': '1.1',
-    'status': ['preview'],
-    'supported_by': 'community'
+    "metadata_version": "1.1",
+    "status": ["preview"],
+    "supported_by": "community",
 }
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: get_all_stack_outputs
 
@@ -54,36 +54,37 @@ options:
     type: str
 author:
     - Harald Jensås <hjensas@redhat.com>
-'''
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Fetch outputs from stack
   get_all_stack_outputs:
     cloud: devstack
     stack_uuid: 298de1e0-e11f-400b-a292-07d36d131acf
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 stack_outputs:
   output_key1: value
   output_key2: value
-'''
+"""
+
 
 def get_stack_outputs(conn, stack_uuid):
     stack_outputs_by_key = {}
 
     for output in conn.orchestration.get_stack(stack_uuid).outputs:
-        stack_outputs_by_key[output['output_key']] = output['output_value']
-                  
+        stack_outputs_by_key[output["output_key"]] = output["output_value"]
+
     return stack_outputs_by_key
 
 
 def run_module():
-    argument_spec = yaml.safe_load(DOCUMENTATION)['options']
+    argument_spec = yaml.safe_load(DOCUMENTATION)["options"]
     module = AnsibleModule(argument_spec, supports_check_mode=False)
 
     if not HAS_OPENSTACK:
-         module.fail_json(
+        module.fail_json(
             msg='Could not import "openstack" library. \
               openstack is required on PYTHONPATH to run this module',
             python=sys.executable,
@@ -91,28 +92,24 @@ def run_module():
             python_system_path=sys.path,
         )
 
-    result = dict(
-        success=False,
-        changed=False,
-        error="",
-        outputs=dict()
-    )
+    result = dict(success=False, changed=False, error="", outputs=dict())
 
-    cloud = module.params['cloud']
-    stack = module.params['stack_uuid']
+    cloud = module.params["cloud"]
+    stack = module.params["stack_uuid"]
 
     try:
         conn = openstack.connect(cloud)
 
-        result['outputs'] = get_stack_outputs(conn, stack)
-        result['changed'] = True if result['outputs'] else False
-        result['success'] = True if result['outputs'] else False
-        
+        result["outputs"] = get_stack_outputs(conn, stack)
+        result["changed"] = True if result["outputs"] else False
+        result["success"] = True if result["outputs"] else False
+
         module.exit_json(**result)
     except Exception as err:
-        result['error'] = str(err)
-        result['msg'] = ("Error getting stack outputs {stack_name}: {error}"
-                         .format(stack_name=stack, error=err))
+        result["error"] = str(err)
+        result["msg"] = "Error getting stack outputs {stack_name}: {error}".format(
+            stack_name=stack, error=err
+        )
         module.fail_json(**result)
 
 
@@ -120,5 +117,5 @@ def main():
     run_module()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,0 +1,16 @@
+---
+profile: production
+exclude_paths:
+  - roles/*/files/
+strict: true
+quiet: false
+verbosity: 1
+parseable: true
+offline: true
+skip_list:
+  - yaml[indentation]
+  - var-naming[no-role-prefix]
+  - no-changed-when
+  - name[template]
+  - command-instead-of-shell
+  - risky-file-permissions

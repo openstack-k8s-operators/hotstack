@@ -32,12 +32,12 @@
   ansible.builtin.copy:
     remote_src: true
     src: >-
-      {{ 
+      {{
         [
           cluster_dir,
           'boot-artifacts',
           item
-        ] | ansible.builtin.path_join 
+        ] | ansible.builtin.path_join
       }}
     dest: "{{ boot_artifacts_dir }}"
     owner: root

@@ -4,13 +4,13 @@ stages:
     manifest: manifests/nad.yaml
     wait_conditions:
       - >-
-        oc wait -n sushy-emulator network-attachment-definitions.k8s.cni.cncf.io ironic 
+        oc wait -n sushy-emulator network-attachment-definitions.k8s.cni.cncf.io ironic
         --for jsonpath='{.metadata.annotations}' --timeout=30s
 
   - name: Patch RedFish Sushy Emulator Deployment - add network attachment
     script: |
       set -xe -o pipefail
-      
+
       TMP_DIR="$(mktemp -d)"
       trap 'rm -rf -- "$TMP_DIR"' EXIT
 
@@ -23,7 +23,7 @@ stages:
             annotations:
               k8s.v1.cni.cncf.io/networks: '[{"name":"ironic","namespace":"sushy-emulator","interface":"ironic"}]'
       EOF
-      
+
       oc patch deployments.apps sushy-emulator --patch-file ${TMP_DIR}/sushy-emulator-network-annotations-patch.yaml
     wait_conditions:
       - "oc -n sushy-emulator wait deployments.apps sushy-emulator --for condition=Available --timeout=300s"
@@ -159,12 +159,12 @@ stages:
         sleep 10
         ((counter++))
       done
-  
+
   - name: Manange ironic nodes
     script: |
       set -xe -o pipefail
       oc project openstack
-    
+
       oc rsh openstackclient openstack baremetal node manage ironic0
       oc rsh openstackclient openstack baremetal node manage ironic1
 
@@ -172,7 +172,7 @@ stages:
     script: |
       set -xe -o pipefail
       oc project openstack
-  
+
       counter=0
       retries=100
       node_state=manageable
@@ -187,7 +187,7 @@ stages:
         sleep 10
         ((counter++))
       done
-  
+
   - name: Power off the ironic nodes
     script: |
       set -xe -o pipefail
@@ -228,15 +228,15 @@ stages:
     script: |
       set -xe -o pipefail
       oc project openstack
-    
+
       oc rsh openstackclient openstack baremetal node provide ironic0
       oc rsh openstackclient openstack baremetal node provide ironic1
 
   - name: Wait for ironic nodes to get to state - available
-    script: | 
+    script: |
       set -xe -o pipefail
       oc project openstack
-    
+
       counter=0
       retries=100
       node_state=available
@@ -254,7 +254,7 @@ stages:
       set -e
 
   - name: Wait for expected compute services (OSPRH-10942)
-    script: | 
+    script: |
       set -xe -o pipefail
       COMPUTES=1
       RETRIES=10
@@ -269,7 +269,7 @@ stages:
       done
 
   - name: Run nova-manage discover_hosts and wait for host records (OSPRH-10942)
-    script: | 
+    script: |
       set -xe -o pipefail
       COMPUTES={{ 1 | int + 4 }}
       RETRIES=10
@@ -286,5 +286,3 @@ stages:
 
   - name: Run tempest
     manifest: tempest-tests.yml
-
-

@@ -8,7 +8,7 @@ The emulator is configured with the Openstack driver as the backend.
 This role consist of static kubernetes manifests in [files](./files/) and
 templates manifests in [templates](./templates/).
 
-The [automation-vars.yml](./files/automation-vars.yml) is used with the 
+The [automation-vars.yml](./files/automation-vars.yml) is used with the
 [`hotloop`](../hotloop) role to
 apply the resources on the Openshift cluster.
 
@@ -23,15 +23,15 @@ $ curl -u admin:password http://sushy-emulator.apps.ocp.openstack.lab/redfish/v1
     "Name": "Computer System Collection",
     "Members@odata.count": 2,
     "Members": [
-        
+
             {
                 "@odata.id": "/redfish/v1/Systems/50cd91c3-380a-423d-80c4-8d65002c96ec"
             },
-        
+
             {
                 "@odata.id": "/redfish/v1/Systems/b6e20780-cb52-4491-96ae-2a817944dbd2"
             }
-        
+
     ],
     "@odata.context": "/redfish/v1/$metadata#ComputerSystemCollection.ComputerSystemCollection",
     "@odata.id": "/redfish/v1/Systems",
@@ -51,7 +51,7 @@ $ curl -u admin:password http://sushy-emulator.apps.ocp.openstack.lab/redfish/v1
       ansible.builtin.include_vars:
         file: "{{ stack_name }}-outputs.yaml"
         name: stack_outputs
-    
+
     - name: Add controller-0 to the Ansible inventory
       ansible.builtin.add_host: "{{ stack_outputs.controller_ansible_host }}"
   roles:

@@ -18,9 +18,9 @@
   register: _dataplane_ssh_key
   community.crypto.openssh_keypair:
     path: >-
-      {{ 
+      {{
         [ansible_user_dir, '.ssh', dataplane_ssh_key.name]
-        | ansible.builtin.path_join 
+        | ansible.builtin.path_join
       }}
     type: "{{ dataplane_ssh_key.type }}"
     size: "{{ dataplane_ssh_key.size }}"
@@ -29,7 +29,7 @@
   register: _nova_migration_ssh_key
   community.crypto.openssh_keypair:
     path: >-
-      {{ 
+      {{
         [ansible_user_dir, '.ssh', nova_migration_ssh_key.name]
         | ansible.builtin.path_join
       }}

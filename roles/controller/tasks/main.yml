@@ -38,12 +38,12 @@
         path: "{{ data_dir }}"
         state: directory
         mode: '0755'
-    
+
     - name: Write ansible inventory to file on controller-0
       ansible.builtin.copy:
         content: "{{ ansible_inventory | to_nice_yaml(indent=2) }}"
         dest: >-
-          {{ 
+          {{
             [data_dir, 'ansible-inventory.yml']
             | ansible.builtin.path_join
           }}
@@ -53,7 +53,7 @@
       ansible.builtin.copy:
         src: "{{ dataplane_ssh_private_key_file }}"
         dest: >-
-          {{ 
+          {{
             [ssh_key_dir, 'id_rsa']
             | ansible.builtin.path_join
           }}
@@ -63,7 +63,7 @@
       ansible.builtin.copy:
         content: "{{ dataplane_ssh_public_key }}"
         dest: >-
-          {{ 
+          {{
             [ssh_key_dir, 'id_rsa.pub']
             | ansible.builtin.path_join
           }}
@@ -73,7 +73,7 @@
       ansible.builtin.copy:
         src: "{{ nova_migration_ssh_private_key_file }}"
         dest: >-
-          {{ 
+          {{
             [ssh_key_dir, 'id_nova_migrate']
             | ansible.builtin.path_join
           }}
@@ -83,7 +83,7 @@
       ansible.builtin.copy:
         content: "{{ nova_migration_ssh_public_key }}"
         dest: >-
-          {{ 
+          {{
             [ssh_key_dir, 'id_nova_migrate.pub']
             | ansible.builtin.path_join
           }}
@@ -95,7 +95,7 @@
           "{{ dataplane_ssh_public_key }}"
           "{{ nova_migration_ssh_public_key }}"
         dest: >-
-          {{ 
+          {{
             [ssh_key_dir, 'dataplane_authorized_keys']
             | ansible.builtin.path_join
           }}
@@ -111,7 +111,7 @@
       ansible.builtin.template:
         src: clouds.yaml.j2
         dest: >-
-          {{ 
+          {{
             [cloud_config_dir, 'clouds.yaml']
             | ansible.builtin.path_join
           }}
@@ -123,7 +123,7 @@
       ansible.builtin.copy:
         content: "{{ stack_outputs.ironic_nodes | to_nice_yaml(indent=2) }}"
         dest: >-
-          {{ 
+          {{
             [data_dir, 'ironic_nodes.yaml']
             | ansible.builtin.path_join
           }}

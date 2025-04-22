@@ -33,4 +33,3 @@ cinder_volume_pvs:
   - /dev/vde
 
 stack_name: "hotstack-{{ scenario }}-{{ zuul.build[:8] | default('no-zuul') }}"
-

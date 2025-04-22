@@ -18,7 +18,7 @@
   ansible.builtin.get_url:
     url: "{{ installer_url }}"
     dest: >-
-      {{ 
+      {{
         [
           agent_installer_dir,
           'openshift-install-linux.tar.gz'
@@ -29,11 +29,11 @@
 - name: Extract installer to /home/zuul/bin
   ansible.builtin.unarchive:
     src: >-
-      {{ 
+      {{
         [
           agent_installer_dir,
           'openshift-install-linux.tar.gz'
         ] | ansible.builtin.path_join
       }}
     dest: "{{ bin_dir }}"
-    remote_src: yes
+    remote_src: true

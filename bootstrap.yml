@@ -28,4 +28,3 @@
 
 - name: Deploy RHOSO
   ansible.builtin.import_playbook: 05_deploy_rhoso.yml
-

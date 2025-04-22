@@ -4,7 +4,7 @@ stages:
     manifest: namespace.yaml
     wait_conditions:
       - "oc wait namespaces sushy-emulator --for jsonpath='{.status.phase}=Active' --timeout=300s"
-  
+
   - name: "Sushy Emulator : Openstack clouds secret"
     cmd: >-
       oc create -n sushy-emulator secret generic os-client-config
@@ -26,7 +26,7 @@ stages:
     manifest: service.yaml
     wait_conditions:
       - "oc wait -n sushy-emulator service/sushy-emulator-service --for jsonpath='{.status.loadBalancer}' --timeout=30s"
-  
+
   - name: "Sushy Emulator : Route"
     manifest: route.yaml
     wait_conditions:

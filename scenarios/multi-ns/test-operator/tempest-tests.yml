@@ -71,7 +71,7 @@ spec:
           ^.*smoke.*
         excludeList: |
           ^octavia_tempest_plugin.*
-  
+
 ---
 apiVersion: test.openstack.org/v1beta1
 kind: Tempest
@@ -145,4 +145,3 @@ spec:
           ^.*smoke.*
         excludeList: |
           ^octavia_tempest_plugin.*
-  

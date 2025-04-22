@@ -23,7 +23,7 @@
       ansible.builtin.include_vars:
         file: "{{ stack_name }}-outputs.yaml"
         name: stack_outputs
- 
+
   roles:
     - role: controller
       vars:

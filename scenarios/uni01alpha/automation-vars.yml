@@ -16,10 +16,10 @@ stages:
         oc wait -n openshift-storage operatorgroups.operators.coreos.com openshift-storage-operatorgroup
         --for jsonpath='{.status.namespaces}' --timeout=30s
       - >-
-        oc wait -n openshift-storage ClusterServiceVersion 
-        -l operators.coreos.com/lvms-operator.openshift-storage 
+        oc wait -n openshift-storage ClusterServiceVersion
+        -l operators.coreos.com/lvms-operator.openshift-storage
         --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
-  
+
   - name: TopoLVM LVMCluster
     documentation: |
       Create a TopoLVM - LVMCluster on the Openshift cluster.
@@ -40,7 +40,7 @@ stages:
       The LVM backend for Cinder is a special case as the storage data is on
       the OpenShift node and has no external storage systems. This has several
       implications.
-      
+
       * To prevent issues with exported volumes, cinder-operator automatically
         uses the host network. The backend is configured to use the host's
         VLAN IP address. This means that the cinder-volume service doesn't
@@ -51,7 +51,7 @@ stages:
 
   - name: OLM
     documentation: |
-      Install the OpenStack K8S operators and their dependencies. (Namespaces, 
+      Install the OpenStack K8S operators and their dependencies. (Namespaces,
       OperatorGroup, and Subscription CRs.)
 
       Once these CRs are created, run the `oc wait` commands to confirm that
@@ -117,11 +117,11 @@ stages:
       --from-file=ssh-publickey=/home/zuul/.ssh/id_rsa.pub
       --type=Opaque -o yaml | oc apply -f -
     wait_conditions:
-      - >- 
+      - >-
         oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
         --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
         --timeout=30s
-  
+
   - name: Nova migration SSH key secret
     cmd: >-
       oc create -n openstack secret generic nova-migration-ssh-key
@@ -134,13 +134,13 @@ stages:
         oc wait -n openstack secret nova-migration-ssh-key
         --for jsonpath='{.metadata.name}=nova-migration-ssh-key'
         --timeout=30s
-  
+
   - name: Networker nodeset
     manifest: manifests/networker/nodeset/nodeset.yaml
-      
+
   - name: EDPM nodeset
     manifest: manifests/edpm/edpm.yaml
-  
+
   - name: Wait for nodesets (Networker and EDPM)
     wait_conditions:
       - >-
@@ -155,7 +155,7 @@ stages:
 
   - name: EDPM deployment
     manifest: manifests/dataplane.yaml
-    
+
   - name: Wait for deployments (Networker and EDPM)
     wait_conditions:
       - >-
@@ -166,7 +166,7 @@ stages:
         --for condition=Ready --timeout=40m
 
   - name: Wait for expected compute services (OSPRH-10942)
-    script: | 
+    script: |
       set -xe -o pipefail
       COMPUTES=3
       RETRIES=10
@@ -181,7 +181,7 @@ stages:
       done
 
   - name: Run nova-manage discover_hosts and wait for host records (OSPRH-10942)
-    script: | 
+    script: |
       set -xe -o pipefail
       COMPUTES={{ 2 | int + 4 }}
       RETRIES=10

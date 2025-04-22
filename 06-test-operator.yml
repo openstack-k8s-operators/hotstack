@@ -7,7 +7,7 @@
       ansible.builtin.include_vars:
         file: "{{ stack_name }}-outputs.yaml"
         name: stack_outputs
-    
+
     - name: Add controller-0 to the Ansible inventory
       ansible.builtin.add_host: "{{ stack_outputs.controller_ansible_host }}"
 

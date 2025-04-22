@@ -8,10 +8,10 @@ stages:
         oc wait -n openshift-storage operatorgroups.operators.coreos.com openshift-storage-operatorgroup
         --for jsonpath='{.status.namespaces}' --timeout=30s
       - >-
-        oc wait -n openshift-storage ClusterServiceVersion 
-        -l operators.coreos.com/lvms-operator.openshift-storage 
+        oc wait -n openshift-storage ClusterServiceVersion
+        -l operators.coreos.com/lvms-operator.openshift-storage
         --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
-  
+
   - name: TopoLVM LVMCluster
     manifest: manifests/topolvm/lvmcluster.yaml
     wait_conditions:
@@ -78,11 +78,11 @@ stages:
       --from-file=ssh-publickey=/home/zuul/.ssh/id_rsa.pub
       --type=Opaque -o yaml | oc apply -f -
     wait_conditions:
-      - >- 
+      - >-
         oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
         --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
         --timeout=30s
-  
+
   - name: Nova migration SSH key secret
     cmd: >-
       oc create -n openstack secret generic nova-migration-ssh-key
@@ -102,7 +102,7 @@ stages:
       - >-
         oc -n openstack wait openstackdataplanenodeset openstack-edpm
         --for condition=SetupReady --timeout=10m
-  
+
   - name: EDPM deployment (pre-ceph)
     manifest: manifests/edpm-pre-ceph/deployment/deployment.yaml
     wait_conditions:
