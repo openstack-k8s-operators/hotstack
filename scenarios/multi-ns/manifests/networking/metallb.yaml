@@ -1,0 +1,178 @@
+# openstack-a
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  labels:
+    osp/lb-addresses-type: standard
+  name: ctlplane-a
+  namespace: metallb-system
+spec:
+  addresses:
+  - 192.168.122.80-192.168.122.90
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  labels:
+    osp/lb-addresses-type: standard
+  name: internalapi-a
+  namespace: metallb-system
+spec:
+  addresses:
+  - 172.17.0.80-172.17.0.90
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  labels:
+    osp/lb-addresses-type: standard
+  name: storage-a
+  namespace: metallb-system
+spec:
+  addresses:
+  - 172.18.0.80-172.18.0.90
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  labels:
+    osp/lb-addresses-type: standard
+  name: tenant-a
+  namespace: metallb-system
+spec:
+  addresses:
+  - 172.19.0.80-172.19.0.90
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: ctlplane-a
+  namespace: metallb-system
+spec:
+  interfaces:
+  - ctlplane-a
+  ipAddressPools:
+  - ctlplane-a
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: internalapi-a
+  namespace: metallb-system
+spec:
+  interfaces:
+  - internalapi-a
+  ipAddressPools:
+  - internalapi-a
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: storage-a
+  namespace: metallb-system
+spec:
+  interfaces:
+  - storage-a
+  ipAddressPools:
+  - storage-a
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: tenant-a
+  namespace: metallb-system
+spec:
+  interfaces:
+  - tenant-a
+  ipAddressPools:
+  - tenant-a
+# openstack-b
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  labels:
+    osp/lb-addresses-type: standard
+  name: ctlplane-b
+  namespace: metallb-system
+spec:
+  addresses:
+  - 192.168.123.80-192.168.123.90
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  labels:
+    osp/lb-addresses-type: standard
+  name: internalapi-b
+  namespace: metallb-system
+spec:
+  addresses:
+  - 172.17.1.80-172.17.1.90
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  labels:
+    osp/lb-addresses-type: standard
+  name: storage-b
+  namespace: metallb-system
+spec:
+  addresses:
+  - 172.18.1.80-172.18.1.90
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  labels:
+    osp/lb-addresses-type: standard
+  name: tenant-b
+  namespace: metallb-system
+spec:
+  addresses:
+  - 172.19.1.80-172.19.1.90
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: ctlplane-b
+  namespace: metallb-system
+spec:
+  interfaces:
+  - ctlplane-b
+  ipAddressPools:
+  - ctlplane-b
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: internalapi-b
+  namespace: metallb-system
+spec:
+  interfaces:
+  - internalapi-b
+  ipAddressPools:
+  - internalapi-b
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: storage-b
+  namespace: metallb-system
+spec:
+  interfaces:
+  - storage-b
+  ipAddressPools:
+  - storage-b
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: tenant-b
+  namespace: metallb-system
+spec:
+  interfaces:
+  - tenant-b
+  ipAddressPools:
+  - tenant-b

@@ -1,0 +1,43 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp/nncm-config-type: standard
+  name: master-0-shared
+  namespace: openstack
+spec:
+  desiredState:
+    dns-resolver:
+      config:
+        search: []
+        server:
+        - 192.168.32.254
+    interfaces:
+    - description: ctlplane interface
+      mtu: 1442
+      name: ens4
+      state: up
+      type: ethernet
+    - name: ospbr
+      type: linux-bridge
+      description: linux-bridge over ctlplane interface
+      bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: ens4
+          vlan: {}
+      ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
+      mtu: 1442
+      state: up
+    route-rules:
+      config: []
+    routes:
+      config: []
+  nodeSelector:
+    kubernetes.io/hostname: master-0
+    node-role.kubernetes.io/worker: ""

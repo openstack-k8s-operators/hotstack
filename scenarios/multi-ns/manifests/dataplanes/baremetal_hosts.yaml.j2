@@ -1,0 +1,46 @@
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  annotations:
+    inspect.metal3.io: "disabled"
+  labels:
+    app: openstack
+    nodeName: bmh-a-0
+  name: bmh-a-0
+  namespace: openstack-a
+spec:
+  architecture: x86_64
+  automatedCleaningMode: metadata
+  bmc:
+    address: redfish-virtualmedia+{{ [stack_outputs.ironic_nodes.nodes[0].driver_info.redfish_address,
+                                      stack_outputs.ironic_nodes.nodes[0].driver_info.redfish_system_id] | join }}
+    credentialsName: bmc-secret
+  bootMACAddress: {{ stack_outputs.ironic_nodes.nodes[0].ports[0].address }}
+  bootMode: UEFI
+  online: false
+  rootDeviceHints:
+    deviceName: /dev/vda
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  annotations:
+    inspect.metal3.io: "disabled"
+  labels:
+    app: openstack
+    nodeName: bmh-b-0
+  name: bmh-b-0
+  namespace: openstack-b
+spec:
+  architecture: x86_64
+  automatedCleaningMode: metadata
+  bmc:
+    address: redfish-virtualmedia+{{ [stack_outputs.ironic_nodes.nodes[1].driver_info.redfish_address,
+                                      stack_outputs.ironic_nodes.nodes[1].driver_info.redfish_system_id] | join }}
+    credentialsName: bmc-secret
+  bootMACAddress: {{ stack_outputs.ironic_nodes.nodes[1].ports[0].address }}
+  bootMode: UEFI
+  online: false
+  rootDeviceHints:
+    deviceName: /dev/vda
