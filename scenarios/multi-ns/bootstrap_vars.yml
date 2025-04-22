@@ -6,7 +6,7 @@ os_router_external_network: public
 controller_ssh_pub_key: "{{ lookup('ansible.builtin.file', '~/.ssh/id_rsa.pub') }}"
 
 scenario: multi-ns
-scenario_dir: ~/hotstack-scenarios
+scenario_dir: scenarios
 
 template_path: "{{ scenario_dir }}/{{ scenario }}/heat_template.yaml"
 automation_vars_file_common: "{{ scenario_dir }}/{{ scenario }}/automation-vars.yml"
@@ -35,3 +35,4 @@ cinder_volume_pvs:
   - /dev/vde
 
 stack_name: "hotstack-{{ scenario }}-{{ zuul.build[:8] | default('no-zuul') }}"
+
