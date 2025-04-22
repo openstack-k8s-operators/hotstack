@@ -1,0 +1,912 @@
+heat_template_version: rocky
+
+description: >
+  Heat template to set up 1x OCP (SNO) + 2x BaremetalHosts
+
+parameters:
+  dns_servers:
+    type: comma_delimited_list
+    default:
+      - 8.8.8.8
+      - 8.8.4.4
+  ntp_servers: 
+    type: comma_delimited_list
+    default: []
+  controller_ssh_pub_key:
+    type: string
+  dataplane_ssh_pub_key:
+    type: string
+  keypair: 
+    type: string
+    default: default
+  controller_params:
+    type: json
+    default:
+      image: hotstack-controller
+      flavor: m1.small
+  ocp_master_params:
+    type: json
+    default:
+      image: ipxe-boot-usb
+      flavor: m1.xxlarge
+  bmh_params:
+    type: json
+    default:
+      image: CentOS-Stream-GenericCloud-9
+      cd_image: sushy-tools-blank-image
+      flavor: m1.medium
+  router_external_network:
+    type: string
+    default: public
+  floating_ip_network:
+    type: string
+    default: public
+
+resources:
+  #
+  # Networks
+  #
+  machine-net:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+
+  ctlplane-net-native-vlan:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+
+  # Namespace A Networks
+  ctlplane-net-a:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+
+  internal-api-net-a:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+
+  storage-net-a:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+
+  tenant-net-a:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+
+  provisioning-net-a:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+  
+  # Namespace B Networks
+  ctlplane-net-b:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+
+  internal-api-net-b:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+
+  storage-net-b:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+
+  tenant-net-b:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+
+  provisioning-net-b:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+
+  #
+  # Subnets
+  #
+  machine-subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: machine-net}
+      ip_version: 4
+      cidr: 192.168.32.0/24
+      enable_dhcp: true
+      dns_nameservers:
+        - 192.168.32.254
+
+  ctlplane-subnet-native:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: ctlplane-net-native-vlan}
+      ip_version: 4
+      cidr: 192.168.121.0/24
+      enable_dhcp: false
+      allocation_pools:
+        - start: 192.168.121.240
+          end: 192.168.121.253
+
+  # Namespace A Networks
+  ctlplane-subnet-a:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: ctlplane-net-a}
+      ip_version: 4
+      cidr: 192.168.122.0/24
+      enable_dhcp: false
+      allocation_pools:
+        - start: 192.168.122.240
+          end: 192.168.122.253
+      dns_nameservers:
+        - 192.168.122.80
+
+  internal-api-subnet-a:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: internal-api-net-a}
+      ip_version: 4
+      cidr: 172.17.0.0/24
+      enable_dhcp: false
+      allocation_pools:
+        - start: 172.17.0.240
+          end: 172.17.0.254
+
+  storage-subnet-a:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: storage-net-a}
+      ip_version: 4
+      cidr: 172.18.0.0/24
+      enable_dhcp: false
+      allocation_pools:
+        - start: 172.18.0.240
+          end: 172.18.0.253
+
+  tenant-subnet-a:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: tenant-net-a}
+      ip_version: 4
+      cidr: 172.19.0.0/24
+      enable_dhcp: false
+      allocation_pools:
+        - start: 172.19.0.240
+          end: 172.19.0.253
+
+  provisioning-subnet-a:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: provisioning-net-a}
+      ip_version: 4
+      cidr: 172.25.0.0/24
+      enable_dhcp: true
+      allocation_pools:
+        - start: 172.25.0.10
+          end: 172.25.0.200
+      dns_nameservers:
+        - 192.168.32.254
+
+  # Namespace A Networks
+  ctlplane-subnet-b:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: ctlplane-net-b}
+      ip_version: 4
+      cidr: 192.168.123.0/24
+      enable_dhcp: false
+      allocation_pools:
+        - start: 192.168.123.240
+          end: 192.168.123.253
+      dns_nameservers:
+        - 192.168.122.80
+
+  internal-api-subnet-b:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: internal-api-net-b}
+      ip_version: 4
+      cidr: 172.17.1.0/24
+      enable_dhcp: false
+      allocation_pools:
+        - start: 172.17.1.240
+          end: 172.17.1.254
+
+  storage-subnet-b:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: storage-net-b}
+      ip_version: 4
+      cidr: 172.18.1.0/24
+      enable_dhcp: false
+      allocation_pools:
+        - start: 172.18.1.240
+          end: 172.18.1.253
+
+  tenant-subnet-b:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: tenant-net-b}
+      ip_version: 4
+      cidr: 172.19.1.0/24
+      enable_dhcp: false
+      allocation_pools:
+        - start: 172.19.1.240
+          end: 172.19.1.253
+
+  provisioning-subnet-b:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: provisioning-net-b}
+      ip_version: 4
+      cidr: 172.25.1.0/24
+      enable_dhcp: true
+      allocation_pools:
+        - start: 172.25.1.240
+          end: 172.25.1.253
+      dns_nameservers:
+        - 192.168.32.254
+
+  #
+  # Routers
+  #
+  router:
+    type: OS::Neutron::Router
+    properties:
+      admin_state_up: true
+      external_gateway_info:
+        network: {get_param: router_external_network}
+
+  machine-net-router-interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: {get_resource: router} 
+      subnet: {get_resource: machine-subnet}
+
+  provisioning-net-a-router-interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: {get_resource: router} 
+      subnet: {get_resource: provisioning-subnet-a}
+
+  provisioning-net-b-router-interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: {get_resource: router} 
+      subnet: {get_resource: provisioning-subnet-b}
+
+  # Network A Router
+  router-a:
+    type: OS::Neutron::Router
+    properties:
+      admin_state_up: true
+      external_gateway_info:
+        network: {get_param: router_external_network}
+
+  ctlplane-net-a-router-interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: {get_resource: router-a} 
+      subnet: {get_resource: ctlplane-subnet-a}
+
+  # Network B Router
+  router-b:
+    type: OS::Neutron::Router
+    properties:
+      admin_state_up: true
+      external_gateway_info:
+        network: {get_param: router_external_network}
+
+  ctlplane-net-b-router-interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: {get_resource: router-b} 
+      subnet: {get_resource: ctlplane-subnet-b}
+
+
+
+  #
+  # Instances
+  #
+  controller_users:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        users:
+          - default
+          - name: zuul
+            geco: "Zuul user"
+            sudo: ALL=(ALL) NOPASSWD:ALL
+            ssh_authorized_keys:
+              - {get_param: controller_ssh_pub_key}
+
+  controller-write-files:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        write_files:
+          - path: /etc/dnsmasq.conf
+            content: |
+              # dnsmasq service config
+              # Include all files in /etc/dnsmasq.d except RPM backup files
+              conf-dir=/etc/dnsmasq.d,.rpmnew,.rpmsave,.rpmorig
+              no-resolv
+            owner: root:dnsmasq
+          - path: /etc/dnsmasq.d/forwarders.conf
+            content: 
+              str_replace:
+                template: |
+                  # DNS forwarders records
+                  server=$dns1
+                  server=$dns2
+                params:
+                  $dns1: {get_param: [dns_servers, 0]}
+                  $dns2: {get_param: [dns_servers, 1]}
+            owner: root:dnsmasq
+          - path: /etc/dnsmasq.d/host_records.conf
+            content: 
+              str_replace:
+                template: |
+                  # Host records
+                  host-record=controller-0.openstack.lab,$controller0
+                  host-record=api.sno.openstack.lab,$master0
+                  host-record=api-int.sno.openstack.lab,$master0
+                  host-record=master-0.sno.openstack.lab,$master0
+                params:
+                  $controller0: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
+                  $master0: {get_attr: [master0-machine-port, fixed_ips, 0, ip_address]}
+            owner: root:dnsmasq
+          - path: /etc/dnsmasq.d/wildcard_records.conf
+            content: 
+              str_replace:
+                template: |
+                  # Wildcard records
+                  address=/apps.sno.openstack.lab/$addr
+                params:
+                  $addr: {get_attr: [master0-machine-port, fixed_ips, 0, ip_address]}
+            owner: root:dnsmasq
+          - path: /etc/resolv.conf
+            content: |
+              nameserver: 127.0.0.1
+            owner: root:root
+          - path: /etc/NetworkManager/conf.d/98-rc-manager.conf
+            content: |
+              [main]
+              rc-manager=unmanaged
+            owner: root:root
+
+  controller-runcmd:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        runcmd:
+          - ['systemctl', 'enable', 'dnsmasq.service']
+          - ['systemctl', 'start', 'dnsmasq.service']
+          - ['setenforce', 'permissive']
+          - ['sed', '-i', 's/Listen 80/Listen 8081/g', '/etc/httpd/conf/httpd.conf']
+          - ['systemctl', 'enable', 'httpd.service']
+          - ['systemctl', 'start', 'httpd.service']
+
+  controller-init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+        - config: {get_resource: controller_users}
+        - config: {get_resource: controller-write-files}
+        - config: {get_resource: controller-runcmd}
+
+  controller-machine-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: machine-net}
+      fixed_ips:
+        - ip_address: 192.168.32.254
+
+  controller-floating-ip:
+     depends_on: machine-net-router-interface
+     type: OS::Neutron::FloatingIP
+     properties:
+       floating_network: {get_param: floating_ip_network}
+       port_id: {get_resource: controller-machine-port}
+
+  controller:
+    type: OS::Nova::Server
+    properties:
+      key_name: {get_param: keypair}
+      image: {get_param: [controller_params, image]}
+      flavor: {get_param: [controller_params, flavor]}
+      networks:
+        - port: {get_resource: controller-machine-port}
+      user_data_format: RAW
+      user_data: {get_resource: controller-init}
+
+  # OCP Masters
+  
+  # DHCP Opts value
+  extra-dhcp-opts-value:
+    type: OS::Heat::Value
+    properties:
+      type: json
+      value:
+        extra_dhcp_opts:
+          - opt_name: "60"
+            opt_value: "HTTPClient"
+            ip_version: 4
+          - opt_name: "67"
+            opt_value: 
+              str_replace:
+                template: http://$server_address:8081/boot-artifacts/agent.x86_64.ipxe
+                params:
+                  $server_address: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
+
+
+  master0-machine-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: machine-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 192.168.32.10
+      value_specs: {get_attr: [extra-dhcp-opts-value, value]}
+
+  master0-ctlplane-trunk-parent-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ctlplane-net-native-vlan}
+      port_security_enabled: false
+      # FIXME: https://bugs.launchpad.net/nova/+bug/2106817
+      # no_fixed_ips: true
+      fixed_ips:
+        - ip_address: 192.168.121.10
+
+  master0-ctlplane-a-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ctlplane-net-a}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 192.168.122.10
+
+  master0-ctlplane-b-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ctlplane-net-b}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 192.168.123.10
+
+  master0-internal-api-a-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: internal-api-net-a}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.17.0.10
+
+  master0-storage-a-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: storage-net-a}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.18.0.10
+
+  master0-tenant-a-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: tenant-net-a}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.19.0.10
+
+  master0-internal-api-b-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: internal-api-net-b}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.17.1.10
+
+  master0-storage-b-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: storage-net-b}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.18.1.10
+
+  master0-tenant-b-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: tenant-net-b}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.19.1.10
+
+  master0-trunk0:
+    type: OS::Neutron::Trunk
+    properties:
+      port: {get_resource: master0-ctlplane-trunk-parent-port}
+      sub_ports:
+        # Network A ports
+        - port: {get_resource: master0-ctlplane-a-port}
+          segmentation_id: 10
+          segmentation_type: vlan
+        - port: {get_resource: master0-internal-api-a-port}
+          segmentation_id: 20
+          segmentation_type: vlan
+        - port: {get_resource: master0-storage-a-port}
+          segmentation_id: 21
+          segmentation_type: vlan
+        - port: {get_resource: master0-tenant-a-port}
+          segmentation_id: 22
+          segmentation_type: vlan
+        # Network B ports
+        - port: {get_resource: master0-ctlplane-b-port}
+          segmentation_id: 11
+          segmentation_type: vlan
+        - port: {get_resource: master0-internal-api-b-port}
+          segmentation_id: 30
+          segmentation_type: vlan
+        - port: {get_resource: master0-storage-b-port}
+          segmentation_id: 31
+          segmentation_type: vlan
+        - port: {get_resource: master0-tenant-b-port}
+          segmentation_id: 32
+          segmentation_type: vlan
+
+  master0-lvms-vol0:
+    type: OS::Cinder::Volume
+    properties:
+      size: 50
+
+  master0-cinder-vol0:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  master0-cinder-vol1:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  master0-cinder-vol2:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  master0:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: [ocp_master_params, image]}
+      flavor: {get_param: [ocp_master_params, flavor]}
+      block_device_mapping_v2:
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: master0-lvms-vol0}
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: master0-cinder-vol0}
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: master0-cinder-vol1}
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: master0-cinder-vol2}
+      networks:
+        - port: {get_resource: master0-machine-port}
+        - port: {get_attr: [master0-trunk0, port_id]}
+
+  #
+  # BaremetalHosts
+  #
+  bmh-a-0-ctlplane-trunk-parent-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ctlplane-net-native-vlan}
+      port_security_enabled: false
+      # FIXME: https://bugs.launchpad.net/nova/+bug/2106817
+      # no_fixed_ips: true
+
+  bmh-a-0-ctlplane-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ctlplane-net-a}
+      port_security_enabled: false
+      
+  bmh-a-0-internal-api-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: internal-api-net-a}
+      port_security_enabled: false
+
+  bmh-a-0-storage-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: storage-net-a}
+      port_security_enabled: false
+
+  bmh-a-0-tenant-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: tenant-net-a}
+      port_security_enabled: false
+
+  bmh-a-0-provisioning-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: provisioning-net-a}
+      port_security_enabled: false
+
+  bmh-a-0-trunk0:
+    type: OS::Neutron::Trunk
+    properties:
+      port: {get_resource: bmh-a-0-ctlplane-trunk-parent-port}
+      sub_ports:
+        - port: {get_resource: bmh-a-0-ctlplane-port}
+          segmentation_id: 10
+          segmentation_type: vlan
+        - port: {get_resource: bmh-a-0-internal-api-port}
+          segmentation_id: 20
+          segmentation_type: vlan
+        - port: {get_resource: bmh-a-0-storage-port}
+          segmentation_id: 21
+          segmentation_type: vlan
+        - port: {get_resource: bmh-a-0-tenant-port}
+          segmentation_id: 22
+          segmentation_type: vlan
+  
+  bmh-a-0:
+    type: OS::Nova::Server
+    properties:
+      flavor: {get_param: [bmh_params, flavor]}
+      block_device_mapping_v2:
+        - device_type: disk
+          boot_index: 1
+          image_id: {get_param: [bmh_params, image]}
+          volume_size: 60
+          delete_on_termination: true
+        - device_type: cdrom
+          disk_bus: scsi
+          boot_index: 0
+          image_id: {get_param: [bmh_params, cd_image]}
+          volume_size: 5
+          delete_on_termination: true
+      networks:
+        - port: {get_resource: bmh-a-0-provisioning-port}
+        - port: {get_resource: bmh-a-0-ctlplane-trunk-parent-port}
+
+  bmh-b-0-ctlplane-trunk-parent-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ctlplane-net-native-vlan}
+      port_security_enabled: false
+      # FIXME: https://bugs.launchpad.net/nova/+bug/2106817
+      # no_fixed_ips: true
+  
+  bmh-b-0-ctlplane-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ctlplane-net-b}
+      port_security_enabled: false
+      
+  bmh-b-0-internal-api-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: internal-api-net-b}
+      port_security_enabled: false
+
+  bmh-b-0-storage-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: storage-net-b}
+      port_security_enabled: false
+
+  bmh-b-0-tenant-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: tenant-net-b}
+      port_security_enabled: false
+
+  bmh-b-0-provisioning-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: provisioning-net-b}
+      port_security_enabled: false
+
+  bmh-b-0-trunk0:
+    type: OS::Neutron::Trunk
+    properties:
+      port: {get_resource: bmh-b-0-ctlplane-trunk-parent-port}
+      sub_ports:
+        - port: {get_resource: bmh-b-0-ctlplane-port}
+          segmentation_id: 11
+          segmentation_type: vlan
+        - port: {get_resource: bmh-b-0-internal-api-port}
+          segmentation_id: 30
+          segmentation_type: vlan
+        - port: {get_resource: bmh-b-0-storage-port}
+          segmentation_id: 31
+          segmentation_type: vlan
+        - port: {get_resource: bmh-b-0-tenant-port}
+          segmentation_id: 32
+          segmentation_type: vlan
+
+  bmh-b-0:
+    type: OS::Nova::Server
+    properties:
+      flavor: {get_param: [bmh_params, flavor]}
+      block_device_mapping_v2:
+        - device_type: disk
+          boot_index: 1
+          image_id: {get_param: [bmh_params, image]}
+          volume_size: 60
+          delete_on_termination: true
+        - device_type: cdrom
+          disk_bus: scsi
+          boot_index: 0
+          image_id: {get_param: [bmh_params, cd_image]}
+          volume_size: 5
+          delete_on_termination: true
+      networks:
+        - port: {get_resource: bmh-b-0-provisioning-port}
+        - port: {get_resource: bmh-b-0-ctlplane-trunk-parent-port}
+
+outputs:
+  controller_floating_ip:
+    description: Controller Floating IP
+    value: {get_attr: [controller-floating-ip, floating_ip_address]}
+
+  sushy_emulator_uuids:
+    description: UUIDs of instances to manage with sushy-tools - RedFish virtual BMC
+    value:
+      bmh-a-0: {get_resource: bmh-a-0}
+      bmh-b-0: {get_resource: bmh-b-0}
+
+  ironic_nodes:
+    description: Ironic nodes YAML, for enroll in ironic or Metal3 BaremetalHost
+    value:
+      nodes:
+        - name: bmh-a-0
+          driver: redfish
+          bios_interface: no-bios
+          boot_interface: redfish-virtual-media
+          driver_info:
+            redfish_address: http://sushy-emulator.apps.sno.openstack.lab
+            redfish_system_id: 
+              str_replace:
+                template: "/redfish/v1/Systems/$SYS_ID"
+                params:
+                  $SYS_ID: {get_resource: bmh-a-0}
+            redfish_username: admin
+            redfish_password: password
+          ports:
+            - address: {get_attr: [bmh-a-0-provisioning-port, mac_address]}
+              physical_network: ctlplane
+        - name: bmh-b-0
+          driver: redfish
+          bios_interface: no-bios
+          boot_interface: redfish-virtual-media
+          driver_info:
+            redfish_address: http://sushy-emulator.apps.sno.openstack.lab
+            redfish_system_id: 
+              str_replace:
+                template: "/redfish/v1/Systems/$SYS_ID"
+                params:
+                  $SYS_ID: {get_resource: bmh-b-0}
+            redfish_username: admin
+            redfish_password: password
+          ports:
+            - address: {get_attr: [bmh-b-0-provisioning-port, mac_address]}
+              physical_network: ctlplane
+
+  ocp_install_config:
+    description: OCP install-config.yaml
+    value:
+      apiVersion: v1
+      baseDomain: openstack.lab
+      controlPlane:
+        architecture: amd64
+        hyperthreading: Disabled
+        name: master
+        replicas: 1
+      compute:
+        - architecture: amd64
+          hyperthreading: Disabled
+          name: worker
+          replicas: 0
+      metadata:
+        name: sno
+      networking:
+        clusterNetwork:
+          - cidr: 10.128.0.0/16
+            hostPrefix: 23
+        machineNetwork:
+          - cidr: {get_attr: [machine-subnet, cidr]}
+        serviceNetwork:
+          - 172.30.0.0/16
+        networkType: OVNKubernetes
+      platform:
+        none: {}
+      pullSecret: _replaced_
+      sshKey: {get_param: dataplane_ssh_pub_key}
+
+  ocp_agent_config:
+    description: OCP agent-config.yaml
+    value:
+      apiVersion: v1beta1
+      kind: AgentConfig
+      metadata:
+        name: sno
+      rendezvousIP: {get_attr: [master0-machine-port, fixed_ips, 0, ip_address]}
+      additionalNTPSources: {get_param: ntp_servers}
+      bootArtifactsBaseURL: 
+        str_replace:
+          template: http://$server_address:8081/boot-artifacts
+          params:
+            $server_address: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
+      hosts:
+        - hostname: master-0
+          role: master
+          interfaces:
+            - name: ens3
+              macAddress: {get_attr: [master0-machine-port, mac_address]}
+          networkConfig:
+            interfaces:
+              - name: ens3
+                type: ethernet
+                state: up
+                mac-address: {get_attr: [master0-machine-port, mac_address]}
+                ipv4:
+                  enabled: true
+                  dhcp: true
+                ipv6:
+                  enabled: false
+              - name: ens4
+                type: ethernet
+                state: down
+              - name: ens5
+                type: ethernet
+                state: down
+  controller_ansible_host:
+    description: >
+      Controller ansible host, this struct can be passed to the ansible.builtin.add_host module
+    value:
+      name: controller-0
+      ansible_ssh_user: zuul
+      ansible_host: {get_attr: [controller-floating-ip, floating_ip_address]}
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+      groups: controllers
+
+  ansible_inventory:
+    description: Ansible inventory
+    value:
+      all:
+        children:
+          controllers:
+            vars:
+          ocps:
+            vars:
+      localhosts:
+        hosts:
+          localhost:
+            ansible_connection: local
+      controllers:
+        hosts:
+          controller0:
+            ansible_host: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
+            ansible_user: zuul
+            ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+            ansible_ssh_private_key_file: '~/.ssh/id_rsa'
+      ocps:
+        hosts:
+          master0:
+            ansible_host: {get_attr: [master0-machine-port, fixed_ips, 0, ip_address]}
+            ansible_user: core
+            ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+            ansible_ssh_private_key_file: '~/.ssh/id_rsa'

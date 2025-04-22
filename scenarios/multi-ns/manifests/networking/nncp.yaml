@@ -1,0 +1,164 @@
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp/nncm-config-type: standard
+  name: master-0-a
+  namespace: openstack-a
+spec:
+  desiredState:
+    interfaces:
+    - name: ctlplane-a 
+      type: vlan
+      description: ctlplane interface
+      ipv4:
+        address:
+        - ip: 192.168.122.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      state: up
+      vlan:
+        base-iface: ens4
+        id: "10"
+    - name: internalapi-a
+      type: vlan
+      description: internalapi vlan interface
+      ipv4:
+        address:
+        - ip: 172.17.0.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      state: up
+      vlan:
+        base-iface: ens4
+        id: "20"
+    - name: storage-a
+      type: vlan
+      description: storage vlan interface
+      ipv4:
+        address:
+        - ip: 172.18.0.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      state: up
+      vlan:
+        base-iface: ens4
+        id: "21"
+    - name: tenant-a
+      type: vlan
+      description: tenant vlan interface
+      ipv4:
+        address:
+        - ip: 172.19.0.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      state: up
+      vlan:
+        base-iface: ens4
+        id: "22"
+    route-rules:
+      config: []
+    routes:
+      config: []
+  nodeSelector:
+    kubernetes.io/hostname: master-0
+    node-role.kubernetes.io/worker: ""
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp/nncm-config-type: standard
+  name: master-0-b
+  namespace: openstack-b
+spec:
+  desiredState:
+    interfaces:
+    - name: ctlplane-b 
+      type: vlan
+      description: ctlplane interface
+      ipv4:
+        address:
+        - ip: 192.168.123.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      state: up
+      vlan:
+        base-iface: ens4
+        id: "11"
+    - name: internalapi-b
+      type: vlan
+      description: internalapi vlan interface
+      ipv4:
+        address:
+        - ip: 172.17.1.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      state: up
+      vlan:
+        base-iface: ens4
+        id: "30"
+    - name: storage-b
+      type: vlan
+      description: storage vlan interface
+      ipv4:
+        address:
+        - ip: 172.18.1.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      state: up
+      vlan:
+        base-iface: ens4
+        id: "31"
+    - name: tenant-b
+      type: vlan
+      description: tenant vlan interface
+      ipv4:
+        address:
+        - ip: 172.19.1.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      state: up
+      vlan:
+        base-iface: ens4
+        id: "32"
+    route-rules:
+      config: []
+    routes:
+      config: []
+  nodeSelector:
+    kubernetes.io/hostname: master-0
+    node-role.kubernetes.io/worker: ""

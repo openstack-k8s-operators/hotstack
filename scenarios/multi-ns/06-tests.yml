@@ -1,0 +1,24 @@
+- name: Bootstrap architecutre on Openstack cloud
+  hosts: localhost
+  gather_facts: true
+  strategy: linear
+  pre_tasks:
+    - name: Load stack output vars from file
+      ansible.builtin.include_vars:
+        file: "{{ stack_name }}-outputs.yaml"
+        name: stack_outputs
+    
+    - name: Add controller-0 to the Ansible inventory
+      ansible.builtin.add_host: "{{ stack_outputs.controller_ansible_host }}"
+
+    - name: Load automation vars
+      ansible.builtin.include_vars:
+        file: "{{ test_operator_automation_vars_file }}"
+        name: automation
+
+  roles:
+    - role: hotloop
+      delegate_to: controller-0
+      vars:
+        work_dir: "{{ scenario_dir }}/{{ scenario }}/test-operator"
+        automation: "{{ automation }}"

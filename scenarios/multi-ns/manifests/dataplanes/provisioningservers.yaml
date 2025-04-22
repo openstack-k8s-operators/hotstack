@@ -1,0 +1,16 @@
+---
+apiVersion: baremetal.openstack.org/v1beta1
+kind: OpenStackProvisionServer
+metadata:
+  name: openstack-a-edpm-provisionserver
+  namespace: openstack-a
+spec:
+  port: 6195
+---
+apiVersion: baremetal.openstack.org/v1beta1
+kind: OpenStackProvisionServer
+metadata:
+  name: openstack-b-edpm-provisionserver
+  namespace: openstack-b
+spec:
+  port: 6196

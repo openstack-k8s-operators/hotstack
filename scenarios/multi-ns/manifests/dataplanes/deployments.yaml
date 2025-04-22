@@ -1,0 +1,18 @@
+---
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneDeployment
+metadata:
+  name: dataplane
+  namespace: openstack-a
+spec:
+  nodeSets:
+  - openstack-edpm
+---
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneDeployment
+metadata:
+  name: dataplane
+  namespace: openstack-b
+spec:
+  nodeSets:
+  - openstack-edpm
