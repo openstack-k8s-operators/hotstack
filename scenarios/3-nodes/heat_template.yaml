@@ -9,14 +9,14 @@ parameters:
     default:
       - 8.8.8.8
       - 8.8.4.4
-  ntp_servers: 
+  ntp_servers:
     type: comma_delimited_list
     default: []
   controller_ssh_pub_key:
     type: string
   dataplane_ssh_pub_key:
     type: string
-  keypair: 
+  keypair:
     type: string
     default: default
   controller_params:
@@ -159,13 +159,13 @@ resources:
   machine-net-router-interface:
     type: OS::Neutron::RouterInterface
     properties:
-      router: {get_resource: router} 
+      router: {get_resource: router}
       subnet: {get_resource: machine-subnet}
 
   ctlplane-net-router-interface:
     type: OS::Neutron::RouterInterface
     properties:
-      router: {get_resource: router} 
+      router: {get_resource: router}
       subnet: {get_resource: ctlplane-subnet}
 
   #
@@ -196,7 +196,7 @@ resources:
               no-resolv
             owner: root:dnsmasq
           - path: /etc/dnsmasq.d/forwarders.conf
-            content: 
+            content:
               str_replace:
                 template: |
                   # DNS forwarders records
@@ -207,7 +207,7 @@ resources:
                   $dns2: {get_param: [dns_servers, 1]}
             owner: root:dnsmasq
           - path: /etc/dnsmasq.d/host_records.conf
-            content: 
+            content:
               str_replace:
                 template: |
                   # Host records
@@ -220,7 +220,7 @@ resources:
                   $master0: {get_attr: [master0-machine-port, fixed_ips, 0, ip_address]}
             owner: root:dnsmasq
           - path: /etc/dnsmasq.d/wildcard_records.conf
-            content: 
+            content:
               str_replace:
                 template: |
                   # Wildcard records
@@ -284,7 +284,7 @@ resources:
       user_data: {get_resource: controller-init}
 
   # OCP Masters
-  
+
   # DHCP Opts value
   extra-dhcp-opts-value:
     type: OS::Heat::Value
@@ -296,7 +296,7 @@ resources:
             opt_value: "HTTPClient"
             ip_version: 4
           - opt_name: "67"
-            opt_value: 
+            opt_value:
               str_replace:
                 template: http://$server_address:8081/boot-artifacts/agent.x86_64.ipxe
                 params:
@@ -547,7 +547,7 @@ outputs:
         name: sno
       rendezvousIP: {get_attr: [master0-machine-port, fixed_ips, 0, ip_address]}
       additionalNTPSources: {get_param: ntp_servers}
-      bootArtifactsBaseURL: 
+      bootArtifactsBaseURL:
         str_replace:
           template: http://$server_address:8081/boot-artifacts
           params:

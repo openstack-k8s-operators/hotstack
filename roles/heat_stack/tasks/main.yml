@@ -26,12 +26,12 @@
 
 - name: Debug Stack parameters
   ansible.builtin.debug:
-    msg: 
+    msg:
       cloud: "{{ os_cloud }}"
       name: "{{ stack_name }}"
       template: "{{ template_path }}"
       parameters: "{{ stack_parameters }}"
-      
+
 - name: Create stack
   openstack.cloud.stack:
     cloud: "{{ os_cloud }}"
@@ -67,7 +67,7 @@
     stack_uuid: "{{ _stack_info.stacks[0].id }}"
 
 - name: Set stack outputs facts
-  ansible.builtin.set_fact: 
+  ansible.builtin.set_fact:
     stack_outputs: "{{ _stack_outputs.outputs }}"
 
 - name: Store stack outputs in file

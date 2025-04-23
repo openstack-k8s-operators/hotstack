@@ -57,11 +57,11 @@
 - name: Write OCP install-config.yaml
   ansible.builtin.copy:
     content: >-
-      {{ 
+      {{
         install_config | to_nice_yaml(indent=2)
       }}
     dest: >-
-      {{ 
+      {{
         [
           cluster_dir,
           'install-config.yaml'
@@ -72,7 +72,7 @@
 - name: Replace pull secret in install-config.yaml
   ansible.builtin.replace:
     path: >-
-      {{ 
+      {{
         [
           cluster_dir, 'install-config.yaml'
         ] | ansible.builtin.path_join
@@ -88,7 +88,7 @@
         agent_config | to_nice_yaml(indent=2)
       }}
     dest: >-
-      {{ 
+      {{
         [
           cluster_dir,
           'agent-config.yaml'
@@ -126,7 +126,7 @@
   ansible.builtin.copy:
     remote_src: true
     src: >-
-      {{ 
+      {{
         [
           cluster_dir,
           'auth',
@@ -134,7 +134,7 @@
         ] | ansible.builtin.path_join
       }}
     dest: >-
-      {{ 
+      {{
         [
           kube_config_dir,
           'config'

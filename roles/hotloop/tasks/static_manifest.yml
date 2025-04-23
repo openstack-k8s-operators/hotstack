@@ -17,7 +17,7 @@
 - name: "Stage: {{ item.name }} :: Ensure manifest dir"
   ansible.builtin.file:
     path: >-
-      {{ 
+      {{
         [
           manifests_dir,
           item.manifest | dirname | ansible.builtin.basename
@@ -28,14 +28,14 @@
 - name: "Stage: {{ item.name }} :: Copy manifest"
   ansible.builtin.copy:
     src: >-
-      {{ 
+      {{
         [
           work_dir,
           item.manifest
         ] | ansible.builtin.path_join
       }}
-    dest: >- 
-      {{ 
+    dest: >-
+      {{
         [
           manifests_dir,
           item.manifest | dirname | ansible.builtin.basename,
@@ -46,8 +46,8 @@
   ansible.builtin.command:
     chdir: "{{ manifests_dir }}"
     cmd: >-
-      oc apply -f 
-      {{ 
+      oc apply -f
+      {{
         [
           manifests_dir,
           item.manifest | dirname | ansible.builtin.basename,

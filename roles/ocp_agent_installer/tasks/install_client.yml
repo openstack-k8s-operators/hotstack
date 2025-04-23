@@ -18,25 +18,25 @@
   ansible.builtin.get_url:
     url: "{{ client_url }}"
     dest: >-
-      {{ 
+      {{
         [
           agent_installer_dir,
           'openshift-client-linux.tar.gz'
-        ] | ansible.builtin.path_join 
+        ] | ansible.builtin.path_join
       }}
     mode: '0644'
 
 - name: Extract client to /home/zuul/bin
   ansible.builtin.unarchive:
     src: >-
-      {{ 
+      {{
         [
           agent_installer_dir,
           'openshift-client-linux.tar.gz'
         ] | ansible.builtin.path_join
       }}
     dest: "{{ bin_dir }}"
-    remote_src: yes
+    remote_src: true
 
 - name: Configure bash completion
   become: true

@@ -125,7 +125,7 @@ spec:
         # These tests are have hard dependencies on ci-framework or devstack.
         # Changes needed in https://opendev.org/x/whitebox-neutron-tempest-plugin is
         # required.
-        # whitebox_neutron_tempest_plugin.* 
+        # whitebox_neutron_tempest_plugin.*
         excludeList: |
           test_encrypted_cinder_volumes_cryptsetup
           octavia_tempest_plugin.tests.act_stdby_scenario

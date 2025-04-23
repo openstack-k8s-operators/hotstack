@@ -103,11 +103,11 @@ stages:
           --dhcp
 
   - name: Wait for expected compute services (OSPRH-10942)
-    script: | 
+    script: |
       set -xe -o pipefail
       COMPUTES=1
       RETRIES=10
-      
+
       oc project openstack-a
       COUNTER=0
       until [ $(oc rsh openstackclient openstack compute service list --service nova-compute -f value | wc -l) -eq "$COMPUTES" ]; do
@@ -129,7 +129,7 @@ stages:
       done
 
   - name: Run nova-manage discover_hosts and wait for host records (OSPRH-10942)
-    script: | 
+    script: |
       set -xe -o pipefail
       COMPUTES={{ 1 | int + 4 }}
       RETRIES=10
@@ -145,7 +145,7 @@ stages:
         sleep 10
       done
 
-      
+
       oc project openstack-b
       COUNTER=0
       until [ $(oc rsh nova-cell1-conductor-0 nova-manage cell_v2 list_hosts | wc -l) -eq "$COMPUTES" ]; do

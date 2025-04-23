@@ -94,4 +94,3 @@ clean:
 	rm -f ipxe-boot.img ipxe-boot.qcow2 ipxe-boot-usb.raw
 
 .PHONY: $(ipxe_iso_path) clean
-

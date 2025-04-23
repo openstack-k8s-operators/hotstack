@@ -5,4 +5,3 @@ input.
 
 When the stack has been succesfully created/updated the stack output is stored
 in the `stack_outputs` fact, and also written to file.
-

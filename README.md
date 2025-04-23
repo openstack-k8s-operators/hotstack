@@ -4,7 +4,7 @@ This repository hosts tooling for a deploying labs for RHOSO deployment testing/
 development on Openstack cloud infrastucture.
 
 ## Roles
-* **dataplane_ssh_keys**: Create SSH keys for dataplane and Nova Migration. 
+* **dataplane_ssh_keys**: Create SSH keys for dataplane and Nova Migration.
   See docs [here](roles/dataplane_ssh_keys/README.md).
 * **heat_stack**: A role to deploy infrastructure on an Openstack cloud using
   a Heat template as input. See docs [here](roles/heat_stack/README.md).
@@ -151,4 +151,3 @@ To clean up the environment, delete the stack:
 ```bash
 openstack stack delete <stack_name> -y --wait
 ```
-

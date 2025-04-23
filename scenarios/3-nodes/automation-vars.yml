@@ -8,10 +8,10 @@ stages:
         oc wait -n openshift-storage operatorgroups.operators.coreos.com openshift-storage-operatorgroup
         --for jsonpath='{.status.namespaces}' --timeout=30s
       - >-
-        oc wait -n openshift-storage ClusterServiceVersion 
-        -l operators.coreos.com/lvms-operator.openshift-storage 
+        oc wait -n openshift-storage ClusterServiceVersion
+        -l operators.coreos.com/lvms-operator.openshift-storage
         --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
-  
+
   - name: TopoLVM LVMCluster
     documentation: |
       Create a TopoLVM - LVMCluster on the Openshift cluster.
@@ -97,11 +97,11 @@ stages:
       --from-file=ssh-publickey=/home/zuul/.ssh/id_rsa.pub
       --type=Opaque -o yaml | oc apply -f -
     wait_conditions:
-      - >- 
+      - >-
         oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
         --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
         --timeout=30s
-  
+
   - name: Nova migration SSH key secret
     cmd: >-
       oc create -n openstack secret generic nova-migration-ssh-key
@@ -114,9 +114,9 @@ stages:
         oc wait -n openstack secret nova-migration-ssh-key
         --for jsonpath='{.metadata.name}=nova-migration-ssh-key'
         --timeout=30s
-  
+
   - name: EDPM Secrets
-    manifest: manifests/edpm/secret.yaml
+    manifest: manifests/edpm/secrets.yaml
 
   - name: EDPM nodeset
     manifest: manifests/edpm/edpm.yaml

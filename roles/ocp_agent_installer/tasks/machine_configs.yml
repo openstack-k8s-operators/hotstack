@@ -20,7 +20,7 @@
     - name: Template butane config for iscsi
       vars:
         role: "{{ item }}"
-      ansible.builtin.template: 
+      ansible.builtin.template:
         src: enable-iscsi.bu.j2
         dest: "{{ butane_dir }}/90-{{ item }}-enable-iscsi.bu"
       loop: "{{ iscsi_roles }}"
@@ -38,7 +38,7 @@
     - name: Template butane config for multipath
       vars:
         role: "{{ item }}"
-      ansible.builtin.template: 
+      ansible.builtin.template:
         src: enable-multipath.bu.j2
         dest: "{{ butane_dir }}/91-{{ item }}-enable-multipath.bu"
       loop: "{{ multipath_roles }}"
@@ -56,7 +56,7 @@
     - name: Template butane config for LVM cinder-volumes
       vars:
         role: "{{ item }}"
-      ansible.builtin.template: 
+      ansible.builtin.template:
         src: lv-cinder-volumes.bu.j2
         dest: "{{ butane_dir }}/92-{{ item }}-lv-cinder-volumes.bu"
       loop: "{{ cinder_volume_roles }}"

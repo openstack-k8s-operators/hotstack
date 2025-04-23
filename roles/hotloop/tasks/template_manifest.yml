@@ -28,11 +28,11 @@
 - name: "Stage: {{ item.name }} :: Template manifest"
   ansible.builtin.template:
     src: >-
-      {{ 
+      {{
         [
           work_dir,
           item.j2_manifest
-        ] | ansible.builtin.path_join 
+        ] | ansible.builtin.path_join
       }}
     dest: >-
       {{
@@ -46,8 +46,8 @@
   ansible.builtin.command:
     chdir: "{{ manifests_dir }}"
     cmd: >-
-      oc apply -f 
-      {{ 
+      oc apply -f
+      {{
         [
           manifests_dir,
           item.j2_manifest | dirname | ansible.builtin.basename,

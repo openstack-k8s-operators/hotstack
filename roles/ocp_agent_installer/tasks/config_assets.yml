@@ -19,9 +19,9 @@
   ansible.builtin.template:
     src: ovn-k8s-config.j2
     dest: >-
-      {{ 
+      {{
         [
           config_assets_dir,
           'ovn_k8s_config.yaml'
-        ] | ansible.builtin.path_join 
+        ] | ansible.builtin.path_join
       }}

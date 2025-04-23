@@ -38,7 +38,7 @@ stages:
       The LVM backend for Cinder is a special case as the storage data is on
       the OpenShift node and has no external storage systems. This has several
       implications
-    
+
       * To prevent issues with exported volumes, cinder-operator automatically
         uses the host network. The backend is configured to use the host's
         VLAN IP address. This means that the cinder-volume service doesn't
@@ -50,7 +50,7 @@ stages:
 
   - name: Common OLM
     documentation: |
-      Install the OpenStack K8S operators and their dependencies. (Namespaces, 
+      Install the OpenStack K8S operators and their dependencies. (Namespaces,
       OperatorGroup, and Subscription CRs.)
 
       Once these CRs are created, run the `oc wait` commands to confirm that
@@ -101,11 +101,11 @@ stages:
       --from-file=ssh-publickey=/home/zuul/.ssh/id_rsa.pub
       --type=Opaque -o yaml | oc apply -f -
     wait_conditions:
-      - >- 
+      - >-
         oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
         --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
         --timeout=30s
-  
+
   - name: Nova migration SSH key secret
     cmd: >-
       oc create -n openstack secret generic nova-migration-ssh-key
@@ -132,10 +132,10 @@ stages:
       ansible.builtin.include_vars:
         file: "{{ stack_name }}-outputs.yaml"
         name: stack_outputs
-    
+
     - name: Add controller-0 to the Ansible inventory
       ansible.builtin.add_host: "{{ stack_outputs.controller_ansible_host }}"
-  
+
     - name: Load dataplane SSH keys vars
       ansible.builtin.include_vars:
         file: dataplane_ssh_keys_vars.yaml

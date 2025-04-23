@@ -16,10 +16,10 @@ stages:
         oc wait -n openshift-storage operatorgroups.operators.coreos.com openshift-storage-operatorgroup
         --for jsonpath='{.status.namespaces}' --timeout=30s
       - >-
-        oc wait -n openshift-storage ClusterServiceVersion 
-        -l operators.coreos.com/lvms-operator.openshift-storage 
+        oc wait -n openshift-storage ClusterServiceVersion
+        -l operators.coreos.com/lvms-operator.openshift-storage
         --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
-  
+
   - name: TopoLVM LVMCluster
     documentation: |
       Create a TopoLVM - LVMCluster on the Openshift cluster.
@@ -40,7 +40,7 @@ stages:
       The LVM backend for Cinder is a special case as the storage data is on
       the OpenShift node and has no external storage systems. This has several
       implications.
-      
+
       * To prevent issues with exported volumes, cinder-operator automatically
         uses the host network. The backend is configured to use the host's
         VLAN IP address. This means that the cinder-volume service doesn't
@@ -51,7 +51,7 @@ stages:
 
   - name: Common OLM
     documentation: |
-      Install the OpenStack K8S operators and their dependencies. (Namespaces, 
+      Install the OpenStack K8S operators and their dependencies. (Namespaces,
       OperatorGroup, and Subscription CRs.)
 
       Once these CRs are created, run the `oc wait` commands to confirm that
@@ -75,7 +75,7 @@ stages:
     manifest: ../common/metallb.yaml
     wait_conditions:
       - "oc wait -n metallb-system pod -l component=speaker --for condition=Ready --timeout=300s"
-  
+
   - name: Common NMState
     manifest: ../common/nmstate.yaml
     wait_conditions:

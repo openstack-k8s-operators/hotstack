@@ -9,7 +9,7 @@ metadata:
 spec:
   desiredState:
     interfaces:
-    - name: ctlplane-a 
+    - name: ctlplane-a
       type: vlan
       description: ctlplane interface
       ipv4:
@@ -91,7 +91,7 @@ metadata:
 spec:
   desiredState:
     interfaces:
-    - name: ctlplane-b 
+    - name: ctlplane-b
       type: vlan
       description: ctlplane interface
       ipv4:
