@@ -19,8 +19,8 @@
     that:
       - stack_name is defined
       - stack_name | length > 0
-      - template_path is defined
-      - template_path | length > 0
+      - stack_template_path is defined
+      - stack_template_path | length > 0
       - controller_ssh_pub_key is defined
       - dataplane_ssh_public_key is defined
 
@@ -29,7 +29,7 @@
     msg:
       cloud: "{{ os_cloud }}"
       name: "{{ stack_name }}"
-      template: "{{ template_path }}"
+      template: "{{ stack_template_path }}"
       parameters: "{{ stack_parameters }}"
 
 - name: Create stack
@@ -37,7 +37,7 @@
     cloud: "{{ os_cloud }}"
     name: "{{ stack_name }}"
     state: present
-    template: "{{ template_path }}"
+    template: "{{ stack_template_path }}"
     parameters: "{{ stack_parameters }}"
     wait: false
 
