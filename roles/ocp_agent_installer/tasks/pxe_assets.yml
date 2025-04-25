@@ -27,6 +27,13 @@
     cmd: >
       {{ bin_dir }}/openshift-install agent create pxe-files
 
+- name: Set serial console in ipxe
+  ansible.builtin.lineinfile:
+    path: "{{ cluster_dir }}/boot-artifacts/agent.x86_64.ipxe"
+    backrefs: true
+    regexp: "^(kernel.*)$"
+    line: '\1 console=ttyS0'
+
 - name: Copy boot-artifacts to the web server - (boot_artifacts_dir)
   become: true
   ansible.builtin.copy:
