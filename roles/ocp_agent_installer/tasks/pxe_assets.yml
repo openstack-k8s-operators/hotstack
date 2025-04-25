@@ -51,7 +51,8 @@
     group: root
     mode: '0644'
   loop:
-    - agent.x86_64-initrd.img
-    - agent.x86_64.ipxe
-    - agent.x86_64-rootfs.img
     - agent.x86_64-vmlinuz
+    - agent.x86_64-initrd.img
+    - agent.x86_64-rootfs.img
+    # Copy the iPXE last, the other files should be ready before iPXE try to load them.
+    - agent.x86_64.ipxe
