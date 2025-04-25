@@ -70,14 +70,14 @@ download packages, since it is using itself as the resolver ...
 
 See documentation [here](./images/README.md)
 
-### Create flavors 
+### Create flavors
 
 Create flavors to use for the instances. This creates flavors with the
 hotstack_ prefix that matches the defaults in scenario's heat templates and
-bootstrap variable files. 
+bootstrap variable files.
 
 > **_NOTE:_** Creating flavors is typically not allowed for regular users.
-> 
+>
 > It is possible to use existing flavors by overriding the stack_parameters
 > variable in the bootstrap variable files in scenarios.
 
