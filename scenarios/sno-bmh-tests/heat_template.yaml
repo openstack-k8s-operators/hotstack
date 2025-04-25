@@ -23,18 +23,18 @@ parameters:
     type: json
     default:
       image: hotstack-controller
-      flavor: m1.small
+      flavor: hotstack.small
   ocp_master_params:
     type: json
     default:
       image: ipxe-boot-usb
-      flavor: m1.xxlarge
+      flavor: hotstack.xxlarge
   bmh_params:
     type: json
     default:
       image: CentOS-Stream-GenericCloud-9
       cd_image: sushy-tools-blank-image
-      flavor: m1.medium
+      flavor: hotstack.medium
   router_external_network:
     type: string
     default: public

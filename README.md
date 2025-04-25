@@ -70,12 +70,23 @@ download packages, since it is using itself as the resolver ...
 
 See documentation [here](./images/README.md)
 
-### An xxlarge flavor (much memory)
+### Create flavors 
 
-Create the `m1.xxlarge` flavor with 32 GB of ram.
+Create flavors to use for the instances. This creates flavors with the
+hotstack_ prefix that matches the defaults in scenario's heat templates and
+bootstrap variable files. 
+
+> **_NOTE:_** Creating flavors is typically not allowed for regular users.
+> 
+> It is possible to use existing flavors by overriding the stack_parameters
+> variable in the bootstrap variable files in scenarios.
 
 ```bash
-openstack flavor create m1.xxlarge --public --vcpus 12 --ram 32768 --disk 160
+openstack flavor create hotstack.small   --public --vcpus  1 --ram  2048 --disk  20
+openstack flavor create hotstack.medium  --public --vcpus  2 --ram  4096 --disk  40
+openstack flavor create hotstack.large   --public --vcpus  4 --ram  8192 --disk  80
+openstack flavor create hotstack.xlarge  --public --vcpus  8 --ram 16384 --disk 160
+openstack flavor create hotstack.xxlarge --public --vcpus 12 --ram 32768 --disk 160
 ```
 
 ### Cloud secret
@@ -98,6 +109,13 @@ cloud_secrets:
   interface: public
   identity_api_version: 3
   auth_type: v3applicationcredential
+```
+
+### Ansible collections (Dependencies)
+
+```
+ansible-galaxy collection install community.crypto
+ansible-galaxy collection install openstack.cloud
 ```
 
 ## Bootstrap playbook
@@ -130,8 +148,7 @@ can be used:
 ```bash
 ansible-playbook -i inventory.yml bootstrap.yml \
   -e @scenarios/uni01alpha/bootstrap_vars.yml \
-  -e @/home/cloud-user/cloud-secrets.yaml \
-  -e scenario_dir=./scenarios
+  -e @~/cloud-secrets.yaml \
 ```
 
 Edit or override the variables in the `bootstrap_vars.yml` to select the

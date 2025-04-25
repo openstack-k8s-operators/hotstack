@@ -23,12 +23,5 @@
       vars:
         os_cloud: "{{ os_cloud }}"
         stack_name: "{{ stack_name }}"
-        stack_template_path: "{{ template_path }}"
-        stack_parameters:
-          keypair: "{{ os_keypair }}"
-          dns_servers: "{{ dns_servers }}"
-          ntp_servers: "{{ ntp_servers }}"
-          controller_ssh_pub_key: "{{ controller_ssh_pub_key }}"
-          dataplane_ssh_pub_key: "{{ dataplane_ssh_public_key }}"
-          router_external_network: "{{ os_router_external_network | default('public') }}"
-          floating_ip_network: "{{ os_floating_network | default('public') }}"
+        stack_template_path: "{{ stack_template_path }}"
+        stack_parameters: "{{ stack_parameters }}"

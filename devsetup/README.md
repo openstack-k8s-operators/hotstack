@@ -30,10 +30,14 @@ vgextend cinder-volumes /dev/sdc
 
 ## Cloud configuration
 
-### Flavor
+### Flavors
 
 ```shell
-openstack flavor create m1.xxlarge --public --vcpus 8 --ram 32768 --disk 160
+openstack flavor create hotstack.small   --public --vcpus  1 --ram  2048 --disk  20
+openstack flavor create hotstack.medium  --public --vcpus  2 --ram  4096 --disk  40
+openstack flavor create hotstack.large   --public --vcpus  4 --ram  8192 --disk  80
+openstack flavor create hotstack.xlarge  --public --vcpus  8 --ram 16384 --disk 160
+openstack flavor create hotstack.xxlarge --public --vcpus 12 --ram 32768 --disk 160
 ```
 
 ### Project
