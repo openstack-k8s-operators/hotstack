@@ -8,10 +8,6 @@ This directory contains tools for for building an IPXE image.
 sudo dnf install -y gcc xorriso make qemu-img syslinux-nonlinux xz-devel guestfs-tools
 ```
 
-## Before building the image, clone ipxe source code to this directory
-
-git clone https://github.com/ipxe/ipxe.git
-
 ## To build the images
 
 ```bash
@@ -25,7 +21,8 @@ The BIOS mode image is required for openshift installer because it refuses to in
 BIOS mode image:
 
 ```bash
-openstack image create --progress --disk-format raw  --file ipxe-boot-usb.raw ipxe-boot-usb
+openstack image create --progress --disk-format raw  --file ipxe-boot-usb.raw ipxe-boot-usb \
+  --property hw_machine_type=q35
 ```
 
 UEFI mode image:

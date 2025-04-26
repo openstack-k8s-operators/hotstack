@@ -6,15 +6,19 @@ IPXE_SRCDIR=ipxe/src
 # Override this to use a different image
 IPXE_ISO=bin/ipxe.iso
 IPXE_USB=bin/ipxe.usb
-
-
 IPXE_EFI=bin-x86_64-efi/ipxe.efi
 
 ipxe_iso_path=$(IPXE_SRCDIR)/$(IPXE_ISO)
 ipxe_usb_path=$(IPXE_SRCDIR)/$(IPXE_USB)
 ipxe_efi_path=$(IPXE_SRCDIR)/$(IPXE_EFI)
 
-all: ipxe-boot.iso ipxe-boot-usb.raw
+all: efi.img ipxe-boot.iso ipxe-boot-usb.raw
+
+efi.img: $(ipxe_efi_path)
+	tmp_dir=$$(mktemp -d) && \
+	mkdir -p $$tmp_dir/EFI/BOOT && \
+	cp $(ipxe_efi_path) $$tmp_dir/EFI/BOOT/BOOTX64.EFI && \
+	virt-make-fs --format=raw --type=fat $$tmp_dir efi.img
 
 ipxe-boot.iso: $(ipxe_iso_path) efi.img
 	tmp_dir=$$(mktemp -d) && \
@@ -34,12 +38,6 @@ ipxe-boot.iso: $(ipxe_iso_path) efi.img
 		-isohybrid-gpt-basdat \
 		-o ipxe-boot.img \
 		$$tmp_dir
-
-efi.img: $(ipxe_efi_path)
-	tmp_dir=$$(mktemp -d) && \
-	mkdir -p $$tmp_dir/EFI/BOOT && \
-	cp $(ipxe_efi_path) $$tmp_dir/EFI/BOOT/BOOTX64.EFI && \
-	virt-make-fs --format=raw --type=fat $$tmp_dir efi.img
 
 ipxe-boot-usb.raw: $(ipxe_usb_path)
 	cp $(ipxe_usb_path) ipxe-boot-usb.raw
@@ -71,9 +69,10 @@ $(repo_config_path): $(IPXE_SRCDIR)
 $(repo_config_path)/%.h: ipxe-config/%.h | $(repo_config_path)
 	cp $< $@
 
+# Pin iPXE until https://github.com/ipxe/ipxe/issues/1454 is resolved
 $(IPXE_SRCDIR):
-	git submodule init
-	git submodule update
+	git clone https://github.com/ipxe/ipxe.git
+	cd ipxe && git checkout -b test-branch b65f67d443d213bbaf9d7859649f25920e6d6785
 
 # We disable -Werror so we can build older commits with newer gcc
 # Don't use parallel make, as this races to initialise config headers in a
@@ -87,10 +86,6 @@ $(ipxe_efi_path): $(repo_config_headers) script.ipxe
 $(ipxe_usb_path): $(repo_config_headers) script.ipxe
 	$(MAKE) -C ipxe/src NO_WERROR=1 EMBED=../../script.ipxe $(IPXE_USB)
 
-
 clean:
 	rm -rf ipxe
-	mkdir ipxe
-	rm -f ipxe-boot.img ipxe-boot.qcow2 ipxe-boot-usb.raw
-
-.PHONY: $(ipxe_iso_path) clean
+	rm -f ipxe-boot.img ipxe-boot.qcow2 ipxe-boot-usb.raw efi.img
