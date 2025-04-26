@@ -21,8 +21,7 @@ The BIOS mode image is required for openshift installer because it refuses to in
 BIOS mode image:
 
 ```bash
-openstack image create --progress --disk-format raw  --file ipxe-boot-usb.raw ipxe-boot-usb \
-  --property hw_machine_type=q35
+openstack image create --progress --disk-format raw  --file ipxe-boot-usb.raw ipxe-boot-usb
 ```
 
 UEFI mode image:
