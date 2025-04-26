@@ -1193,13 +1193,17 @@ outputs:
         - hostname: master-0
           role: master
           interfaces:
-            - name: ens3
+            - name: eth0
               macAddress: {get_attr: [master0-machine-port, mac_address]}
+            - name: eth1
+              macAddress: {get_attr: [master0-ctlplane-trunk-parent-port, mac_address]}
+            - name: eth2
+              macAddress: {get_attr: [master0-ironic-port, mac_address]}
           rootDeviceHints:
             deviceName: /dev/vda
           networkConfig:
             interfaces:
-              - name: ens3
+              - name: eth0
                 type: ethernet
                 state: up
                 mac-address: {get_attr: [master0-machine-port, mac_address]}
@@ -1208,22 +1212,28 @@ outputs:
                   dhcp: true
                 ipv6:
                   enabled: false
-              - name: ens4
+              - name: eth1
                 type: ethernet
                 state: down
-              - name: ens5
+                mac-address: {get_attr: [master0-ctlplane-trunk-parent-port, mac_address]}
+              - name: eth2
                 type: ethernet
                 state: down
+                mac-address: {get_attr: [master0-ironic-port, mac_address]}
         - hostname: master-1
           role: master
           interfaces:
-            - name: ens3
+            - name: eth0
               macAddress: {get_attr: [master1-machine-port, mac_address]}
+            - name: eth1
+              macAddress: {get_attr: [master1-ctlplane-trunk-parent-port, mac_address]}
+            - name: eth2
+              macAddress: {get_attr: [master1-ironic-port, mac_address]}
           rootDeviceHints:
             deviceName: /dev/vda
           networkConfig:
             interfaces:
-              - name: ens3
+              - name: eth0
                 type: ethernet
                 state: up
                 mac-address: {get_attr: [master1-machine-port, mac_address]}
@@ -1232,22 +1242,28 @@ outputs:
                   dhcp: true
                 ipv6:
                   enabled: false
-              - name: ens4
+              - name: eth1
                 type: ethernet
                 state: down
-              - name: ens5
+                mac-address: {get_attr: [master1-ctlplane-trunk-parent-port, mac_address]}
+              - name: eth2
                 type: ethernet
                 state: down
+                mac-address: {get_attr: [master1-ironic-port, mac_address]}
         - hostname: master-2
           role: master
           interfaces:
-            - name: ens3
+            - name: eth0
               macAddress: {get_attr: [master2-machine-port, mac_address]}
+            - name: eth1
+              macAddress: {get_attr: [master2-ctlplane-trunk-parent-port, mac_address]}
+            - name: eth2
+              macAddress: {get_attr: [master2-ironic-port, mac_address]}
           rootDeviceHints:
             deviceName: /dev/vda
           networkConfig:
             interfaces:
-              - name: ens3
+              - name: eth0
                 type: ethernet
                 state: up
                 mac-address: {get_attr: [master2-machine-port, mac_address]}
@@ -1256,12 +1272,14 @@ outputs:
                   dhcp: true
                 ipv6:
                   enabled: false
-              - name: ens4
+              - name: eth1
                 type: ethernet
                 state: down
-              - name: ens5
+                mac-address: {get_attr: [master2-ctlplane-trunk-parent-port, mac_address]}
+              - name: eth2
                 type: ethernet
                 state: down
+                mac-address: {get_attr: [master2-ironic-port, mac_address]}
 
   controller_ansible_host:
     description: >

@@ -28,7 +28,7 @@ spec:
       mtu: 1442
       state: up
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "20"
     - name: storage
       type: vlan
@@ -44,7 +44,7 @@ spec:
       mtu: 1442
       state: up
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "21"
     - name: tenant
       type: vlan
@@ -60,11 +60,11 @@ spec:
       mtu: 1442
       state: up
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "22"
     - description: ctlplane interface
       mtu: 1442
-      name: ens4
+      name: eth1
       state: up
       type: ethernet
     - name: ospbr
@@ -75,7 +75,7 @@ spec:
           stp:
             enabled: false
         port:
-        - name: ens4
+        - name: eth1
           vlan: {}
       ipv4:
         address:
@@ -95,7 +95,7 @@ spec:
           stp:
             enabled: false
         port:
-        - name: ens5
+        - name: eth2
       ipv4:
         address:
         - ip: 172.20.1.10

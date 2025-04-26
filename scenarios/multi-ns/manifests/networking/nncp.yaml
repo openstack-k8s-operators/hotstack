@@ -23,7 +23,7 @@ spec:
       mtu: 1442
       state: up
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "10"
     - name: internalapi-a
       type: vlan
@@ -39,7 +39,7 @@ spec:
       mtu: 1442
       state: up
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "20"
     - name: storage-a
       type: vlan
@@ -55,7 +55,7 @@ spec:
       mtu: 1442
       state: up
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "21"
     - name: tenant-a
       type: vlan
@@ -71,7 +71,7 @@ spec:
       mtu: 1442
       state: up
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "22"
     route-rules:
       config: []
@@ -105,7 +105,7 @@ spec:
       mtu: 1442
       state: up
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "11"
     - name: internalapi-b
       type: vlan
@@ -121,7 +121,7 @@ spec:
       mtu: 1442
       state: up
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "30"
     - name: storage-b
       type: vlan
@@ -137,7 +137,7 @@ spec:
       mtu: 1442
       state: up
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "31"
     - name: tenant-b
       type: vlan
@@ -153,7 +153,7 @@ spec:
       mtu: 1442
       state: up
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "32"
     route-rules:
       config: []
