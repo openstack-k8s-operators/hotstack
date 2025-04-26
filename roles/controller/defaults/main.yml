@@ -1,3 +1,4 @@
+---
 controller_ansible_host:
 ansible_inventory:
 ssh_key_dir: /home/zuul/.ssh

@@ -1,0 +1,15 @@
+---
+extends: default
+
+rules:
+  indentation:
+    spaces: 2
+    indent-sequences: whatever
+  line-length:
+    max: 150
+    level: warning
+  truthy:
+    allowed-values:
+      - 'true'
+      - 'false'
+    check-keys: true

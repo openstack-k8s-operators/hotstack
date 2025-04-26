@@ -1,3 +1,4 @@
+---
 heat_template_version: rocky
 
 description: >
@@ -266,11 +267,11 @@ resources:
         - ip_address: 192.168.32.254
 
   controller-floating-ip:
-     depends_on: machine-net-router-interface
-     type: OS::Neutron::FloatingIP
-     properties:
-       floating_network: {get_param: floating_ip_network}
-       port_id: {get_resource: controller-machine-port}
+    depends_on: machine-net-router-interface
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: {get_param: floating_ip_network}
+      port_id: {get_resource: controller-machine-port}
 
   controller:
     type: OS::Nova::Server
@@ -412,7 +413,7 @@ resources:
         - port: {get_resource: master0-machine-port}
         - port: {get_attr: [master0-trunk0, port_id]}
 
-# Computes
+  # Computes
   dataplane_users:
     type: OS::Heat::CloudConfig
     properties:

@@ -17,12 +17,12 @@
 - name: "Stage: {{ item.name }} :: Run command"
   when: item.cmd is defined
   ansible.builtin.shell:
-     cmd: "{{ item.cmd }}"
+    cmd: "{{ item.cmd }}"
 
 - name: "Stage: {{ item.name }} :: Run script"
   when: item.script is defined
   ansible.builtin.shell:
-     cmd: "{{ item.script }}"
+    cmd: "{{ item.script }}"
 
 - name: "Stage: {{ item.name }} :: Apply static manifest"
   when: item.manifest is defined
