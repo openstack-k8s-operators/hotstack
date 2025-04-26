@@ -100,7 +100,7 @@ stages:
       - "oc wait -n openstack-operators service infra-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
       - "oc wait -n openstack-operators service openstack-baremetal-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
       - "oc wait -n openstack-operators service openstack-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
-      - "sleep 120" # The {.status.loadBalancer} wait conditions are not working?
+      - "sleep 120"  # The {.status.loadBalancer} wait conditions are not working?
 
   - name: NodeNetworkConfigurationPolicy (nncp)
     manifest: manifests/control-plane/networking/nncp.yaml

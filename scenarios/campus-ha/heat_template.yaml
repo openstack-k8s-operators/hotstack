@@ -1,3 +1,4 @@
+---
 heat_template_version: rocky
 
 description: >
@@ -366,11 +367,11 @@ resources:
       fixed_ips: [{ip_address: 192.168.32.3}]
 
   controller-floating-ip:
-     depends_on: machine-net-a-router-interface
-     type: OS::Neutron::FloatingIP
-     properties:
-       floating_network: {get_param: floating_ip_network}
-       port_id: {get_resource: controller-machine-port}
+    depends_on: machine-net-a-router-interface
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: {get_param: floating_ip_network}
+      port_id: {get_resource: controller-machine-port}
 
   controller:
     type: OS::Nova::Server

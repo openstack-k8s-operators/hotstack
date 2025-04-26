@@ -1,3 +1,4 @@
+---
 os_cloud: default
 os_keypair: default
 os_floating_network: public
