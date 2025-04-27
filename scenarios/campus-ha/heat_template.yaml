@@ -216,7 +216,7 @@ resources:
         users:
           - default
           - name: zuul
-            geco: "Zuul user"
+            gecos: "Zuul user"
             sudo: ALL=(ALL) NOPASSWD:ALL
             ssh_authorized_keys:
               - {get_param: controller_ssh_pub_key}

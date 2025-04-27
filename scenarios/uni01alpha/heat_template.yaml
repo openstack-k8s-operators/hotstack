@@ -200,7 +200,7 @@ resources:
         users:
           - default
           - name: zuul
-            geco: "Zuul user"
+            gecos: "Zuul user"
             sudo: ALL=(ALL) NOPASSWD:ALL
             ssh_authorized_keys:
               - {get_param: controller_ssh_pub_key}
@@ -750,7 +750,7 @@ resources:
         users:
           - default
           - name: cloud-admin
-            geco: "Cloud Admin User"
+            gecos: "Cloud Admin User"
             sudo: ALL=(ALL) NOPASSWD:ALL
             ssh_authorized_keys:
               - {get_param: dataplane_ssh_pub_key}
