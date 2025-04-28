@@ -53,6 +53,10 @@ parameters:
   floating_ip_network:
     type: string
     default: public
+  net_value_specs:
+    type: json
+    defautl: {}
+
 
 resources:
   #

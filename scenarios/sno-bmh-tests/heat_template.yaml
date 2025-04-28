@@ -42,6 +42,10 @@ parameters:
   floating_ip_network:
     type: string
     default: public
+  net_value_specs:
+    type: json
+    default: {}
+
 
 resources:
   #
@@ -51,56 +55,67 @@ resources:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   ctlplane-net-0:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   ctlplane-net-1:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   ctlplane-net-2:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   ctlplane-net-3:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   internal-api-net:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   storage-net:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   tenant-net:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   provisioning-net-0:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   provisioning-net-1:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   provisioning-net-2:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   #
   # Subnets
