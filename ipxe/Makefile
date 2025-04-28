@@ -69,10 +69,8 @@ $(repo_config_path): $(IPXE_SRCDIR)
 $(repo_config_path)/%.h: ipxe-config/%.h | $(repo_config_path)
 	cp $< $@
 
-# Pin iPXE until https://github.com/ipxe/ipxe/issues/1454 is resolved
 $(IPXE_SRCDIR):
 	git clone https://github.com/ipxe/ipxe.git
-	cd ipxe && git checkout -b test-branch b65f67d443d213bbaf9d7859649f25920e6d6785
 
 # We disable -Werror so we can build older commits with newer gcc
 # Don't use parallel make, as this races to initialise config headers in a
