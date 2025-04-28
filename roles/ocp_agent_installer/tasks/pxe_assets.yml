@@ -34,6 +34,14 @@
     regexp: "^(kernel.*)$"
     line: '\1 console=ttyS0'
 
+- name: Disable net.ifnames
+  when: disable_net_ifnames | bool
+  ansible.builtin.lineinfile:
+    path: "{{ cluster_dir }}/boot-artifacts/agent.x86_64.ipxe"
+    backrefs: true
+    regexp: "^(kernel.*)$"
+    line: '\1 net.ifnames=0'
+
 - name: Copy boot-artifacts to the web server - (boot_artifacts_dir)
   become: true
   ansible.builtin.copy:

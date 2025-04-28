@@ -853,11 +853,13 @@ outputs:
         - hostname: master-0
           role: master
           interfaces:
-            - name: ens3
+            - name: eth0
               macAddress: {get_attr: [master0-machine-port, mac_address]}
+            - name: eth0
+              macAddress: {get_attr: [master0-ctlplane-trunk-parent-port, mac_address]}
           networkConfig:
             interfaces:
-              - name: ens3
+              - name: eth0
                 type: ethernet
                 state: up
                 mac-address: {get_attr: [master0-machine-port, mac_address]}
@@ -866,12 +868,10 @@ outputs:
                   dhcp: true
                 ipv6:
                   enabled: false
-              - name: ens4
+              - name: eth1
                 type: ethernet
                 state: down
-              - name: ens5
-                type: ethernet
-                state: down
+                mac-address: {get_attr: [master0-ctlplane-trunk-parent-port, mac_address]}
   controller_ansible_host:
     description: >
       Controller ansible host, this struct can be passed to the ansible.builtin.add_host module

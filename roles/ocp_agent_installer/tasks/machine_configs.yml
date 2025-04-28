@@ -14,6 +14,23 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+- name: Disable net.ifnames
+  when: disable_net_ifnames | bool
+  block:
+    - name: Template butane config for net.ifnames
+      vars:
+        role: "{{ item }}"
+      ansible.builtin.template:
+        src: disable-netifnames.bu.j2
+        dest: "{{ butane_dir }}/90-{{ item }}-disable-netifnames.bu"
+      loop: "{{ net_ifnames_roles }}"
+    - name: Generate MachineConfig for iscsi
+      ansible.builtin.command:
+        cmd: >-
+          butane {{ butane_dir }}/90-{{ item }}-disable-netifnames.bu
+          -o {{ machine_configs_dir }}/90-{{ item }}-disable-netifnames.yaml
+      loop: "{{ net_ifnames_roles }}"
+
 - name: Enable iscsi
   when: enable_iscsi | bool
   block:

@@ -28,7 +28,7 @@ spec:
       state: up
       type: vlan
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "20"
     - description: storage vlan interface
       ipv4:
@@ -44,7 +44,7 @@ spec:
       state: up
       type: vlan
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "21"
     - description: tenant vlan interface
       ipv4:
@@ -60,11 +60,11 @@ spec:
       state: up
       type: vlan
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "22"
     - description: ctlplane interface
       mtu: 1442
-      name: ens4
+      name: eth1
       state: up
       type: ethernet
     - bridge:
@@ -72,7 +72,7 @@ spec:
           stp:
             enabled: false
         port:
-        - name: ens4
+        - name: eth1
           vlan: {}
       description: linux-bridge over ctlplane interface
       ipv4:
@@ -124,7 +124,7 @@ spec:
       state: up
       type: vlan
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "20"
     - description: storage vlan interface
       ipv4:
@@ -140,7 +140,7 @@ spec:
       state: up
       type: vlan
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "21"
     - description: tenant vlan interface
       ipv4:
@@ -156,11 +156,11 @@ spec:
       state: up
       type: vlan
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "22"
     - description: ctlplane interface
       mtu: 1442
-      name: ens4
+      name: eth1
       state: up
       type: ethernet
     - bridge:
@@ -168,7 +168,7 @@ spec:
           stp:
             enabled: false
         port:
-        - name: ens4
+        - name: eth1
           vlan: {}
       description: linux-bridge over ctlplane interface
       ipv4:
@@ -220,7 +220,7 @@ spec:
       state: up
       type: vlan
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "20"
     - description: storage vlan interface
       ipv4:
@@ -236,7 +236,7 @@ spec:
       state: up
       type: vlan
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "21"
     - description: tenant vlan interface
       ipv4:
@@ -252,11 +252,11 @@ spec:
       state: up
       type: vlan
       vlan:
-        base-iface: ens4
+        base-iface: eth1
         id: "22"
     - description: ctlplane interface
       mtu: 1442
-      name: ens4
+      name: eth1
       state: up
       type: ethernet
     - bridge:
@@ -264,7 +264,7 @@ spec:
           stp:
             enabled: false
         port:
-        - name: ens4
+        - name: eth1
           vlan: {}
       description: linux-bridge over ctlplane interface
       ipv4:

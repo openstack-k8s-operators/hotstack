@@ -19,6 +19,10 @@ dns_servers:
 pull_secret_file: ~/pull-secret.txt
 
 ovn_k8s_gateway_config_host_routing: true
+net_ifnames_roles:
+  - master
+  - worker
+
 enable_iscsi: true
 iscsi_roles:
   - worker

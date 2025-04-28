@@ -48,6 +48,9 @@ multipath_roles:
 enable_iscsi: false
 iscsi_roles:
   - master
+disable_net_ifnames: true
+net_ifnames_roles:
+  - master
 
 # OVN Configuration
 enable_ovn_k8s_overrides: true
