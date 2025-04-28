@@ -42,6 +42,10 @@ parameters:
   floating_ip_network:
     type: string
     default: public
+  net_value_specs:
+    type: json
+    default: {}
+
 
 resources:
   #
@@ -51,63 +55,75 @@ resources:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   ctlplane-net-native-vlan:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   # Namespace A Networks
   ctlplane-net-a:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   internal-api-net-a:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   storage-net-a:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   tenant-net-a:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   provisioning-net-a:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   # Namespace B Networks
   ctlplane-net-b:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   internal-api-net-b:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   storage-net-b:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   tenant-net-b:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   provisioning-net-b:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
 
   #
   # Subnets
