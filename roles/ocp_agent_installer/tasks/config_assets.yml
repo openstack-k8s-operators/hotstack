@@ -25,3 +25,15 @@
           'ovn_k8s_config.yaml'
         ] | ansible.builtin.path_join
       }}
+
+- name: Copy Etcd customization
+  when: enable_etcd_hardware_speed_slow | bool
+  ansible.builtin.copy:
+    src: etcd-config.yaml
+    dest: >-
+      {{
+        [
+          config_assets_dir,
+          '95-etcd_config.yaml'
+        ] | ansible.builtin.path_join
+      }}
