@@ -871,7 +871,7 @@ outputs:
           interfaces:
             - name: eth0
               macAddress: {get_attr: [master0-machine-port, mac_address]}
-            - name: eth0
+            - name: eth1
               macAddress: {get_attr: [master0-ctlplane-trunk-parent-port, mac_address]}
           networkConfig:
             interfaces:
