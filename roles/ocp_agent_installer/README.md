@@ -6,6 +6,7 @@
   * Enable multipath
   * Stand up cinder-volumes LVM
   * Extra config for OVN-Kubernetes
+  * Etcd hardware speed (Slower)
 
 Example:
 
