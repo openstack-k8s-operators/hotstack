@@ -5,6 +5,21 @@ single node Openstack is to use [packstack](https://github.com/redhat-openstack/
 
 [RDO](https://www.rdoproject.org) provides instructions standing up a cloud on CentOS Stream 9 [here](https://www.rdoproject.org/deploy/packstack/)
 
+## Install the repos, packstack and tools
+
+```bash
+sudo dnf config-manager --enable crb
+sudo dnf install -y centos-release-openstack-dalmatian.noarch
+sudo dnf install -y openstack-packstack crudini
+```
+
+## Enable IP forwarding
+
+```bash
+echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.d/98-ip-forwarding.conf
+sudo sysctl -p /etc/sysctl.d/98-ip-forwarding.conf
+```
+
 ## Suggested Packastack customizations
 
 ```bash
@@ -13,6 +28,7 @@ crudini --set packstack.answers general CONFIG_SERVICE_WORKERS 8
 crudini --set packstack.answers general CONFIG_HEAT_INSTALL y
 crudini --set packstack.answers general CONFIG_CEILOMETER_INSTALL n
 crudini --set packstack.answers general CONFIG_AODH_INSTALL n
+crudini --set packstack.answers general CONFIG_NOVA_LIBVIRT_VIRT_TYPE kvm
 ```
 
 ### cinder-volumes
@@ -28,6 +44,16 @@ vgcreate cinder-volumes /dev/sdb
 vgextend cinder-volumes /dev/sdc
 ```
 
+```bash
+crudini --set packstack.answers general CONFIG_CINDER_VOLUMES_CREATE n
+```
+
+## Run the installer
+
+```bash
+sudo packstack --answer-file=packstack.answers
+```
+
 ## Cloud configuration
 
 ### Flavors
@@ -38,6 +64,7 @@ openstack flavor create hotstack.medium  --public --vcpus  2 --ram  4096 --disk 
 openstack flavor create hotstack.large   --public --vcpus  4 --ram  8192 --disk  80
 openstack flavor create hotstack.xlarge  --public --vcpus  8 --ram 16384 --disk 160
 openstack flavor create hotstack.xxlarge --public --vcpus 12 --ram 32768 --disk 160
+openstack flavor create hotstack.xxxlarge --public --vcpus 12 --ram 49152 --disk 160
 ```
 
 ### Project

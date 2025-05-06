@@ -5,7 +5,7 @@ This directory contains tools for for building an IPXE image.
 ## To install the required build dependencies on a Fedora system:
 
 ```bash
-sudo dnf install -y gcc xorriso make qemu-img syslinux-nonlinux xz-devel guestfs-tools
+sudo dnf install -y gcc xorriso make qemu-img syslinux-nonlinux xz-devel guestfs-tools perl
 ```
 
 ## To build the images
