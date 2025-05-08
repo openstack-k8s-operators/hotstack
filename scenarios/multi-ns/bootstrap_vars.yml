@@ -51,7 +51,7 @@ stack_parameters:
     flavor: hotstack.small
   ocp_master_params:
     image: ipxe-boot-usb
-    flavor: hotstack.xxlarge
+    flavor: hotstack.xxxlarge
   bmh_params:
     image: CentOS-Stream-GenericCloud-9
     cd_image: sushy-tools-blank-image
