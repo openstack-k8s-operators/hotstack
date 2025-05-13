@@ -7,6 +7,7 @@ metadata:
 spec:
   workflow:
     - stepName: multi-thread-testing
+      storageClass: lvms-local-storage
       tempestconfRun:
         overrides: |
           auth.tempest_roles swiftoperator

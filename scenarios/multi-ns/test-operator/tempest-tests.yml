@@ -14,10 +14,10 @@ spec:
       memory: 6Gi
   networkAttachments:
     - ctlplane
-  storageClass: lvms-local-storage
   privileged: true
   workflow:
     - stepName: multi-thread-testing-smoke
+      storageClass: lvms-local-storage
       resources:
         requests:
           cpu: 2000m
@@ -88,10 +88,10 @@ spec:
       memory: 6Gi
   networkAttachments:
     - ctlplane
-  storageClass: lvms-local-storage
   privileged: true
   workflow:
     - stepName: multi-thread-testing-smoke
+      storageClass: lvms-local-storage
       resources:
         requests:
           cpu: 2000m

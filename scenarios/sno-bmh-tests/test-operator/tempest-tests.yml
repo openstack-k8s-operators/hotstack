@@ -7,10 +7,10 @@ metadata:
 spec:
   networkAttachments:
     - ctlplane
-  storageClass: lvms-local-storage
   privileged: true
   workflow:
     - stepName: multi-thread-testing
+      storageClass: lvms-local-storage
       tempestconfRun:
         create: true
         overrides: |
