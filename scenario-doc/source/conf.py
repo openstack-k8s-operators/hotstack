@@ -34,4 +34,4 @@ html_theme_options = {
     "globaltoc_maxdepth": 3,
 }
 
-html_static_path = ["_static"]
+# html_static_path = ["_static"]
