@@ -67,6 +67,6 @@ sudo dnf install -y gcc xorriso make qemu-img syslinux-nonlinux xz-devel guestfs
 
 2. Upload the BIOS image to Glance:
    ```shell
-   openstack image create --disk-format=raw --file ipxe-boot-usb.raw ipxe-usb-image \
+   openstack image create --disk-format=raw --file ipxe-boot-usb.raw ipxe-boot-usb \
      --property os_shutdown_timeout=5
    ```
