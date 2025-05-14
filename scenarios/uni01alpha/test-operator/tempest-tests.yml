@@ -14,7 +14,6 @@ spec:
       memory: 6Gi
   networkAttachments:
     - ctlplane
-  storageClass: lvms-local-storage
   privileged: true
   tempestRun:
     extraImages:
@@ -30,6 +29,7 @@ spec:
           vcpus: 1
   workflow:
     - stepName: multi-thread-testing
+      storageClass: lvms-local-storage
       resources:
         requests:
           cpu: 2000m
@@ -193,6 +193,7 @@ spec:
           ^whitebox_neutron_tempest_plugin.tests.scenario.test_ovn_fdb.*
           ^whitebox_neutron_tempest_plugin.tests.scenario.test_api_server.*
     - stepName: single-thread-testing
+      storageClass: lvms-local-storage
       resources:
         requests:
           cpu: 2000m
@@ -263,6 +264,7 @@ spec:
         excludeList: |
           ^whitebox_neutron_tempest_plugin.*n
     - stepName: ironic-scenario-testing
+      storageClass: lvms-local-storage
       resources:
         requests:
           cpu: 2000m
@@ -293,6 +295,7 @@ spec:
           ^ironic_tempest_plugin.tests.scenario.test_baremetal_basic_ops.BaremetalBasicOps.test_baremetal_server_ops_partition_image
 
     - stepName: ironic-api-testing
+      storageClass: lvms-local-storage
       resources:
         requests:
           cpu: 2000m

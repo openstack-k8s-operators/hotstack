@@ -7,10 +7,10 @@ metadata:
 spec:
   networkAttachments:
     - ctlplane
-  storageClass: lvms-local-storage
   privileged: true
   workflow:
     - stepName: ironic-scenario-testing
+      storageClass: lvms-local-storage
       tempestconfRun:
         create: true
         overrides: |
@@ -35,6 +35,7 @@ spec:
           ^ironic_tempest_plugin.tests.scenario.test_baremetal_basic_ops.BaremetalBasicOps.test_baremetal_server_ops_partition_image
 
     - stepName: ironic-api-testing
+      storageClass: lvms-local-storage
       tempestconfRun:
         create: true
         overrides: |
