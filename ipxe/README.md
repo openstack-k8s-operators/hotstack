@@ -57,22 +57,16 @@ sudo dnf install -y gcc xorriso make qemu-img syslinux-nonlinux xz-devel guestfs
 
 ### Uploading the iPXE Images to Glance
 
-1. Upload the EFI image to Glance:
+1. Upload the ISO image to Glance:
    ```shell
-   openstack image create --disk-format=raw --container-format=bare --file efi.img ipxe-efi-image \
+   openstack image create --disk-format=iso --file ipxe-boot.img ipxe-iso-image \
      --property os_shutdown_timeout=5 \
      --property hw_firmware_type=uefi \
      --property hw_machine_type=q35
    ```
-2. Upload the ISO image to Glance:
+
+2. Upload the BIOS image to Glance:
    ```shell
-   openstack image create --disk-format=iso --container-format=bare --file ipxe-boot.iso ipxe-iso-image \
-     --property os_shutdown_timeout=5 \
-     --property hw_firmware_type=uefi \
-     --property hw_machine_type=q35
-   ```
-3. Upload the USB raw image to Glance:
-   ```shell
-   openstack image create --disk-format=raw --container-format=bare --file ipxe-boot-usb.raw ipxe-usb-image \
+   openstack image create --disk-format=raw --file ipxe-boot-usb.raw ipxe-usb-image \
      --property os_shutdown_timeout=5
    ```
