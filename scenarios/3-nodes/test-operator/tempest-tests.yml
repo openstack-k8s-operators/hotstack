@@ -8,7 +8,15 @@ spec:
   workflow:
     - stepName: multi-thread-testing
       storageClass: lvms-local-storage
+      resources:
+        requests:
+          cpu: 2000m
+          memory: 2Gi
+        limits:
+          cpu: 8000m
+          memory: 6Gi
       tempestconfRun:
+        create: true
         overrides: |
           auth.tempest_roles swiftoperator
           barbican_tempest.enable_multiple_secret_stores true
