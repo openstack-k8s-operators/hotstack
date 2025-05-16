@@ -78,7 +78,7 @@
         dest: "{{ butane_dir }}/92-{{ item }}-lv-cinder-volumes.bu"
       loop: "{{ cinder_volume_roles }}"
 
-    - name: Generate MachineConfig for multipaht
+    - name: Generate MachineConfig for multipath
       ansible.builtin.command:
         cmd: >-
           butane {{ butane_dir }}/92-{{ item }}-lv-cinder-volumes.bu

@@ -108,7 +108,7 @@ stages:
   - name: MetalLB - L2Advertisement and IPAddressPool
     manifest: manifests/control-plane/networking/metallb.yaml
 
-  - name: Netcofnig
+  - name: Netconfig
     manifest: manifests/control-plane/networking/netconfig.yaml
 
   - name: OpenstackControlPlane

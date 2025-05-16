@@ -134,7 +134,7 @@ stages:
   - name: MetalLB - L2Advertisement and IPAddressPool
     manifest: manifests/networking/metallb.yaml
 
-  - name: Netcofnig
+  - name: Netconfig
     manifest: manifests/networking/netconfig.yaml
 
   - name: OpenstackControlPlane secrets
