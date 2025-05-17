@@ -46,10 +46,10 @@ The `script` stage type executes a script. This allows for more complex logic an
   script: |
     set -xe -o pipefail
     oc project openstack
-    
+
     oc rsh openstackclient openstack volume type show multiattach &>/dev/null || \
       oc rsh openstackclient openstack volume type create multiattach
-    
+
     oc rsh openstackclient openstack volume type set --property multiattach="<is> True" multiattach
 ```
 
