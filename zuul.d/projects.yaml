@@ -4,3 +4,4 @@
     github-check:
       jobs:
         - noop
+        - hotstack-pre-commit
