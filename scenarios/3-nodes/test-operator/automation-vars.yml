@@ -1,6 +1,5 @@
 ---
- stages:
-
+stages:
   - name: Set a multiattach volume type and create it if needed
     script: |
       set -xe -o pipefail
