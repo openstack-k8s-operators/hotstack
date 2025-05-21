@@ -1,0 +1,6 @@
+---
+- project:
+    github-check:
+      name: openstack-k8s-operators/hotstack
+      jobs:
+        - noop
