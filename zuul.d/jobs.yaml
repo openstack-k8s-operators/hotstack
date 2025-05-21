@@ -1,0 +1,12 @@
+---
+# TBD
+# - job:
+#     name: hotstack-multinode
+#     parent: base-hotstack
+#     timeout: 10800
+#     attempts: 1
+#     nodeset: centos-stream-9-hotstack-multinode
+#     required-projects:
+#       - openstack-k8s-operators/ci-framework
+#     roles:
+#       - zuul: github.com/openstack-k8s-operators/hotstack
