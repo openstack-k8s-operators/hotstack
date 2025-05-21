@@ -1,0 +1,8 @@
+---
+- job:
+    name: hotstack-pre-commit
+    nodeset: hotstack-pod
+    description: |
+      Run pre-commit in pod
+    timeout: 300
+    run: ci/playbooks/pre-commit.yml
