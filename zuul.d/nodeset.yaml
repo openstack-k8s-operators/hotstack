@@ -1,0 +1,8 @@
+---
+- nodeset:
+    name: centos-stream-9-hotstack-multinode
+    nodes:
+      - name: hotstack
+        label: cloud-centos-9-stream-tripleo-medium
+      - name: worker
+        label: cloud-centos-9-stream-tripleo

@@ -4,3 +4,7 @@
       name: openstack-k8s-operators/hotstack
       jobs:
         - noop
+        - cifmw-pod-ansible-test
+        - cifmw-pod-pre-commit
+# TBD
+#        - hotstack-multinode
