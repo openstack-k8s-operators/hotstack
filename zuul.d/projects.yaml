@@ -3,5 +3,4 @@
     name: openstack-k8s-operators/hotstack
     github-check:
       jobs:
-        - noop
         - hotstack-pre-commit
