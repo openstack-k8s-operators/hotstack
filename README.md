@@ -101,7 +101,7 @@ openstack application credential create --unrestricted hotstack-app-credential
 
 Example cloud-secrets variable file:
 ```
-cloud_secrets:
+hotstack_cloud_secrets:
   auth_url: http://10.1.200.21:5000
   application_credential_id: <APP_CREDENTIAL_ID>
   application_credential_secret: <SECRET>
