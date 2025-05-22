@@ -1,0 +1,6 @@
+---
+- nodeset:
+    name: hotstack-pod
+    nodes:
+      - name: container
+        label: pod-centos-9-stream

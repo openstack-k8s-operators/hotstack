@@ -1,0 +1,27 @@
+---
+- name: Run light checks in pod
+  hosts: all
+  vars:
+    pre_commit_venv_dir: "{{ ansible_user_dir }}/pre-commit-virtualenv"
+  tasks:
+    - name: Install packages
+      become: true
+      ansible.builtin.dnf:
+        name:
+          - python3
+          - python3-pip
+        state: present
+    - name: Pip install
+      ansible.builtin.pip:
+        virtualenv: "{{ pre_commit_venv_dir }}"
+        name:
+          - pre-commit
+          - ansible-core
+    - name: Install ansible galaxy dependencies
+      ansible.builtin.shell: |
+        {{ pre_commit_venv_dir }}/bin/ansible-galaxy collection install community.crypto
+        {{ pre_commit_venv_dir }}/bin/ansible-galaxy collection install openstack.cloud
+    - name: Run pre-commit
+      ansible.builtin.command:
+        chdir: "{{ zuul.project.src_dir }}"
+        cmd: "{{ pre_commit_venv_dir }}/bin/pre-commit run --all"

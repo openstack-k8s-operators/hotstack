@@ -1,0 +1,6 @@
+---
+- project:
+    name: openstack-k8s-operators/hotstack
+    github-check:
+      jobs:
+        - hotstack-pre-commit
