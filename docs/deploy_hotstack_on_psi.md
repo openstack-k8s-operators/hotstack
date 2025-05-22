@@ -128,7 +128,7 @@ cd hotstack
     * An example structure for the `cloud-secret.yaml` file, when using an application credential, is as follows:
 
       ```yaml
-      cloud_secrets:
+      hotstack_cloud_secrets:
         auth_url: http://<keystone_ip>:5000 # Replace with your Keystone endpoint
         application_credential_id: <APP_CREDENTIAL_ID>
         application_credential_secret: <SECRET>
@@ -182,7 +182,7 @@ This file is the primary mechanism for customizing the parameters of a specific 
 >*Note: It is recommended that we should create a copy of bootstrap_vars.yml into home folder of client machine and use that file for edit. Example create a copy `~/bootstrap_vars_overrides.yml`* and it should be passed instead of bootstrap_vars.yml inside scenarios subfolders.
 
 Key parameters within `bootstrap_vars.yml` that typically require review or modification include:
-- **os_cloud**: Typically specifies the name of the OpenStack cloud configuration to use from your `cloud_secrets.yaml` file. This allows Ansible to authenticate and interact with the correct OpenStack environment where the resources will be deployed. For example, if your `cloud_secrets.yaml` looks like this:
+- **os_cloud**: Typically specifies the name of the OpenStack cloud configuration to use from your `clouds.yaml` file. This allows Ansible to authenticate and interact with the correct OpenStack environment where the resources will be deployed. For example, if your `clouds.yaml` looks like this:
 
   ```yaml
   clouds:
