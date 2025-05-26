@@ -19,8 +19,6 @@
     that:
       - controller_ansible_host is defined
       - controller_ansible_host | length > 0
-      - ansible_inventory is defined
-      - ansible_inventory | length > 0
 
 - name: Add controller-0 to the Ansible inventory
   ansible.builtin.add_host: "{{ controller_ansible_host }}"
@@ -40,6 +38,9 @@
         mode: '0755'
 
     - name: Write ansible inventory to file on controller-0
+      when:
+        - ansible_inventory is defined
+        - ansible_inventory | length > 0
       ansible.builtin.copy:
         content: "{{ ansible_inventory | to_nice_yaml(indent=2) }}"
         dest: >-
