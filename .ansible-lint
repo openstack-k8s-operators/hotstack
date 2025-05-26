@@ -13,4 +13,5 @@ skip_list:
   - no-changed-when
   - name[template]
   - command-instead-of-shell
+  - command-instead-of-module
   - risky-file-permissions
