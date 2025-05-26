@@ -1,6 +1,6 @@
 ---
 controller_ansible_host:
-ansible_inventory:
+ansible_inventory: {}
 ssh_key_dir: /home/zuul/.ssh
 cloud_config_dir: /home/zuul/.config/openstack
 data_dir: /home/zuul/data
