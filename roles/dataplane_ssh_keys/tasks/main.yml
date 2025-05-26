@@ -51,4 +51,4 @@
       dataplane_ssh_public_key: "{{ _dataplane_ssh_key.public_key }}"
       nova_migration_ssh_private_key_file: "{{ _nova_migration_ssh_key.filename }}"
       nova_migration_ssh_public_key: "{{ _nova_migration_ssh_key.public_key }}"
-    dest: "dataplane_ssh_keys_vars.yaml"
+    dest: "{{ hotstack_work_dir }}/dataplane_ssh_keys_vars.yaml"

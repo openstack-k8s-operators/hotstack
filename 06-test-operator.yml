@@ -10,11 +10,11 @@
         name: stack_outputs
 
     - name: Add controller-0 to the Ansible inventory
-      ansible.builtin.add_host: "{{ stack_outputs.controller_ansible_host }}"
+      ansible.builtin.add_host: "{{ hotstack_work_dir | default(playbook_dir) }}/{{ stack_outputs.controller_ansible_host }}"
 
     - name: Load dataplane SSH keys vars
       ansible.builtin.include_vars:
-        file: dataplane_ssh_keys_vars.yaml
+        file: "{{ hotstack_work_dir | default(playbook_dir) }}/dataplane_ssh_keys_vars.yaml"
 
     - name: Load automation vars
       ansible.builtin.include_vars:

@@ -21,7 +21,7 @@
   pre_tasks:
     - name: Load stack output vars from file
       ansible.builtin.include_vars:
-        file: "{{ stack_name }}-outputs.yaml"
+        file: "{{ hotstack_work_dir | default(playbook_dir) }}/{{ stack_name }}-outputs.yaml"
         name: stack_outputs
 
     - name: Add controller-0 to the Ansible inventory
