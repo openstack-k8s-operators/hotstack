@@ -73,4 +73,4 @@
 - name: Store stack outputs in file
   ansible.builtin.copy:
     content: "{{ stack_outputs | to_nice_yaml(indent=2) }}"
-    dest: "{{ stack_name }}-outputs.yaml"
+    dest: "{{ hotstack_work_dir }}/{{ stack_name }}-outputs.yaml"
