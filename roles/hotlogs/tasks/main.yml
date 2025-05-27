@@ -23,9 +23,10 @@
 # TODO: Use ansible.posix.synchronize module instead
 - name: Collect hotstack data
   ansible.builtin.command:
-    cmd: >
+    cmd: >-
       rsync -avh
-        zuul@{{ controller_floating_ip }}:/{{ item }}
-          {{ hotlog_dir }}/{{ item | ansible.builtin.basename | ansible.builtin.regex_replace('^[.]', '') }}
-      || /bin/true
+        zuul@{{ controller_floating_ip }}:{{ item }}
+          {{ hotlog_dir }}/{{ item | ansible.builtin.basename | ansible.builtin.regex_replace('^[.]', '') }} || /bin/true
   loop: "{{ hotlog_collect_paths }}"
+  register: _rsync_results
+  failed_when: _rsync_results.rc not in [0, 23]
