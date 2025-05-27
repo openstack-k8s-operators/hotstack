@@ -6,16 +6,8 @@ clouds:
 {% if hotstack_cloud_secrets.ca_cert_path is defined %}
     cacert: {{ hotstack_cloud_secrets.ca_cert_path }}
 {% endif %}
-    auth_type: {{ hotstack_cloud_secrets.auth_type }}
+    auth_type: v3applicationcredential
     auth:
       auth_url: {{ hotstack_cloud_secrets.auth_url }}
-{% if hotstack_cloud_secrets.auth_type == 'v3password' %}
-      username: {{ hotstack_cloud_secrets.username }}
-      password: {{ hotstack_cloud_secrets.password }}
-      project_name: {{ hotstack_cloud_secrets.project_name }}
-      user_domain_name: {{ hotstack_cloud_secrets.user_domain_name }}
-      project_domain_name: {{ hotstack_cloud_secrets.project_domain_name }}
-{% elif hotstack_cloud_secrets.auth_type == 'v3applicationcredential' %}
       application_credential_id: {{ hotstack_cloud_secrets.application_credential_id }}
       application_credential_secret: {{ hotstack_cloud_secrets.application_credential_secret }}
-{% endif %}

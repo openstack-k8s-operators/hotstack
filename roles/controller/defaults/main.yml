@@ -5,14 +5,9 @@ ssh_key_dir: /home/zuul/.ssh
 cloud_config_dir: /home/zuul/.config/openstack
 data_dir: /home/zuul/data
 hotstack_cloud_secrets:
-  auth_url: http://10.1.200.21:5000
-  username:
-  password:
-  project_name: Default
-  user_domain_name: Default
-  project_domain_name: Default
-  application_credential_id: 38400981a36d4ba0adae425daccb354b
-  application_credential_secret: 5wXr9q9ZY7rjo0pvEQ6otjm586hUgQ322XNlJon6v7GTJXp9L_sV1tQkCQgJ3no1aN89xd-SbsgM7hQ3LhvT-w
+  auth_url: http://cloud.example.com:5000
+  application_credential_id: app_credential_id
+  application_credential_secret: app_credential_secret
   region_name: RegionOne
   interface: public
   identity_api_version: 3
