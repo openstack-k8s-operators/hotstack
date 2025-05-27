@@ -35,7 +35,7 @@ parameters:
     default:
       image: hotstack-controller
       flavor: hotstack.small
-  ocp_masters_params:
+  ocp_master_params:
     type: json
     default:
       image: ipxe-boot-usb
@@ -468,8 +468,8 @@ resources:
   master0:
     type: OS::Nova::Server
     properties:
-      image: {get_param: [ocp_masters_params, image]}
-      flavor: {get_param: [ocp_masters_params, flavor]}
+      image: {get_param: [ocp_master_params, image]}
+      flavor: {get_param: [ocp_master_params, flavor]}
       block_device_mapping_v2:
         - boot_index: -1
           device_type: disk
@@ -548,8 +548,8 @@ resources:
   master1:
     type: OS::Nova::Server
     properties:
-      image: {get_param: [ocp_masters_params, image]}
-      flavor: {get_param: [ocp_masters_params, flavor]}
+      image: {get_param: [ocp_master_params, image]}
+      flavor: {get_param: [ocp_master_params, flavor]}
       block_device_mapping_v2:
         - boot_index: -1
           device_type: disk
@@ -628,8 +628,8 @@ resources:
   master2:
     type: OS::Nova::Server
     properties:
-      image: {get_param: [ocp_masters_params, image]}
-      flavor: {get_param: [ocp_masters_params, flavor]}
+      image: {get_param: [ocp_master_params, image]}
+      flavor: {get_param: [ocp_master_params, flavor]}
       block_device_mapping_v2:
         - boot_index: -1
           device_type: disk
