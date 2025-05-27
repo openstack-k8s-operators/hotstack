@@ -42,7 +42,6 @@
             ] | ansible.builtin.path_join
           }}
       loop:
-        - automation-vars.yml
         - namespace.yaml
         - deployment.yaml
         - service.yaml
@@ -71,13 +70,7 @@
 
     - name: Load automation vars
       ansible.builtin.include_vars:
-        file: >-
-          {{
-            [
-              _tempdir.path,
-              'automation-vars.yml'
-            ] | ansible.builtin.path_join
-          }}
+        file: automation-vars.yml
         name: automation
 
     - name: Run the hotloop
