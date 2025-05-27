@@ -35,7 +35,7 @@ parameters:
     default:
       image: hotstack-controller
       flavor: hotstack.small
-  ocp_masters_params:
+  ocp_master_params:
     type: json
     default:
       image: ipxe-boot-usb
