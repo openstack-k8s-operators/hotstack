@@ -4,3 +4,8 @@
     nodes:
       - name: container
         label: pod-centos-9-stream
+- nodeset:
+    name: hotstack
+    nodes:
+      - name: hotstack
+        label: cloud-centos-9-stream-tripleo
