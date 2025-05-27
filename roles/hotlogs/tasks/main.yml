@@ -27,4 +27,5 @@
       rsync -avh
         zuul@{{ controller_floating_ip }}:/{{ item }}
           {{ hotlog_dir }}/{{ item | ansible.builtin.basename | ansible.builtin.regex_replace('^[.]', '') }}
+      || /bin/true
   loop: "{{ hotlog_collect_paths }}"
