@@ -26,7 +26,8 @@
     cmd: >-
       rsync -avh
         zuul@{{ controller_floating_ip }}:{{ item }}
-          {{ hotlog_dir }}/{{ item | ansible.builtin.basename | ansible.builtin.regex_replace('^[.]', '') }} || /bin/true
+          {{ hotlog_dir }}/{{ item | ansible.builtin.basename | ansible.builtin.regex_replace('^[.]', '') }}
   loop: "{{ hotlog_collect_paths }}"
   register: _rsync_results
   failed_when: _rsync_results.rc not in [0, 23]
+  ignore_errors: true
