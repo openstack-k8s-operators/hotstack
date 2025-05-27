@@ -5,9 +5,6 @@ description: >
   Heat template to set up infrastructure for openstack-k8s-operators HCI example architecture
 
 parameters:
-  keypair:
-    type: string
-    default: default
   dns_servers:
     type: comma_delimited_list
     default:
@@ -20,21 +17,9 @@ parameters:
     type: string
   dataplane_ssh_pub_key:
     type: string
-  controller_params:
-    type: json
-    default:
-      image: hotstack-controller
-      flavor: hotstack.small
-  ocp_masters_params:
-    type: json
-    default:
-      image: ipxe-boot-usb
-      flavor: hotstack.xxlarge
-  computes_params:
-    type: json
-    default:
-      image: CentOS-Stream-GenericCloud-9
-      flavor: hotstack.large
+  keypair:
+    type: string
+    default: default
   router_external_network:
     type: string
     default: public
@@ -45,6 +30,43 @@ parameters:
     type: json
     default: {}
 
+  controller_params:
+    type: json
+    default:
+      image: hotstack-controller
+      flavor: hotstack.small
+  ocp_masters_params:
+    type: json
+    default:
+      image: ipxe-boot-usb
+      flavor: hotstack.xxlarge
+  ocp_worker_params:
+    type: json
+    default:
+      image: ipxe-boot-usb
+      flavor: hotstack.xxlarge
+  computes_params:
+    type: json
+    default:
+      image: CentOS-Stream-GenericCloud-9
+      flavor: hotstack.large
+  networkers_params:
+    type: json
+    default:
+      image: CentOS-Stream-GenericCloud-9
+      flavor: hotstack.small
+  bmh_params:
+    type: json
+    default:
+      image: CentOS-Stream-GenericCloud-9
+      cd_image: sushy-tools-blank-image
+      flavor: hotstack.medium
+  ironics_params:
+    type: json
+    default:
+      image: CentOS-Stream-GenericCloud-9
+      cd_image: sushy-tools-blank-image
+      flavor: hotstack.medium
 
 resources:
   #
