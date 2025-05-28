@@ -38,9 +38,9 @@ stack_parameters:
   # Ref: https://access.redhat.com/solutions/7059376
   # net_value_specs:
   #   mtu: 1442
-  keypair: "{{ os_keypair | default('default')}}"
-  dns_servers: "{{ dns_servers | default(['8.8.8.8', '8.8.4.4'])}}"
-  ntp_servers: "{{ ntp_servers | default([])}}"
+  keypair: "{{ os_keypair }}"
+  dns_servers: "{{ dns_servers }}"
+  ntp_servers: "{{ ntp_servers }}"
   controller_ssh_pub_key: "{{ controller_ssh_pub_key }}"
   router_external_network: "{{ os_router_external_network | default('public') }}"
   floating_ip_network: "{{ os_floating_network | default('public') }}"
