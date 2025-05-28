@@ -24,14 +24,6 @@
       - controller_ssh_pub_key is defined
       - dataplane_ssh_public_key is defined
 
-- name: Debug Stack parameters
-  ansible.builtin.debug:
-    msg:
-      cloud: "{{ os_cloud }}"
-      name: "{{ stack_name }}"
-      template: "{{ stack_template_path }}"
-      parameters: "{{ stack_parameters }}"
-
 - name: Create stack
   openstack.cloud.stack:
     cloud: "{{ os_cloud }}"
