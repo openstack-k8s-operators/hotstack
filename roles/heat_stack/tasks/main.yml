@@ -38,7 +38,11 @@
     name: "{{ stack_name }}"
     state: present
     template: "{{ stack_template_path }}"
-    parameters: "{{ stack_parameters }}"
+    parameters: >-
+      {{
+        stack_parameters
+        | ansible.builtin.combine({'dataplane_ssh_pub_key': dataplane_ssh_public_key})
+      }}
     wait: false
 
 - name: Wait for stack to complete
