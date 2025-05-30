@@ -105,9 +105,12 @@
       ansible.builtin.file:
         path: "{{ cloud_config_dir }}"
         state: directory
-        mode: '0755'
+        mode: '0750'
+        owner: zuul
+        group: zuul
 
     - name: Template the clouds.yaml
+      no_log: true
       ansible.builtin.template:
         src: clouds.yaml.j2
         dest: >-
@@ -115,6 +118,9 @@
             [cloud_config_dir, 'clouds.yaml']
             | ansible.builtin.path_join
           }}
+        mode: '0640'
+        owner: zuul
+        group: zuul
 
     - name: Write Ironic nodes YAML
       when:

@@ -19,5 +19,5 @@ ingress_domain: apps.ocp.openstack.lab
 redfish_username: admin
 redfish_password: password
 instances_uuids: []
-cloud_config_dir: /home/zuul/.config/openstack
+cloud_config_dir: "/home/zuul/.hotcloud"
 sushy_emulator_manifests: /home/zuul/manifests/sushy_emulator_manifests
