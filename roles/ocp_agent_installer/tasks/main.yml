@@ -70,6 +70,7 @@
     mode: '0644'
 
 - name: Replace pull secret in install-config.yaml
+  no_log: true
   ansible.builtin.replace:
     path: >-
       {{
