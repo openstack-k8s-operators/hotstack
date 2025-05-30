@@ -243,7 +243,7 @@ spec:
               spec:
                 type: LoadBalancer
         preserveJobs: false
-        replicas: 0
+        replicas: 1
       ironicNeutronAgent:
         replicas: 1
       preserveJobs: false
