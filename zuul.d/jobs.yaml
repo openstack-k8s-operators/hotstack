@@ -6,3 +6,39 @@
       Run pre-commit in pod
     timeout: 300
     run: ci/playbooks/pre-commit.yml
+
+- job:
+    name: hotstack-sno-bmh-tests
+    parent: base-hotstack
+    nodeset: hotstack
+    description: |
+      Run hotstack scenario: sno-bmh-tests
+
+      It creates SNO OCP and 3 dataplane nodes. The dataplane nodes are on 3
+      separate provisioning networks.
+
+      bmh0: provisioning-net-0 vmedia, dedicated NIC, DHCP.
+      bmh1: provisioning-net-1 vmedia, dedicated NIC, no-DHCP. (preprovisioningNetworkDataName)
+      bmh2: provisioning-net-2 vmedia, shared NIC, DHCP. (ctlplane net VLAN tagged)
+    timeout: 7200
+    attempts: 1
+    roles:
+      - zuul: github.com/openstack-k8s-operators/hotstack
+    vars:
+      scenario: sno-bmh-tests
+
+- job:
+    name: hotstack-sno-2-bm
+    parent: base-hotstack
+    nodeset: hotstack
+    description: |
+      Run hotstack scenario: sno-2-bm
+
+      4-node infrastructure consisting of a Controller node, an OpenShift
+      Container Platform (OCP) SNO node, and two Ironic nodes.
+    timeout: 5400
+    attempts: 1
+    roles:
+      - zuul: github.com/openstack-k8s-operators/hotstack
+    vars:
+      scenario: sno-2-bm
