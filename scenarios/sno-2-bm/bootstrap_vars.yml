@@ -1,6 +1,5 @@
 ---
 os_cloud: default
-os_keypair: default
 os_floating_network: public
 os_router_external_network: public
 
@@ -38,7 +37,6 @@ stack_parameters:
   # Ref: https://access.redhat.com/solutions/7059376
   # net_value_specs:
   #   mtu: 1442
-  keypair: "{{ os_keypair }}"
   dns_servers: "{{ dns_servers }}"
   ntp_servers: "{{ ntp_servers }}"
   controller_ssh_pub_key: "{{ controller_ssh_pub_key }}"
@@ -50,7 +48,7 @@ stack_parameters:
   ocp_master_params:
     image: ipxe-boot-usb
     flavor: hotstack.xxlarge
-  ironics_params:
+  ironic_params:
     image: CentOS-Stream-GenericCloud-9
     cd_image: sushy-tools-blank-image
     flavor: hotstack.medium
