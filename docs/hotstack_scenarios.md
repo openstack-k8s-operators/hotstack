@@ -9,7 +9,7 @@ Here's a breakdown of the key components:
 
 * This YAML file contains the primary configuration variables for the scenario. It defines parameters for the OpenStack deployment, OpenShift installation, networking, and other infrastructure settings.
 * **Key elements typically include:**
-    * `os_cloud`, `os_keypair`, `os_floating_network`, `os_router_external_network`:  OpenStack cloud and networking settings.
+    * `os_cloud`, `os_floating_network`, `os_router_external_network`:  OpenStack cloud and networking settings.
     * `controller_ssh_pub_key`:  SSH public key for the controller node.
     * `scenario`, `scenario_dir`, `stack_template_path`, `automation_vars_file`: Paths and names related to the scenario's files.
     * `openstack_operators_image`, `openstack_operator_channel`, `openshift_version`:  OpenStack operator and OpenShift versions.

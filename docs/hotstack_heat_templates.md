@@ -43,11 +43,6 @@ This section explains the typical parameters defined in a Heat Orchestration Tem
    - **Type**: string
    - **Description**: The public SSH key for the dataplane nodes.
 
-- **keypair**
-   - **Type**: string
-   - **Default**: "default"
-   - **Description**: The name of the keypair to use for SSH access.
-
 - **controller_params**
    - **Type**: json
    - **Default**:
@@ -273,7 +268,7 @@ This section explains the resources defined in a Heat Orchestration Template (HO
 
 - **ironicX**
    - **Type**: OS::Nova::Server
-   - **Purpose**: Creates Nova server for the Ironic node using the specified flavor and block devices. The block devices include a root disk and a CD-ROM device, with the root disk using the image specified in the `image` property of the `ironics_params` dictionary and the CD-ROM device using the image specified in the `cd_image` property of the `ironics_params` dictionary. The server connect to the respective networks through the Neutron port.
+   - **Purpose**: Creates Nova server for the Ironic node using the specified flavor and block devices. The block devices include a root disk and a CD-ROM device, with the root disk using the image specified in the `image` property of the `ironic_params` dictionary and the CD-ROM device using the image specified in the `cd_image` property of the `ironic_params` dictionary. The server connect to the respective networks through the Neutron port.
 
 ## Heat Template Output Values in HotStack Scenarios
 

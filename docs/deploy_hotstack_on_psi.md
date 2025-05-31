@@ -212,15 +212,6 @@ Key parameters within `bootstrap_vars.yml` that typically require review or modi
 
   Then, the HotStack Ansible playbooks will use the credentials and endpoint information defined under `my_openstack_cloud_1` to deploy the Heat stack and other resources. This makes it easy to switch between different OpenStack environments without changing the playbooks themselves, just the `os_cloud` variable and ensuring the corresponding `clouds.yaml` entry exists.
 
-- **os_keypair**: This variable must be set to the public SSH key that will be injected into the deployed instances (e.g., controller node, OCP nodes). This key will be used for accessing these instances after deployment. To create a ssh keypair:
-  ```bash
-  openstack keypair create my_openstack_cloud_1_key --public-key ~/.ssh/id_rsa.pub
-  ```
-  Then it should be referenced inside the `bootstrap_vars.yml`
-
-  ```
-  os_keypair: my_openstack_cloud_1_key
-  ```
 - **pull_secret_file**: Specifies the path to the Red Hat pull secret file (typically a TXT file). This pull secret is mandatory for downloading container images for OpenShift Container Platform and other Red Hat products from authenticated registries. To get pull_secret  https://console.redhat.com/openshift/install/metal/multi
   It is recommended to copy pull_secret into client machine home directory (~/)
 
@@ -232,7 +223,6 @@ Key parameters within `bootstrap_vars.yml` that typically require review or modi
 
 ```yaml
 os_cloud: <openstack>
-os_keypair: <openstack>
 os_floating_network: <network-id>
 os_router_external_network: <network-id>
 
