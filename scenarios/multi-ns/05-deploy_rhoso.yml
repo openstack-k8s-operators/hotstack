@@ -34,11 +34,11 @@
     - name: Load automation vars for common
       ansible.builtin.include_vars:
         file: "{{ automation_vars_file }}"
-        name: automation
+        name: automation_vars
 
   roles:
     - role: hotloop
       delegate_to: controller-0
       vars:
         work_dir: "{{ scenario_dir }}/{{ scenario }}"
-        automation: "{{ automation }}"
+        automation: "{{ automation_vars }}"
