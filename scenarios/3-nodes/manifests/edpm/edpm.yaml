@@ -69,6 +69,7 @@ spec:
         edpm_nodes_validation_validate_controllers_icmp: false
         edpm_nodes_validation_validate_gateway_icmp: false
         edpm_sshd_allowed_ranges:
+        - 192.168.32.254/32
         - 192.168.122.0/24
         edpm_sshd_configure_firewall: true
         gather_facts: false

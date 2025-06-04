@@ -81,6 +81,7 @@ spec:
           {% endfor %}
         edpm_sshd_allowed_ranges:
         - 192.168.122.0/24
+        - 192.168.32.254/32
         gather_facts: false
         neutron_physical_bridge_name: br-ex
         neutron_public_interface_name: enp4s0
@@ -211,6 +212,7 @@ spec:
           {% endfor %}
         edpm_sshd_allowed_ranges:
         - 192.168.123.0/24
+        - 192.168.32.254/32
         gather_facts: false
         neutron_physical_bridge_name: br-ex
         neutron_public_interface_name: enp4s0

@@ -76,6 +76,7 @@ spec:
                   routes: {{ lookup('vars', networks_lower[network] ~ '_host_routes') }}
           {% endfor %}
         edpm_sshd_allowed_ranges:
+        - 192.168.32.254/32
         - 192.168.122.0/24
         - 192.168.123.0/24
         - 192.168.124.0/24
