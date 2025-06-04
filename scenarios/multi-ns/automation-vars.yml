@@ -281,16 +281,6 @@ stages:
         --for jsonpath='{.status.provisioning.state}=available'
         --timeout=300s
 
-  - name: OpenStackProvisionServer resources
-    manifest: manifests/dataplanes/provisioningservers.yaml
-    wait_conditions:
-      - >-
-        oc wait -n openstack-a openstackprovisionservers.baremetal.openstack.org
-        openstack-a-edpm-provisionserver --for condition=Ready --timeout=10m
-      - >-
-        oc wait -n openstack-b openstackprovisionservers.baremetal.openstack.org
-        openstack-b-edpm-provisionserver --for condition=Ready --timeout=10m
-
   - name: Dataplane nodeset
     manifest: manifests/dataplanes/nodesets.yaml
     wait_conditions:
