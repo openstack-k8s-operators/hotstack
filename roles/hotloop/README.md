@@ -147,6 +147,7 @@ stages:
 
   roles:
     - role: hotloop
+      run_once: true
       delegate_to: controller-0
       vars:
         work_dir: "{{ scenario_dir }}/{{ scenario }}"

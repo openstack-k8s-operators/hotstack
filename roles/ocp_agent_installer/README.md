@@ -12,6 +12,7 @@ Example:
 
 ```yaml
 - role: ocp_agent_installer
+  run_once: true
   delegate_to: controller-0
   vars:
     install_config: "{{ stack_outputs.ocp_install_config }}"

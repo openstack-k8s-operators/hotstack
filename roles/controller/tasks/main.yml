@@ -24,6 +24,7 @@
   ansible.builtin.add_host: "{{ controller_ansible_host }}"
 
 - name: Block delegated to controller-0
+  run_once: true
   delegate_to: "{{ controller_ansible_host.name }}"
   block:
     - name: Wait for controller-0 to be ready
