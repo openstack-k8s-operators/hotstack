@@ -22,3 +22,38 @@ automation:
 
 openstack_operators_image: quay.io/openstack-k8s-operators/openstack-operator-index:latest
 openstack_operator_channel: alpha
+
+openstack_operators_leadear_election_tune_script: |
+  CSV_NAME=$(oc -n openstack-operators get csv \
+              -l operators.coreos.com/openstack-operator.openstack-operators= -o json \
+              | jq -r '.items[0].metadata.name')
+  LEASE_DURATION_INDEX=$(oc -n openstack-operators get csv ${CSV_NAME} -o json | \
+    jq '.spec.install.spec.deployments[0].spec.template.spec.containers[0].env |
+        map(.name == "LEASE_DURATION") |
+        index(true)')
+  RENEW_DEADLINE_INDEX=$(oc -n openstack-operators get csv ${CSV_NAME} -o json | \
+    jq '.spec.install.spec.deployments[0].spec.template.spec.containers[0].env |
+        map(.name == "RENEW_DEADLINE") |
+        index(true)')
+  RETRY_PERIOD_INDEX=$(oc -n openstack-operators get csv ${CSV_NAME} -o json | \
+    jq '.spec.install.spec.deployments[0].spec.template.spec.containers[0].env |
+        map(.name == "RETRY_PERIOD") |
+        index(true)')
+
+  # TODO: Older versions don't have these env vars
+  if [ "$LEASE_DURATION_INDEX" == "null" ]; then
+    exit 0
+  fi
+
+  oc -n openstack-operators patch csv ${CSV_NAME} --type=json \
+    -p="[
+          {'op': 'replace',
+          'path': '/spec/install/spec/deployments/0/spec/template/spec/containers/0/env/$LEASE_DURATION_INDEX/value',
+          'value': '50'},
+          {'op': 'replace',
+          'path': '/spec/install/spec/deployments/0/spec/template/spec/containers/0/env/$RENEW_DEADLINE_INDEX/value',
+          'value': '30'},
+          {'op': 'replace',
+          'path': '/spec/install/spec/deployments/0/spec/template/spec/containers/0/env/$RETRY_PERIOD_INDEX/value',
+          'value': '10'}
+        ]"
