@@ -60,3 +60,8 @@ ovn_k8s_gateway_config_host_routing: false
 # Etcd - set to true for controlPlaneHardwareSpeed = Slower
 # https://www.redhat.com/en/blog/introducing-selectable-profiles-for-etcd
 enable_etcd_hardware_speed_slow: true
+
+enable_image_content_source_policy: false
+# To enable ImageContentSourcePolicy (ICSP), set this variable to contain the value
+# for the ICSP spec's repositoryDigestMirrors field.
+image_content_source_policy_mirrors: []

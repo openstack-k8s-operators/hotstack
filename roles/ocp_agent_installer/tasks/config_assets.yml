@@ -37,3 +37,15 @@
           '95-etcd_config.yaml'
         ] | ansible.builtin.path_join
       }}
+
+- name: Template ImageContentSourcePolicy customization
+  when: enable_image_content_source_policy | bool
+  ansible.builtin.template:
+    src: image-content-source-policy.yaml.j2
+    dest: >-
+      {{
+        [
+          config_assets_dir,
+          '95-image-content-source-policy.yaml'
+        ] | ansible.builtin.path_join
+      }}

@@ -63,39 +63,10 @@ stages:
       - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=300s"
 
   - name: Patch openstack leader election tuneables
-    script: |
-      LEASE_DURATION_INDEX=$(oc -n openstack-operators get csv/openstack-operator.v0.3.0 -o json | \
-        jq '.spec.install.spec.deployments[0].spec.template.spec.containers[0].env |
-            map(.name == "LEASE_DURATION") |
-            index(true)')
-      RENEW_DEADLINE_INDEX=$(oc -n openstack-operators get csv/openstack-operator.v0.3.0 -o json | \
-        jq '.spec.install.spec.deployments[0].spec.template.spec.containers[0].env |
-            map(.name == "RENEW_DEADLINE") |
-            index(true)')
-      RETRY_PERIOD_INDEX=$(oc -n openstack-operators get csv/openstack-operator.v0.3.0 -o json | \
-        jq '.spec.install.spec.deployments[0].spec.template.spec.containers[0].env |
-            map(.name == "RETRY_PERIOD") |
-            index(true)')
-
-      oc -n openstack-operators patch csv/openstack-operator.v0.3.0 --type=json \
-        -p="[
-              {'op': 'replace',
-              'path': '/spec/install/spec/deployments/0/spec/template/spec/containers/0/env/$LEASE_DURATION_INDEX/value',
-              'value': '50'},
-              {'op': 'replace',
-              'path': '/spec/install/spec/deployments/0/spec/template/spec/containers/0/env/$RENEW_DEADLINE_INDEX/value',
-              'value': '30'},
-              {'op': 'replace',
-              'path': '/spec/install/spec/deployments/0/spec/template/spec/containers/0/env/$RETRY_PERIOD_INDEX/value',
-              'value': '10'}
-            ]"
+    script: "{{ openstack_operators_leadear_election_tune_script }}"
     wait_conditions:
+      # TODO(hjensas): Add proper wait conditions here.
       - sleep 10
-      - >-
-        oc wait -n openstack-operators leases.coordination.k8s.io c569355b.openstack.org
-        --for jsonpath='{.spec.leaseDurationSeconds}'=50
-        --timeout=2m
-      - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=5m"
 
   - name: NodeNetworkConfigurationPolicy (nncp)
     manifest: manifests/control-plane/networking/nncp.yaml
