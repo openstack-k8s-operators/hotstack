@@ -134,9 +134,19 @@ stages:
       - path: spec.nodeTemplate.ansible.ansibleVars.edpm_bootstrap_command
         value: >-
           {{
-            lookup('ansible.builtin.file',
-                   '{{ scenario_dir }}/common/scripts/upstream_edpm_bootstrap_command.sh')
+            lookup('ansible.builtin.file', hotstack_edpm_bootstrap_command)
           }}
+      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
+        value: "{{ edpm_podman_registries }}"
+        where:
+          - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
+            value: null
+      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_container_registry_logins
+        value: "{{ edpm_container_registry_logins }}"
+        where:
+          - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
+            value: null
+
     wait_conditions:
       - >-
         oc -n openstack wait openstackdataplanenodeset openstack-edpm
