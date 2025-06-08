@@ -22,3 +22,6 @@ automation:
 
 openstack_operators_image: quay.io/openstack-k8s-operators/openstack-operator-index:latest
 openstack_operator_channel: alpha
+
+edpm_podman_registries: []
+edpm_container_registry_logins: {}
