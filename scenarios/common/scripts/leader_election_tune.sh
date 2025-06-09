@@ -1,0 +1,49 @@
+#!/bin/bash
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+CSV_NAME=$(oc -n openstack-operators get csv \
+            -l operators.coreos.com/openstack-operator.openstack-operators= -o json \
+            | jq -r '.items[0].metadata.name')
+LEASE_DURATION_INDEX=$(oc -n openstack-operators get csv "${CSV_NAME}" -o json | \
+  jq '.spec.install.spec.deployments[0].spec.template.spec.containers[0].env |
+      map(.name == "LEASE_DURATION") |
+      index(true)')
+RENEW_DEADLINE_INDEX=$(oc -n openstack-operators get csv "${CSV_NAME}" -o json | \
+  jq '.spec.install.spec.deployments[0].spec.template.spec.containers[0].env |
+      map(.name == "RENEW_DEADLINE") |
+      index(true)')
+RETRY_PERIOD_INDEX=$(oc -n openstack-operators get csv "${CSV_NAME}" -o json | \
+  jq '.spec.install.spec.deployments[0].spec.template.spec.containers[0].env |
+      map(.name == "RETRY_PERIOD") |
+      index(true)')
+
+# Older versions don't have these env vars, just exit without error
+if [ "$LEASE_DURATION_INDEX" == "null" ]; then
+  exit 0
+fi
+
+oc -n openstack-operators patch csv "${CSV_NAME}" --type=json \
+  -p="[
+        {'op': 'replace',
+        'path': '/spec/install/spec/deployments/0/spec/template/spec/containers/0/env/$LEASE_DURATION_INDEX/value',
+        'value': '50'},
+        {'op': 'replace',
+        'path': '/spec/install/spec/deployments/0/spec/template/spec/containers/0/env/$RENEW_DEADLINE_INDEX/value',
+        'value': '30'},
+        {'op': 'replace',
+        'path': '/spec/install/spec/deployments/0/spec/template/spec/containers/0/env/$RETRY_PERIOD_INDEX/value',
+        'value': '10'}
+      ]"
