@@ -108,6 +108,13 @@ stages:
 
   - name: EDPM nodeset (pre-ceph)
     manifest: manifests/edpm-pre-ceph/nodeset/nodeset.yaml
+    patches:
+      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_bootstrap_command
+        value: >-
+          {{
+            lookup('ansible.builtin.file',
+                   '{{ scenario_dir }}/common/scripts/upstream_edpm_bootstrap_command.sh')
+          }}
     wait_conditions:
       - >-
         oc -n openstack wait openstackdataplanenodeset openstack-edpm

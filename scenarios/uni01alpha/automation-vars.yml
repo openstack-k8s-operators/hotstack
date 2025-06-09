@@ -162,9 +162,23 @@ stages:
 
   - name: Networker deployment
     manifest: manifests/networker/networker.yaml
+    patches:
+      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_bootstrap_command
+        value: >-
+          {{
+            lookup('ansible.builtin.file',
+                   '{{ scenario_dir }}/common/scripts/upstream_edpm_bootstrap_command.sh')
+          }}
 
   - name: EDPM deployment
     manifest: manifests/dataplane.yaml
+    patches:
+      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_bootstrap_command
+        value: >-
+          {{
+            lookup('ansible.builtin.file',
+                   '{{ scenario_dir }}/common/scripts/upstream_edpm_bootstrap_command.sh')
+          }}
 
   - name: Wait for deployments (Networker and EDPM)
     wait_conditions:
