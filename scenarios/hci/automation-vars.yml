@@ -34,7 +34,7 @@ stages:
       - "oc wait -n openshift-nmstate deployments/nmstate-operator --for condition=Available --timeout=300s"
       - >-
         oc wait -n openstack-operators csv -l operators.coreos.com/openstack-operator.openstack-operators=
-        --for jsonpath='{.status.phase}=Succeeded' --timeout=300s"
+        --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
 
   - name: Patch openstack leader election tuneables
     script: >-
