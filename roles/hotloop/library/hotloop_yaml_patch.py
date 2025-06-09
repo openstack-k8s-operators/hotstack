@@ -168,17 +168,17 @@ def is_path_in_yaml(data, path, return_value=False):
         try:
             value = _data[_array_ref_to_idx(last_part)]
         except IndexError:
-            return False
+            return False if return_value is False else None
     else:
         try:
             value = _data[last_part]
         except KeyError:
-            return False
+            return False if return_value is False else None
 
     return value if return_value else True
 
 
-def is_where_conditions_in_document(data, where):
+def is_where_conditions_in_doc(data, where):
     """Check if a document matches a list of conditions.
 
     This function is designed to verify if a given YAML document matches a
@@ -193,9 +193,10 @@ def is_where_conditions_in_document(data, where):
     """
     for condition in where:
         path_parts = condition["path"].split(".")
-        if not is_path_in_yaml(data, path_parts):
-            return False
-        if is_path_in_yaml(data, path_parts, return_value=True) != condition["value"]:
+        value = condition.get("value", None)
+        # if not is_path_in_yaml(data, path_parts):
+        #    return False
+        if is_path_in_yaml(data, path_parts, return_value=True) != value:
             return False
 
     return True
@@ -287,19 +288,29 @@ def run_module():
             raise ValueError(_msg)
 
     where_results = list()
+    already_set = list()
     try:
         parts = path.split(".")
         docs = list(open_and_load_yaml(file))
-        for _idx, _ in enumerate(docs):
-            where_results.append(is_where_conditions_in_document(docs[_idx], where))
 
-            if where_results[_idx] is False:
-                continue
+        for _idx, _ in enumerate(docs):
+            where_results.append(is_where_conditions_in_doc(docs[_idx], where))
 
             if not is_path_in_yaml(docs[_idx], parts[:-1]):
                 continue
 
-            changed = _replace(docs[_idx], parts, value)
+            is_already_set = (
+                is_path_in_yaml(docs[_idx], parts, return_value=True) == value
+            )
+            already_set.append(is_already_set)
+
+            # Ignore where results if already set
+            if is_already_set:
+                where_results[_idx] = True
+                continue
+
+            if is_already_set is False and where_results[_idx] is True:
+                changed = _replace(docs[_idx], parts, value)
 
         if changed:
             write_yaml_to_file(file, docs)
@@ -313,14 +324,6 @@ def run_module():
                 "{file}. Where results: {where_results}".format(
                     where=where, file=file, where_results=where_results
                 )
-            )
-            result["msg"] = "No changes made"
-            module.fail_json(**result)
-
-        if changed is False:
-            result["error"] = (
-                "Error replacing value, {path} not in YAML "
-                "{file}".format(path=path, file=file)
             )
             result["msg"] = "No changes made"
             module.fail_json(**result)
