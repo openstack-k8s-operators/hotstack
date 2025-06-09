@@ -192,11 +192,9 @@ def is_where_conditions_in_doc(data, where):
         YAML document.
     """
     for condition in where:
-        path_parts = condition["path"].split(".")
+        parts = condition["path"].split(".")
         value = condition.get("value", None)
-        # if not is_path_in_yaml(data, path_parts):
-        #    return False
-        if is_path_in_yaml(data, path_parts, return_value=True) != value:
+        if is_path_in_yaml(data, parts, return_value=True) != value:
             return False
 
     return True
@@ -279,13 +277,10 @@ def run_module():
     for item in where:
         if not isinstance(item, dict):
             raise ValueError(f"where {where} is not a list of dicts")
-        _msg = str()
-        if "path" not in item:
-            _msg = "where {where} must contain a `path` key"
-        if "value" not in item:
-            _msg += f" and a `value` key"
-        if _msg:
-            raise ValueError(_msg)
+        if "path" not in item or "value" not in item:
+            raise ValueError(
+                f"where {where} must contain a `path` key and a `value` key"
+            )
 
     where_results = list()
     already_set = list()
