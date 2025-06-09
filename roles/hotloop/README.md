@@ -23,6 +23,22 @@ Schema for a stage item is:
   * **Currently only used for operator image and channel, extensive usage discurraged.**
   * If both a static and dynamic manifest is defined in the same stage, the
     static one is applied first - then the dynamic (Jinja2) manifest is applied
+    and patches are applied to both manifest and j2_manifest.
+* `patches`: (list) List of YAML patches to apply to `manifests` and/or `j2_manifests`.
+  * Each patch must define the `path` and the `value` to replace at the path.
+  * Jinja2 manifests are templated first, then patches are applied.
+  * The value in the patch replaces the current value, e.g. **no** merge.
+  * Patches are applied to all YAML documents in the file where the path exist.
+  * An error is reised if no YAML document in the manifest file has the path
+    specified in the patch.
+  * Example patch:
+    ```yaml
+    patches:
+      - path: "spec.dns.template.options.[0].values"
+        value:
+          - 192.168.32.250
+          - 192.168.32.251
+    ```
 * `wait_conditions` (list) A list of commands to run after applying the
   manifest, i.e `oc wait --for <condition>`
 

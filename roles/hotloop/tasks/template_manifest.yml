@@ -25,6 +25,7 @@
       }}
     state: directory
     mode: '0755'
+
 - name: "Stage: {{ item.name }} :: Template manifest"
   ansible.builtin.template:
     src: >-
@@ -42,6 +43,25 @@
           item.j2_manifest | ansible.builtin.basename | ansible.builtin.splitext | first
         ] | ansible.builtin.path_join
       }}
+
+- name: "Stage: {{ item.name }} :: Apply patches"
+  when: item.patches is defined
+  hotloop_yaml_patch:
+    file: >-
+      {{
+        [
+          manifests_dir,
+          item.j2_manifest | dirname | ansible.builtin.basename,
+          item.j2_manifest | ansible.builtin.basename
+        ] | ansible.builtin.path_join
+      }}
+    path: "{{ __patch.path }}"
+    value: "{{ __patch.value }}"
+  loop: "{{ item.patches }}"
+  loop_control:
+    label: "{{ __patch.path }}"
+    loop_var: __patch
+
 - name: "Stage: {{ item.name }} :: Apply dynamic manifest (Jinja2)"
   ansible.builtin.command:
     chdir: "{{ manifests_dir }}"
