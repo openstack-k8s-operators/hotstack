@@ -28,23 +28,13 @@ cat << EOF > /root/.config/containers/policy.json
 }
 EOF
 
-# TODO(hjensas): This uses upstream for packages, must switch to downstream.
-pushd /var/tmp
-
-curl -sL https://github.com/openstack-k8s-operators/repo-setup/archive/refs/heads/main.tar.gz | tar -xz
-
-pushd repo-setup-main
-
-python3 -m venv ./venv
-PBR_VERSION=0.0.0 ./venv/bin/pip install ./
-
-# This is required for FIPS enabled until trunk.rdoproject.org
-# is not being served from a centos7 host, tracked by
-# https://issues.redhat.com/browse/RHOSZUUL-1517
-update-crypto-policies --set FIPS:NO-ENFORCE-EMS
-
-./venv/bin/repo-setup current-podified -b antelope
-
+# root CA
+pushd /etc/pki/ca-trust/source/anchors/
+curl -Lk -o hotstack-ca.pem {{ hotstack_install_ca_url }}
+update-ca-trust
 popd
 
-rm -rf repo-setup-main
+# install rhos-release repos
+curl -Lk -o rhos-release.rpm {{ hotstack_rhos_release_rpm }}
+dnf --nogpgcheck install -y rhos-release.rpm
+rhos-release {{ hotstack_rhos_release_args }}
