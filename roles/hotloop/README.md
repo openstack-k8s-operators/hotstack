@@ -13,6 +13,8 @@ vars.
 Schema for a stage item is:
 * `name`: (string) A name for the stage, used in task names for UI purpose
   only.
+* `documentation`: (string) A multi-line string providing a explanation of
+  what the stage does.
 * `cmd`: (string) A command to run for the stage.
 * `script`: (string) A shell script to run for the stage.
   * If commands must run after applying manifests, use a separate stage.
@@ -26,18 +28,30 @@ Schema for a stage item is:
     and patches are applied to both manifest and j2_manifest.
 * `patches`: (list) List of YAML patches to apply to `manifests` and/or `j2_manifests`.
   * Each patch must define the `path` and the `value` to replace at the path.
+    * `path`: The location in the YAML data for replacement.
+    * `value`: The new value to replace the existing one.
+  * A patch can optionally include a list of `where` conditions.
+    * Each `where` condition requires:
+      * `path`: The specific location within the YAML data to evaluate.
+      * `value`: The value to compare against at the specified path.
   * Jinja2 manifests are templated first, then patches are applied.
-  * The value in the patch replaces the current value, e.g. **no** merge.
-  * Patches are applied to all YAML documents in the file where the path exist.
-  * An error is reised if no YAML document in the manifest file has the path
-    specified in the patch.
-  * Example patch:
+  * The `value` replaces the current value, no merge.
+  * Patches apply to all YAML documents in the file with the specified path.
+  * An error is raised if no YAML document in the file has the specified path.
+
+  **Example patch:**
+
     ```yaml
     patches:
       - path: "spec.dns.template.options.[0].values"
         value:
           - 192.168.32.250
           - 192.168.32.251
+        where:
+          - path: kind
+            value: OpenStackControlPlane
+          - path: metadata.namespace
+            value: openstack-b
     ```
 * `wait_conditions` (list) A list of commands to run after applying the
   manifest, i.e `oc wait --for <condition>`
