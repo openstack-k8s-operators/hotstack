@@ -18,7 +18,8 @@ datplane containers will be pulled from the brew container registries.
     - [Set image reference for openstack-operators CatalogSource](#set-image-reference-for-openstack-operators-catalogsource)
     - [Set EDPM container registries](#set-edpm-container-registries)
     - [Set EDPM container registry logins](#set-edpm-container-registry-logins)
-    - [Set hotstack EDPM bootstrap command variable](#set-hotstack-edpm-bootstrap-command-variable)
+    - [Set hotstack EDPM bootstrap command variables](#set-hotstack-edpm-bootstrap-command-variables)
+    - [Set the image to use for dataplane nodes](#set-the-image-to-use-for-dataplane-nodes)
 
 ## Get brew registry pull-secret
 
@@ -134,7 +135,7 @@ edpm_container_registry_logins:
      username: password
 ```
 
-### Set hotstack EDPM bootstrap command variable
+### Set hotstack EDPM bootstrap command variables
 
 Container images in brew are not signed. The `brew_edpm_bootstrap_command.sh`
 will set "insecureAcceptAnything" policy type so that Podman is allowed to
@@ -142,5 +143,32 @@ accept and run containers from any source, including those signed with unknown
 or self-signed certificates.
 
 ```yaml
-hotstack_edpm_bootstrap_command: "{{ scenario_dir }}/common/scripts/brew_edpm_bootstrap_command.sh"
+hotstack_edpm_bootstrap_command: "{{ scenario_dir }}/common/scripts/brew_edpm_bootstrap_command.sh.j2"
+```
+
+It is also possible to override the following variables for the bootstrap
+command template `brew_edpm_bootstrap_command.sh.j2`:
+
+- `hotstack_rhos_release_args`: Defaults to: `18.0 -r 9.4 -p latest-RHOSO-18.0-RHEL-9`
+- `hotstack_install_ca_url`: Defaults to: https://url.corp.redhat.com/hotstack-ca
+- `hotstack_rhos_release_rpm`: Defaults to: https://url.corp.redhat.com/hotstack-rhos-release-latest-noarch-rpm
+
+### Set the image to use for dataplane nodes
+
+If the Hotstack scenario is using "pre-provisioned" nodes for the dataplane,
+override the image to use a RHEL image. Update the `bootstrap_vars.yaml` for
+the scenario and setthe image property in the `compute_params` and/or
+`networker_params` section.
+
+Example:
+
+```yaml
+stack_parameters:
+  ...
+  compute_params:
+    image: RHEL-9.4.0-x86_64-latest
+    flavor: hotstack.xlarge
+  networker_params:
+    image: RHEL-9.4.0-x86_64-latest
+    flavor: hotstack.large
 ```

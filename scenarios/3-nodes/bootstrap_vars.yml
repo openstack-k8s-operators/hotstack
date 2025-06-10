@@ -14,8 +14,6 @@ openstack_operators_image: quay.io/openstack-k8s-operators/openstack-operator-in
 openstack_operator_channel: alpha
 openshift_version: stable-4.18
 
-hotstack_edpm_bootstrap_command: "{{ scenario_dir }}/common/scripts/upstream_edpm_bootstrap_command.sh"
-
 ntp_servers: []
 dns_servers:
   - 8.8.8.8
