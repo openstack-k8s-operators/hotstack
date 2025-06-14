@@ -148,3 +148,66 @@ spec:
   name: openstack-operator
   source: openstack-operator-index
   sourceNamespace: openstack-operators
+  installPlanApproval: Manual
+{% if openstack_operators_starting_csv | default(none) %}
+  startingCSV: openstack-operator.{{ openstack_operators_starting_csv }}
+{% endif %}
+
+{%- if openstack_operators_starting_csv | default(none) and
+        openstack_operator_channel != 'alpha' -%}
+{%     if openstack_operators_starting_csv is version('v1.0.4', '<') %}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openstack-ansibleee
+  namespace: openstack-operators
+  labels:
+    category: openstack-subscription
+spec:
+  channel: {{ openstack_operator_channel }}
+  installPlanApproval: Manual
+  name: openstack-ansibleee-operator
+  source: openstack-operator-index
+  sourceNamespace: openstack-operators
+  startingCSV: openstack-ansibleee-operator.{{ openstack_operators_starting_csv }}
+{%     endif %}
+{%     for operator_name in [
+            'barbican',
+            'cinder',
+            'designate',
+            'glance',
+            'heat',
+            'infra',
+            'ironic',
+            'keystone',
+            'manila',
+            'mariadb',
+            'neutron',
+            'nova',
+            'octavia',
+            'openstack-baremetal',
+            'ovn',
+            'placement',
+            'rabbitmq-cluster',
+            'swift',
+            'telemetry'
+          ]
+          if openstack_operators_starting_csv is version('v1.0.7', '<') %}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: {{ operator_name }}
+  namespace: openstack-operators
+  labels:
+    category: openstack-subscription
+spec:
+  channel: {{ openstack_operator_channel }}
+  installPlanApproval: Manual
+  name: {{ operator_name }}-operator
+  source: openstack-operator-index
+  sourceNamespace: openstack-operators
+  startingCSV: {{ operator_name }}-operator.{{ openstack_operators_starting_csv }}
+{%     endfor %}
+{%- endif -%}

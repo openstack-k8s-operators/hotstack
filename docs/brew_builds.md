@@ -1,11 +1,12 @@
 # Using brew builds with Hotstack
 
-To enable use of not yet published content OpenShift has to be configured to
-do some registry redirection.
-
-**NOTE**: This is **work-in-progress**, in the current state RPM package
-repositories for the dataplane nodes are upstream. The controlplane and
-datplane containers will be pulled from the brew container registries.
+This document outlines how to configure OpenShift, specifically integrating
+with the Operator Lifecycle Manager
+([OLM](https://olm.operatorframework.io/docs/)), to enable the use of
+pre-release or not-yet-published Operator content via 'brew builds'. This
+process primarily involves setting up registry redirection and configuring OLM
+components like `CatalogSources` and `Subscriptions` to pull Operator images
+and metadata from 'brew' registries rather than the ones from CDN or quay.io.
 
 ## Table of Contents
 
@@ -16,6 +17,7 @@ datplane containers will be pulled from the brew container registries.
   - [Set hotstack variables to enable brew builds](#set-hotstack-variables-to-enable-brew-builds)
     - [Set variable to create ImageContentSourcePolicy (ICSP)](#set-variable-to-create-imagecontentsourcepolicy-icsp)
     - [Set image reference for openstack-operators CatalogSource](#set-image-reference-for-openstack-operators-catalogsource)
+    - [(Optional) Override the starting CSV in the Subscription](#optional-override-the-starting-csv-in-the-subscription)
     - [Set EDPM container registries](#set-edpm-container-registries)
     - [Set EDPM container registry logins](#set-edpm-container-registry-logins)
     - [Set hotstack EDPM bootstrap command variables](#set-hotstack-edpm-bootstrap-command-variables)
@@ -59,9 +61,9 @@ in different ways. For example ...
 
 ### Set variable to create ImageContentSourcePolicy (ICSP)
 
-An ImageContentSourcePolicy or ICSP describes registry mirroring rules.
-
-The ICSP allow you to consume bundles pinned to CDN-live locations like
+An ImageContentSourcePolicy (ICSP) is an OpenShift resource that defines
+registry mirroring rules. When using brew builds, ICSPs are critical because
+they allow you to consume bundles pinned to CDN-live locations like
 (registry.redhat.io/…) by actually fetching the images from brew registries
 (brew.registry.redhat.io/…).
 
@@ -89,6 +91,15 @@ image_content_source_policy_mirrors:
 
 ### Set image reference for openstack-operators CatalogSource
 
+The openstack-operators `CatalogSource` is an OLM concept that represents a
+repository of application definitions and Custom Resource Definitions (CRDs).
+OLM uses `CatalogSources` to discover Operators available for installation. By
+overriding `openstack_operators_image`, you are directing OLM to retrieve the
+OpenStack Operators metadata and images from a 'brew' registry, thus enabling
+the deployment of non-published versions. `CatalogSources` typically contain
+Packages, which map 'channels' (like `stable-v1.0` in this case) to specific
+application definitions, allowing for different update paths.
+
 Override the `openstack_operators_image` and `openstack_operator_channel`
 variables to point at index image for the non-published operator image and
 stable channel.
@@ -98,6 +109,30 @@ Example:
 ```yaml
 openstack_operators_image: brew.registry.redhat.io/<namespace>/<image>:<tag>
 openstack_operator_channel: stable-v1.0
+```
+
+### (Optional) Override the starting CSV in the Subscription
+
+The ClusterServiceVersion (CSV) is OLM's primary vehicle for describing
+Operator requirements and capabilities. A `Subscription` is an OLM resource
+that allows users to subscribe to channels within a `CatalogSource` to receive
+automatic updates for Operators. By setting `openstack_operators_starting_csv`
+you are explicitly telling OLM which specific `ClusterServiceVersion` (i.e.,
+which version of the OpenStack Operator) from your 'brew' `CatalogSource`
+should be initially deployed. This ensures that even with automatic updates
+enabled via the `Subscription`, the deployment starts from a known version.
+
+Set the initial version of OpenStack Operator to be deployed  by setting the
+`openstack_operators_starting_csv` variable. This variable controls the
+`spec.startingCSV` field of the `Subscription` resource.
+
+For versions prior to `v1.0.7` subscription for all openstack operators are
+created when using [common/olm.yaml.j2](../scenarios/common/olm.yaml.j2).
+
+Example:
+
+```yaml
+openstack_operators_starting_csv: v1.0.7
 ```
 
 ### Set EDPM container registries
