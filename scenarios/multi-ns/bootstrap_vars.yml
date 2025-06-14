@@ -14,6 +14,8 @@ test_operator_automation_vars_file: "{{ scenario_dir }}/{{ scenario }}/test-oper
 
 openstack_operators_image: quay.io/openstack-k8s-operators/openstack-operator-index:latest
 openstack_operator_channel: alpha
+openstack_operator_starting_csv: null
+
 openshift_version: stable-4.18
 
 ntp_servers: []

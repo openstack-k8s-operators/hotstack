@@ -79,6 +79,17 @@ stages:
       - "oc wait -n metallb-system pod -l component=webhook-server --for condition=Ready --timeout=300s"
       - "oc wait -n openshift-nmstate deployments/nmstate-operator --for condition=Available --timeout=300s"
       - >-
+        oc -n openstack-operators wait subscriptions.operators.coreos.com openstack-operator
+        --for condition=InstallPlanPending --timeout=300s
+
+  - name: Approve openstack-operator Install plan
+    script: |
+      INSTALL_PLAN=$(oc -n openstack-operators get subscriptions.operators.coreos.com openstack-operator \
+                     -o jsonpath='{ .status.installPlanRef.name }')
+      oc -n openstack-operators patch installplans.operators.coreos.com "${INSTALL_PLAN}" \
+        -p '{"spec":{"approved":true}}' --type merge
+    wait_conditions:
+      - >-
         oc wait -n openstack-operators csv -l operators.coreos.com/openstack-operator.openstack-operators=
         --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
 
@@ -111,6 +122,14 @@ stages:
       - "oc wait -n openstack-operators service openstack-baremetal-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
       - "oc wait -n openstack-operators service openstack-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
       - "sleep 120"  # The {.status.loadBalancer} wait conditions are not working?
+    run_conditions:
+      - name: Always for `alpha` channel and greater than v1.0.6 for other channels.
+        condition: >-
+          {{
+            openstack_operator_channel == 'alpha' or
+            openstack_operators_starting_csv | default(none) or
+            openstack_operators_starting_csv is version('v1.0.6', '>')
+          }}
 
   - name: Namespaces
     manifest: ./manifests/namespaces.yaml
