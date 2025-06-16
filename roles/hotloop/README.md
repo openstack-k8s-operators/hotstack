@@ -55,6 +55,33 @@ Schema for a stage item is:
     ```
 * `wait_conditions` (list) A list of commands to run after applying the
   manifest, i.e `oc wait --for <condition>`
+* `run_conditions` (list) A list of conditions that must be met for a stage
+  to execute. Each condition has a `name` and a `condition` field.
+  * `name`: A human-readable string that describes the condition. This helps
+    in understanding the purpose of the condition when reviewing the
+    automation workflow.
+  * `condition`: A Jinja2 template expression that evaluates to a boolean
+    value. If the expression evaluates to True , the condition is considered
+    met. If it evaluates to False, the condition is not met.
+
+  The  condition field uses Jinja2 syntax, which allows for dynamic evaluation
+  of expressions based on the available variables in the automation
+  environment. The curly brackets `{{ }}` denote Jinja2 template expressions.
+
+  **Example stage run conditions**:
+
+    ```yaml
+    run_conditions:
+      - name: Variable `foo` is defined
+        condition: "{{ foo is defined }}"
+      - name: Always for `alpha` channel and greater than v1.0.6 for other channels.
+        condition: >-
+          {{
+            openstack_operator_channel == 'alpha' or
+            openstack_operators_starting_csv | default(none) or
+            openstack_operators_starting_csv is version('v1.0.6', '>')
+          }}
+    ```
 
 > **_NOTE_**: Stage items are applied the actions in the following order:
 > `cmd` -> `script` -> `manifest` -> `j2_manifest` -> `wait_conditions`.
