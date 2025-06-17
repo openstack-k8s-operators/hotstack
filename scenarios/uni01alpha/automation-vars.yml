@@ -75,18 +75,19 @@ stages:
       - "oc wait -n openshift-nmstate deployments/nmstate-operator --for condition=Available --timeout=300s"
       - >-
         oc -n openstack-operators wait subscriptions.operators.coreos.com openstack-operator
-        --for condition=InstallPlanPending --timeout=300s
+        --for jsonpath='{.status.state}' --timeout=300s
 
   - name: Approve openstack-operator Install plan
-    script: |
-      INSTALL_PLAN=$(oc -n openstack-operators get subscriptions.operators.coreos.com openstack-operator \
-                     -o jsonpath='{ .status.installPlanRef.name }')
-      oc -n openstack-operators patch installplans.operators.coreos.com "${INSTALL_PLAN}" \
-        -p '{"spec":{"approved":true}}' --type merge
+    script: >-
+      {{
+        lookup('ansible.builtin.template',
+               '{{ scenario_dir }}/common/scripts/approve_install_plan.sh.j2')
+      }}
     wait_conditions:
       - >-
         oc wait -n openstack-operators csv -l operators.coreos.com/openstack-operator.openstack-operators=
         --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
+
 
   - name: Patch openstack leader election tuneables
     script: >-
