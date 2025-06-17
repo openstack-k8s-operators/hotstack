@@ -44,6 +44,9 @@ stages:
       - "oc wait -n cert-manager pod -l app=cert-manager --for condition=Ready --timeout=300s"
       - "oc wait -n metallb-system pod -l control-plane=controller-manager --for condition=Ready --timeout=300s"
       - "oc wait -n metallb-system pod -l component=webhook-server --for condition=Ready --timeout=300s"
+      - >-
+        oc -n metallb-system wait service -l operators.coreos.com/metallb-operator.metallb-system=
+        --for jsonpath='{.status.loadBalancer}' --timeout=300s
       - "oc wait -n openshift-nmstate deployments/nmstate-operator --for condition=Available --timeout=300s"
       - >-
         oc wait -n openstack-operators csv -l operators.coreos.com/openstack-operator.openstack-operators=
