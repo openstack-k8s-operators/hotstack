@@ -95,7 +95,7 @@ Here's a breakdown of the common attributes within a stage:
         condition: >-
           {{
             openstack_operator_channel == 'alpha' or
-            openstack_operators_starting_csv | default(none) or
+            openstack_operators_starting_csv | default(none) is none or
             openstack_operators_starting_csv is version('v1.0.6', '>')
           }}
     ```
