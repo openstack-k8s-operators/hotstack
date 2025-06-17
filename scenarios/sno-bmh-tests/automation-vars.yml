@@ -88,8 +88,8 @@ stages:
   - name: Approve openstack-operator Install plan
     script: >-
       {{
-        lookup('ansible.builtin.template',
-               '{{ scenario_dir }}/common/scripts/approve_install_plan.sh.j2')
+        lookup('ansible.builtin.file',
+               '{{ scenario_dir }}/common/scripts/approve_install_plan.sh')
       }}
     wait_conditions:
       - >-
