@@ -18,9 +18,9 @@
   ansible.builtin.assert:
     quiet: true
     that:
-      - __item.condition | bool
-    fail_msg: "Stage run condition: {{ __item.name }} evaluated:  {{ __item.condition | bool }}"
-    success_msg: "Stage run condition: {{ __item.name }} evaluated: {{ __item.condition | bool }}"
+      - __item.condition
+    fail_msg: "Stage run condition: {{ __item.name }} evaluated:  {{ __item.condition }}"
+    success_msg: "Stage run condition: {{ __item.name }} evaluated: {{ __item.condition }}"
   loop: "{{ item.run_conditions | default([]) }}"
   loop_control:
     loop_var: __item
