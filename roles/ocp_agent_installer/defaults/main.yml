@@ -65,3 +65,8 @@ enable_image_content_source_policy: false
 # To enable ImageContentSourcePolicy (ICSP), set this variable to contain the value
 # for the ICSP spec's repositoryDigestMirrors field.
 image_content_source_policy_mirrors: []
+
+enable_additional_trusted_ca: false
+ocp_additional_trusted_ca:
+  - name: registry-proxy.engineering.redhat.com
+    url: https://url.corp.redhat.com/hotstack-ca
