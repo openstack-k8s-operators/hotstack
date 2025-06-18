@@ -82,9 +82,31 @@ Schema for a stage item is:
             openstack_operators_starting_csv is version('v1.0.6', '>')
           }}
     ```
+* `stages`: (dict, list or YAML string) Nested stages, enable referencing
+  stages inline or loading stages from different files by utilizing ansible
+  `lookup()`.
+
+  By setting `run_conditions` on a stage with nested stages it is also
+  possible to conditionally include/exclude stages.
+
+  > **NOTE**: Nested stages are not allowed to have their own nested stages.
+
+  **Example stage including nested stages**:
+  ```yaml
+  - name: Include stages from template
+    stages: >-
+      {{
+        lookup('ansible.builtin.template', 'extra_stages.yaml.j2')
+      }}
+    run_conditions:
+      - name: extra stages is defined
+        condition: "{{ extra_stages is defined and extra_stages }}"
+  ```
+
 
 > **_NOTE_**: Stage items are applied the actions in the following order:
-> `cmd` -> `script` -> `manifest` -> `j2_manifest` -> `wait_conditions`.
+> `cmd` -> `script` -> `manifest` -> `j2_manifest` -> `wait_conditions` ->
+> `stages`.
 
 Example:
 ```yaml

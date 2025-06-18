@@ -72,8 +72,8 @@ Here's a breakdown of the common attributes within a stage:
   are typically `oc wait` commands in the context of OpenShift, ensuring that
   resources are created, become ready, or reach a desired state before the
   pipeline proceeds. Each item in the list is a command-line string.
-* **`run_conditions`**: (Optional) A list of conditions that must be met for a stage
-  to execute. Each condition has a `name` and a `condition` field.
+* **`run_conditions`**: (Optional) A list of conditions that must be met for a
+  stage to execute. Each condition has a `name` and a `condition` field.
   * `name`: A human-readable string that describes the condition. This helps
     in understanding the purpose of the condition when reviewing the
     automation workflow.
@@ -99,7 +99,42 @@ Here's a breakdown of the common attributes within a stage:
             openstack_operators_starting_csv is version('v1.0.6', '>')
           }}
     ```
+* **`stages`**: (Optional) This parameter allows you to define nested stages.
+  By utilizing nested stages, you can create more modular and reusable
+  automation workflows.
 
+  You can load stages from external YAML files using Ansible's `lookup()`
+  function. This is particularly useful for managing large numbers of stages
+  or stages that are shared across multiple scenarios.
+
+  You can also define nested stages directly within the main stage either
+  using YAML's block scalar syntax (`|>`), os as a `dict` or `list`. This is
+  useful for including a small number of stages inline in combinetion with
+  `run_conditions`.
+
+  By setting `run_conditions` on a stage with nested stages, you can
+  conditionally include or exclude the nested stages based on specific
+  criteria. This allows for more dynamic and flexible automation workflows.
+
+  > **NOTE**: Nested stages are not allowed to have their own nested stages.
+
+  **Example nested stages**:
+  ```yaml
+  - name: Include stages from file
+    stages: >-
+      {{
+        lookup('ansible.builtin.file', 'extra_stages.yaml')
+      }}
+  - name: Include stages inline as "list"
+    stages:
+      - name: Extra inline stage - cmd
+        cmd: uname -a
+      - name: Extra inline stage - manifest
+        manifest: "manifest.yaml"
+    run_conditions:
+      - name: extra stages are enabled
+        condition: "{{ extra_stages is defined and extra_stages }}"
+  ```
 
 ## Stage Types
 

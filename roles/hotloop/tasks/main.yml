@@ -33,7 +33,12 @@
   loop:
     - "{{ manifests_dir }}"
 
+- name: Load stages
+  hotloop_stage_loader:
+    stages: "{{ automation.stages }}"
+  register: __loaded_stages
+
 - name: Execute automation stages
   ansible.builtin.include_tasks:
     file: execute_stage.yml
-  loop: "{{ automation.stages }}"
+  loop: "{{ __loaded_stages.outputs.stages }}"
