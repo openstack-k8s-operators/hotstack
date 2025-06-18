@@ -219,7 +219,7 @@ stages:
       ansible.builtin.include_vars:
         file: dataplane_ssh_keys_vars.yaml
 
-    - name: Load automation vars
+    - name: "Load automation vars and store in variable: automation"
       ansible.builtin.include_vars:
         file: "{{ automation_vars_file }}"
         name: automation
@@ -229,5 +229,4 @@ stages:
       delegate_to: controller-0
       vars:
         work_dir: "{{ scenario_dir }}/{{ scenario }}"
-        automation: "{{ automation }}"
 ```
