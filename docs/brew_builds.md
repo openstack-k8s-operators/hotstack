@@ -12,10 +12,11 @@ and metadata from 'brew' registries rather than the ones from CDN or quay.io.
 
 - [Using brew builds with Hotstack](#using-brew-builds-with-hotstack)
   - [Table of Contents](#table-of-contents)
-  - [Get brew registry pull-secret](#get-brew-registry-pull-secret)
+  - [Get brew registry secret](#get-brew-registry-secret)
   - [Patch you pull-secret to include the brew registry secret](#patch-you-pull-secret-to-include-the-brew-registry-secret)
   - [Set hotstack variables to enable brew builds](#set-hotstack-variables-to-enable-brew-builds)
     - [Set variable to create ImageContentSourcePolicy (ICSP)](#set-variable-to-create-imagecontentsourcepolicy-icsp)
+    - [Additional CA trusts](#additional-ca-trusts)
     - [Set image reference for openstack-operators CatalogSource](#set-image-reference-for-openstack-operators-catalogsource)
     - [(Optional) Override the starting CSV in the Subscription](#optional-override-the-starting-csv-in-the-subscription)
     - [Set EDPM container registries](#set-edpm-container-registries)
@@ -23,13 +24,23 @@ and metadata from 'brew' registries rather than the ones from CDN or quay.io.
     - [Set hotstack EDPM bootstrap command variables](#set-hotstack-edpm-bootstrap-command-variables)
     - [Set the image to use for dataplane nodes](#set-the-image-to-use-for-dataplane-nodes)
 
-## Get brew registry pull-secret
+## Get brew registry secret
+
+If you already have created token, fetch it by running:
 
 ```shell
-export TESTING_TOKEN_DESCRIPTION="____ REPLACE WITH YOUR OWN DESCRIPTION ____"
-curl --negotiate -u : -X POST -H 'Content-Type: application/json' \
+REDIRECT_URL=$(curl -Ls -o /dev/null -w %{url_effective} https://url.corp.redhat.com/hotstack-employee-tokens)
+curl --negotiate -u : "${REDIRECT_URL}" -s > ~/brew-pull-secret.json
+```
+
+If you do not have a token, create one by running:
+
+```shell
+TESTING_TOKEN_DESCRIPTION="____ REPLACE WITH YOUR OWN DESCRIPTION ____"
+REDIRECT_URL=$(curl -Ls -o /dev/null -w %{url_effective} https://url.corp.redhat.com/hotstack-employee-tokens)
+curl -L --negotiate -u : -X POST -H 'Content-Type: application/json' \
   --data '{"description":"${TESTING_TOKEN_DESCRIPTION}"}' \
-  https://token-manager.registry.example.com/v1/tokens \
+  "${REDIRECT_URL}" \
   -s > ~/brew-pull-secret.json
 ```
 
@@ -83,10 +94,40 @@ image_content_source_policy_mirrors:
     source: registry.redhat.io
   - mirrors:
     - brew.registry.redhat.io
-    source: registry.example.com
+    source: registry.stage.redhat.io
   - mirrors:
     - brew.registry.redhat.io
-    source: proxy.example.com
+    source: registry-proxy.engineering.redhat.com
+```
+
+### Additional CA trusts
+
+If you're using a registry or proxy that requires additional trusted CAs,
+you'll need to configure them accordingly. Set the variable
+`enable_additional_trusted_ca` to `true`. This enables the additional
+trusted CA configuration. Define the `ocp_additional_trusted_ca`
+variable as a list of CA configurations. Each CA configuration should include
+a `name` and either a `url` or `data` field.
+
+The certificates will be added to a ConfigMap resource named
+`hotstack-additional-trusted-ca` in the `openshift-config` namespace. And
+the `images.config.openshift.io` `cluster` resource will be configured to
+reference this config map in the `additionalTrustedCA` field of the resource
+spec.
+
+Example:
+
+```yaml
+enable_additional_trusted_ca: true
+ocp_additional_trusted_ca:
+  - name: registry-proxy.engineering.redhat.com
+    url: https://url.corp.redhat.com/hotstack-ca
+  - name: anoteher-ca
+    data: |
+      -----BEGIN CERTIFICATE-----
+      ****************************************************************
+      ****************************************************************
+      -----END CERTIFICATE-----
 ```
 
 ### Set image reference for openstack-operators CatalogSource
@@ -156,11 +197,11 @@ edpm_podman_registries:
 
 ### Set EDPM container registry logins
 
-Customize the dataplane container registries by configuring the
-`edpm_podman_registries` variable. The `edpm_container_registry_logins`
-variable is a dictionary where the keys are the registry locations (e.g.,
-`brew.registry.redhat.io`), and the values are dictionaries containing the
-login credentials (username and password).
+Customize the dataplane container registries logins by configuring the
+`edpm_container_registry_logins` variable. This  variable is a dictionary
+where the keys are the registry locations (e.g., `brew.registry.redhat.io`),
+and the values are dictionaries containing the login credentials (username and
+password).
 
 Example:
 
