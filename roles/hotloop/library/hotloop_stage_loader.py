@@ -200,8 +200,9 @@ def _load_stages(stages):
         # Extract nested stages if they exist
         nested = stage.pop("stages", None)
 
-        # If the stage has more than one key, it's a top-level stage
-        if len(stage.keys()) > 1:
+        # If the stage has other keys than "documentation" and "name",
+        # it's a top-level stage and should be loaded
+        if stage.keys() - {"documentation", "name"}:
             loaded.append(stage)
 
         conditions = stage.get("run_conditions", None)
