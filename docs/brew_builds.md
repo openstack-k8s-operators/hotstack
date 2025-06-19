@@ -219,7 +219,7 @@ accept and run containers from any source, including those signed with unknown
 or self-signed certificates.
 
 ```yaml
-hotstack_edpm_bootstrap_command: "{{ scenario_dir }}/common/scripts/brew_edpm_bootstrap_command.sh.j2"
+hotstack_edpm_bootstrap_command: "common/scripts/brew_edpm_bootstrap_command.sh.j2"
 ```
 
 It is also possible to override the following variables for the bootstrap

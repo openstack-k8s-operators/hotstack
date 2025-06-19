@@ -1,0 +1,54 @@
+---
+- name: Common Openstack OLM
+  documentation: |
+    Install the OpenStack K8S operators (Namespaces, OperatorGroup, and Subscription CRs.)
+
+    Once these CRs are created, run the `oc wait` commands to confirm that
+    each step of this procedure is complete.
+  j2_manifest: "{{ role_path }}/files/common/manifests/olm-openstack.yaml.j2"
+  wait_conditions:
+    - "oc wait namespaces openstack-operators --for jsonpath='{.status.phase}=Active' --timeout=300s"
+    - "oc wait namespaces openstack --for jsonpath='{.status.phase}=Active' --timeout=300s"
+    - >-
+      oc -n openstack-operators wait subscriptions.operators.coreos.com openstack-operator
+      --for jsonpath='{.status.state}' --timeout=300s
+
+- name: Approve openstack-operator Install plan
+  script: |
+    {{
+      lookup('ansible.builtin.file',
+              'common/scripts/approve_install_plan.sh')
+      | indent(width=4)
+    }}
+  wait_conditions:
+    - >-
+      oc wait -n openstack-operators csv -l operators.coreos.com/openstack-operator.openstack-operators=
+      --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
+
+- name: Patch openstack leader election tuneables
+  script: |
+    {{
+      lookup('ansible.builtin.file',
+              'common/scripts/leader_election_tune.sh')
+      | indent(width=4)
+    }}
+
+- name: Openstack
+  manifest: "{{ role_path }}/files/common/manifests/openstack.yaml"
+  wait_conditions:
+    - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=300s"
+    - "oc wait -n openstack-operators pod --for condition=Ready -l openstack.org/operator-name=openstack-controller --timeout=300s"
+    - "oc wait -n openstack-operators -l openstack.org/operator-name deployment --for condition=Available --timeout=300s"
+    - "oc wait -n openstack-operators -l app.kubernetes.io/name=rabbitmq-cluster-operator deployment --for condition=Available --timeout=300s"
+    - "oc wait -n openstack-operators service infra-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+    - "oc wait -n openstack-operators service openstack-baremetal-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+    - "oc wait -n openstack-operators service openstack-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+    - "sleep 30"  # The {.status.loadBalancer} wait conditions are not working?
+  run_conditions:
+    - name: Always for `alpha` channel and greater than v1.0.6 for other channels.
+      condition: >-
+        {{
+          openstack_operator_channel == 'alpha' or
+          openstack_operators_starting_csv | default(none) is none or
+          openstack_operators_starting_csv is version('v1.0.6', '>')
+        }}
