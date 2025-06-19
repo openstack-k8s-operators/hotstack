@@ -37,8 +37,11 @@
       }}
     dest: "{{ bin_dir }}"
     remote_src: true
+    creates: "{{ bin_dir }}/oc"
 
 - name: Configure bash completion
   become: true
   ansible.builtin.shell: |
     {{ bin_dir }}/oc completion bash > /etc/bash_completion.d/oc_bash_completion
+  args:
+    creates: /etc/bash_completion.d/oc_bash_completion

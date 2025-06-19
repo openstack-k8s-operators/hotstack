@@ -37,3 +37,4 @@
       }}
     dest: "{{ bin_dir }}"
     remote_src: true
+    creates: "{{ bin_dir }}/openshift-install"
