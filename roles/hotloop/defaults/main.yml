@@ -28,6 +28,6 @@ edpm_container_registry_logins: {}
 
 hotstack_rhos_release_args: >-
   18.0 -r 9.4 -p latest-RHOSO-18.0-RHEL-9
-hotstack_edpm_bootstrap_command: "{{ scenario_dir }}/common/scripts/upstream_edpm_bootstrap_command.sh.j2"
+hotstack_edpm_bootstrap_command: "common/scripts/upstream_edpm_bootstrap_command.sh.j2"
 hotstack_install_ca_url: https://url.corp.redhat.com/hotstack-ca
 hotstack_rhos_release_rpm: https://url.corp.redhat.com/hotstack-rhos-release-latest-noarch-rpm

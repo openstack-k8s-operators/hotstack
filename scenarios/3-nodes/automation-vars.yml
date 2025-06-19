@@ -1,98 +1,32 @@
 ---
 stages:
-  - name: TopoLVM common
-    manifest: ../common/topolvm.yaml
-    wait_conditions:
-      - "oc wait namespaces openshift-storage --for jsonpath='{.status.phase}=Active' --timeout=300s"
-      - >-
-        oc wait -n openshift-storage operatorgroups.operators.coreos.com openshift-storage-operatorgroup
-        --for jsonpath='{.status.namespaces}' --timeout=30s
-      - >-
-        oc wait -n openshift-storage ClusterServiceVersion
-        -l operators.coreos.com/lvms-operator.openshift-storage
-        --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
-
-  - name: TopoLVM LVMCluster
-    documentation: |
-      Create a TopoLVM - LVMCluster on the Openshift cluster.
-
-      Configure the LVMCluster custom resource (CR) to perform the following
-      actions:
-
-      * Create LVM volume groups that you can use to provision persistent
-        volume claims (PVCs).
-      * Configure a list of devices that you want to add to the LVM volume
-        groups.
-    manifest: ../common/topolvmcluster.yaml
-    wait_conditions:
-      - "oc wait -n openshift-storage lvmcluster.lvm.topolvm.io/lvmcluster --for jsonpath='{.status.state}=Ready' --timeout=300s"
-
-  - name: Node label cinder-lvm
-    cmd: "oc label node master-0 openstack.org/cinder-lvm="
-
-  - name: Common OLM
-    j2_manifest: ../common/olm.yaml.j2
-    wait_conditions:
-      - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}=Active' --timeout=300s"
-      - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}=Active' --timeout=300s"
-      - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}=Active' --timeout=300s"
-      - "oc wait namespaces openstack-operators --for jsonpath='{.status.phase}=Active' --timeout=300s"
-      - "oc wait namespaces openstack --for jsonpath='{.status.phase}=Active' --timeout=300s"
-      - "oc wait -n cert-manager-operator pod --for condition=Ready -l name=cert-manager-operator --timeout=300s"
-      - "oc wait -n cert-manager pod -l app=cainjector --for condition=Ready --timeout=300s"
-      - "oc wait -n cert-manager pod -l app=webhook --for condition=Ready --timeout=300s"
-      - "oc wait -n cert-manager pod -l app=cert-manager --for condition=Ready --timeout=300s"
-      - "oc wait -n metallb-system pod -l control-plane=controller-manager --for condition=Ready --timeout=300s"
-      - "oc wait -n metallb-system pod -l component=webhook-server --for condition=Ready --timeout=300s"
-      - >-
-        oc -n metallb-system wait service -l operators.coreos.com/metallb-operator.metallb-system=
-        --for jsonpath='{.status.loadBalancer}' --timeout=300s
-      - "oc wait -n openshift-nmstate deployments/nmstate-operator --for condition=Available --timeout=300s"
-      - >-
-        oc -n openstack-operators wait subscriptions.operators.coreos.com openstack-operator
-        --for jsonpath='{.status.state}' --timeout=300s
-
-  - name: Approve openstack-operator Install plan
-    script: >-
+  - name: Cinder LVM
+    stages: >-
       {{
-        lookup('ansible.builtin.file',
-               '{{ scenario_dir }}/common/scripts/approve_install_plan.sh')
-      }}
-    wait_conditions:
-      - >-
-        oc wait -n openstack-operators csv -l operators.coreos.com/openstack-operator.openstack-operators=
-        --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
-
-  - name: Patch openstack leader election tuneables
-    script: >-
-      {{
-        lookup('ansible.builtin.file',
-               '{{ scenario_dir }}/common/scripts/leader_election_tune.sh')
+        lookup("ansible.builtin.file",
+               "common/stages/cinder-lvm-label-stages.yaml")
       }}
 
-  - name: Common MetalLB
-    manifest: ../common/metallb.yaml
-    wait_conditions:
-      - "oc wait -n metallb-system pod -l component=speaker --for condition=Ready --timeout=300s"
+  - name: TopoLVM
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/topolvm-stages.yaml.j2")
+      }}
 
-  - name: Common NMState
-    manifest: ../common/nmstate.yaml
-    wait_conditions:
-      - "oc wait -n openshift-nmstate pod -l component=kubernetes-nmstate-handler --for condition=Ready --timeout=300s"
-      - "oc wait -n openshift-nmstate deployments/nmstate-webhook --for condition=Available --timeout=300s"
+  - name: OLM Dependencies
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/olm-deps-stages.yaml.j2")
+      }}
 
-  - name: Openstack
-    manifest: ../common/openstack.yaml
-    wait_conditions:
-      - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=300s"
-    run_conditions:
-      - name: Always for `alpha` channel and greater than v1.0.6 for other channels.
-        condition: >-
-          {{
-            openstack_operator_channel == 'alpha' or
-            openstack_operators_starting_csv | default(none) is none or
-            openstack_operators_starting_csv is version('v1.0.6', '>')
-          }}
+  - name: OLM Openstack
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/olm-openstack-stages.yaml.j2")
+      }}
 
   - name: NodeNetworkConfigurationPolicy (nncp)
     manifest: manifests/control-plane/networking/nncp.yaml

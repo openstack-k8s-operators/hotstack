@@ -1,0 +1,14 @@
+---
+- name: Node label cinder-lvm
+  documentation: |
+    The LVM backend for Cinder is a special case as the storage data is on
+    the OpenShift node and has no external storage systems. This has several
+    implications.
+
+    * To prevent issues with exported volumes, cinder-operator automatically
+      uses the host network. The backend is configured to use the host's
+      VLAN IP address. This means that the cinder-volume service doesn't
+      need any networkAttachments.
+    * There can only be one node with the label openstack.org/cinder-lvm=.
+      Apply the label using the command: ``oc label node <nodename> openstack.org/cinder-lvm=``
+  cmd: "oc label node master-0 openstack.org/cinder-lvm="
