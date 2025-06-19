@@ -71,41 +71,11 @@ stages:
 
   - name: Networker nodeset
     manifest: manifests/networker/nodeset/nodeset.yaml
-    patches:
-      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_bootstrap_command
-        value: >-
-          {{
-            lookup('ansible.builtin.template', hotstack_edpm_bootstrap_command)
-          }}
-      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
-        value: "{{ edpm_podman_registries }}"
-        where:
-          - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
-            value: null
-      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_container_registry_logins
-        value: "{{ edpm_container_registry_logins }}"
-        where:
-          - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
-            value: null
+    patches: "{{ hotstack_default_nodeset_patches }}"
 
   - name: EDPM nodeset
     manifest: manifests/edpm/edpm.yaml
-    patches:
-      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_bootstrap_command
-        value: >-
-          {{
-            lookup('ansible.builtin.template', hotstack_edpm_bootstrap_command)
-          }}
-      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
-        value: "{{ edpm_podman_registries }}"
-        where:
-          - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
-            value: null
-      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_container_registry_logins
-        value: "{{ edpm_container_registry_logins }}"
-        where:
-          - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
-            value: null
+    patches: "{{ hotstack_default_nodeset_patches }}"
 
   - name: Wait for nodesets (Networker and EDPM)
     wait_conditions:
