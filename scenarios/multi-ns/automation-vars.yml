@@ -183,22 +183,7 @@ stages:
 
   - name: Dataplane nodeset
     manifest: manifests/dataplanes/nodesets.yaml
-    patches:
-      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_bootstrap_command
-        value: >-
-          {{
-            lookup('ansible.builtin.template', hotstack_edpm_bootstrap_command)
-          }}
-      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
-        value: "{{ edpm_podman_registries }}"
-        where:
-          - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
-            value: null
-      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_container_registry_logins
-        value: "{{ edpm_container_registry_logins }}"
-        where:
-          - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
-            value: null
+    patches: "{{ hotstack_default_nodeset_patches }}"
     wait_conditions:
       - >-
         oc wait -n openstack-a openstackdataplanenodesets.dataplane.openstack.org

@@ -31,3 +31,23 @@ hotstack_rhos_release_args: >-
 hotstack_edpm_bootstrap_command: "common/scripts/upstream_edpm_bootstrap_command.sh.j2"
 hotstack_install_ca_url: https://url.corp.redhat.com/hotstack-ca
 hotstack_rhos_release_rpm: https://url.corp.redhat.com/hotstack-rhos-release-latest-noarch-rpm
+
+# For convinience, a default patches for nodesets
+# * Sets edpm_bootstrap_command
+# * Set registries/registry logins if not already set in the nodeset YAML.
+hotstack_default_nodeset_patches:
+  - path: spec.nodeTemplate.ansible.ansibleVars.edpm_bootstrap_command
+    value: >-
+      {{
+        lookup('ansible.builtin.template', hotstack_edpm_bootstrap_command)
+      }}
+  - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
+    value: "{{ edpm_podman_registries }}"
+    where:
+      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
+        value: null
+  - path: spec.nodeTemplate.ansible.ansibleVars.edpm_container_registry_logins
+    value: "{{ edpm_container_registry_logins }}"
+    where:
+      - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
+        value: null
