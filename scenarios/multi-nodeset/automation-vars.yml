@@ -1,0 +1,139 @@
+---
+stages:
+  - name: Cinder LVM
+    stages: >-
+      {{
+        lookup("ansible.builtin.file",
+               "common/stages/cinder-lvm-label-stages.yaml")
+      }}
+
+  - name: TopoLVM
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/topolvm-stages.yaml.j2")
+      }}
+
+  - name: Metal platform Provisioning CR
+    documentation: |
+      Create a Provisioning custom resource (CR) to enable OCP Metal platform components
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/metal-platofrm-provisioning.yaml.j2")
+      }}
+
+  - name: OLM Dependencies
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/olm-deps-stages.yaml.j2")
+      }}
+
+  - name: OLM Openstack
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/olm-openstack-stages.yaml.j2")
+      }}
+
+  - name: NodeNetworkConfigurationPolicy (nncp)
+    manifest: manifests/control-plane/networking/nncp.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack nncp -l osp/nncm-config-type=standard
+        --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
+        --timeout=5m
+
+  - name: NetworkAttchmentDefinition (NAD)
+    manifest: manifests/control-plane/networking/nad.yaml
+
+  - name: MetalLB - L2Advertisement and IPAddressPool
+    manifest: manifests/control-plane/networking/metallb.yaml
+
+  - name: Netconfig
+    manifest: manifests/control-plane/networking/netconfig.yaml
+
+  - name: OpenstackControlPlane secrets
+    manifest: manifests/control-plane/secrets.yaml
+
+  - name: OpenstackControlPlane
+    manifest: manifests/control-plane/control-plane.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack openstackcontrolplane controlplane
+        --for condition=Ready --timeout=60m
+
+  - name: Dataplane SSH key secret
+    cmd: >-
+      oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret
+      --save-config --dry-run=client
+      --from-file=authorized_keys=/home/zuul/.ssh/id_rsa.pub
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_rsa
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_rsa.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >-
+        oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
+        --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
+        --timeout=30s
+
+  - name: Nova migration SSH key secret
+    cmd: >-
+      oc create -n openstack secret generic nova-migration-ssh-key
+      --save-config --dry-run=client
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_nova_migrate.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >-
+        oc wait -n openstack secret nova-migration-ssh-key
+        --for jsonpath='{.metadata.name}=nova-migration-ssh-key'
+        --timeout=30s
+
+  - name: Dataplane Secrets
+    manifest: manifests/dataplane/secrets.yaml
+
+  - name: BaremetalHosts BMC secret
+    cmd: >-
+      oc create -n openstack secret generic bmc-secret
+      --save-config --dry-run=client
+      --from-literal=username=admin
+      --from-literal=password=password
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >-
+        oc wait -n openstack secret bmc-secret
+        --for jsonpath='{.metadata.name}=bmc-secret'
+        --timeout=30s
+
+  - name: BaremetalHosts CRs
+    j2_manifest: manifests/dataplane/baremetal_hosts.yaml.j2
+    wait_conditions:
+      - sleep 20
+      - >-
+        oc wait -n openstack baremetalhosts.metal3.io bmh0
+        --for jsonpath='{.status.provisioning.state}=available'
+        --timeout=300s
+      - >-
+        oc wait -n openstack baremetalhosts.metal3.io bmh1
+        --for jsonpath='{.status.provisioning.state}=available'
+        --timeout=300s
+
+  - name: Dataplane nodeset
+    manifest: manifests/dataplane/nodeset.yaml
+    patches: "{{ hotstack_default_nodeset_patches }}"
+    wait_conditions:
+      - >-
+        oc wait -n openstack openstackdataplanenodesets.dataplane.openstack.org
+        openstack-edpm-a --for condition=SetupReady --timeout=10m
+      - >-
+        oc wait -n openstack openstackdataplanenodesets.dataplane.openstack.org
+        openstack-edpm-b --for condition=SetupReady --timeout=10m
+
+  - name: Dataplane Deployment
+    manifest: manifests/dataplane/deployment.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack openstackdataplanedeployments.dataplane.openstack.org
+        dataplane --for condition=Ready --timeout=40m
