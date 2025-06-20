@@ -1,0 +1,92 @@
+---
+stages:
+  - name: Set a multiattach volume type and create it if needed
+    script: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack volume type show multiattach &>/dev/null || \
+          oc rsh openstackclient openstack volume type create multiattach
+
+      oc rsh openstackclient openstack volume type set --property multiattach="<is> True" multiattach
+
+  - name: Create public network if needed
+    script: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack network show public &>/dev/null || \
+        oc rsh openstackclient openstack network create public \
+          --external \
+          --no-share \
+          --default \
+          --provider-network-type flat \
+          --provider-physical-network datacentre
+
+  - name: Create subnet on public network if needed
+    script: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack subnet show public_subnet &>/dev/null || \
+        oc rsh openstackclient openstack subnet create public_subnet \
+          --network public \
+          --subnet-range 192.168.122.0/24 \
+          --allocation-pool start=192.168.122.171,end=192.168.122.250 \
+          --gateway 192.168.122.1 \
+          --dhcp
+
+  - name: Create private network if needed
+    script: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack network show private &>/dev/null || \
+        oc rsh openstackclient openstack network create private --share
+
+  - name: Create subnet on private network if needed
+    script: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack subnet show private_subnet &>/dev/null || \
+        oc rsh openstackclient openstack subnet create private_subnet \
+          --network private \
+          --subnet-range 10.2.0.0/24 \
+          --allocation-pool start=10.2.0.10,end=10.2.0.250 \
+          --gateway 10.2.0.1 \
+          --dhcp
+
+  - name: Wait for expected compute services (OSPRH-10942)
+    script: |
+      set -xe -o pipefail
+      COMPUTES=2
+      RETRIES=10
+      COUNTER=0
+      oc project openstack
+      until [ $(oc rsh openstackclient openstack compute service list --service nova-compute -f value | wc -l) -eq "$COMPUTES" ]; do
+        if [[ "$COUNTER" -ge "$RETRIES" ]]; then
+          exit 1
+        fi
+        COUNTER=$[$COUNTER +1]
+        sleep 10
+      done
+
+  - name: Run nova-manage discover_hosts and wait for host records (OSPRH-10942)
+    script: |
+      set -xe -o pipefail
+      COMPUTES={{ 2| int + 4 }}
+      RETRIES=10
+      COUNTER=0
+      oc project openstack
+      until [ $(oc rsh nova-cell1-conductor-0 nova-manage cell_v2 list_hosts | wc -l) -eq "$COMPUTES" ]; do
+        if [[ "$COUNTER" -ge "$RETRIES" ]]; then
+          exit 1
+        fi
+        oc rsh nova-cell1-conductor-0 nova-manage cell_v2 discover_hosts --verbose
+        COUNTER=$[$COUNTER +1]
+        sleep 10
+      done
+
+  - name: Run tempest
+    manifest: tempest-tests.yml
