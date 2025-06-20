@@ -28,7 +28,7 @@ ovn_k8s_gateway_config_host_routing: true
 enable_iscsi: false
 enable_multipath: false
 
-stack_name: "hotstack-{{ scenario }}-{{ zuul.build[:8] | default('no-zuul') }}"
+stack_name: "{{ scenario }}-{{ zuul.build[:8] | default('no-zuul') }}"
 stack_parameters:
   # On missconfigured clouds, uncomment these to avoid issues.
   # Ref: https://access.redhat.com/solutions/7059376
