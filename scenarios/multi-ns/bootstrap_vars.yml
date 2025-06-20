@@ -54,4 +54,4 @@ stack_parameters:
   bmh_params:
     image: CentOS-Stream-GenericCloud-9
     cd_image: sushy-tools-blank-image
-    flavor: hotstack.medium
+    flavor: hotstack.mlarge
