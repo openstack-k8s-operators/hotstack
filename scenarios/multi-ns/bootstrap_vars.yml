@@ -34,7 +34,7 @@ cinder_volume_pvs:
   - /dev/vdd
   - /dev/vde
 
-stack_name: "{{ scenario }}-{{ zuul.build[:8] | default('no-zuul') }}"
+stack_name: "hs-{{ scenario }}-{{ zuul.build[:8] | default('no-zuul') }}"
 stack_parameters:
   # On missconfigured clouds, uncomment these to avoid issues.
   # Ref: https://access.redhat.com/solutions/7059376
