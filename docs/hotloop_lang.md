@@ -73,15 +73,10 @@ Here's a breakdown of the common attributes within a stage:
   resources are created, become ready, or reach a desired state before the
   pipeline proceeds. Each item in the list is a command-line string.
 * **`run_conditions`**: (Optional) A list of conditions that must be met for a
-  stage to execute. Each condition has a `name` and a `condition` field.
-  * `name`: A human-readable string that describes the condition. This helps
-    in understanding the purpose of the condition when reviewing the
-    automation workflow.
-  * `condition`: A Jinja2 template expression that evaluates to a boolean
-    value. If the expression evaluates to True , the condition is considered
-    met. If it evaluates to False, the condition is not met.
+  stage to execute. Strings `False`, `FALSE` and `false` will be evaluated as
+  `False`, otherwize the python boolean equivalent of the value.
 
-  The  condition field uses Jinja2 syntax, which allows for dynamic evaluation
+  The condition field can use Jinja2 syntax, which allows for dynamic evaluation
   of expressions based on the available variables in the automation
   environment. The curly brackets `{{ }}` denote Jinja2 template expressions.
 
@@ -89,15 +84,13 @@ Here's a breakdown of the common attributes within a stage:
 
     ```yaml
     run_conditions:
-      - name: Variable `foo` is defined
-        condition: "{{ foo is defined }}"
-      - name: Always for `alpha` channel and greater than v1.0.6 for other channels.
-        condition: >-
-          {{
-            openstack_operator_channel == 'alpha' or
-            openstack_operators_starting_csv | default(none) is none or
-            openstack_operators_starting_csv is version('v1.0.6', '>')
-          }}
+      - "{{ foo is defined }}"
+      - >-
+        {{
+          openstack_operator_channel == 'alpha' or
+          openstack_operators_starting_csv | default(none) is none or
+          openstack_operators_starting_csv is version('v1.0.6', '>')
+        }}
     ```
 * **`stages`**: (Optional) This parameter allows you to define nested stages.
   By utilizing nested stages, you can create more modular and reusable
@@ -132,8 +125,7 @@ Here's a breakdown of the common attributes within a stage:
       - name: Extra inline stage - manifest
         manifest: "manifest.yaml"
     run_conditions:
-      - name: extra stages are enabled
-        condition: "{{ extra_stages is defined and extra_stages }}"
+      - "{{ extra_stages is defined and extra_stages }}"
   ```
 
 ## Stage Types
