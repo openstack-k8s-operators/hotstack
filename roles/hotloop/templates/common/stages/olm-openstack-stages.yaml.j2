@@ -17,7 +17,7 @@
   script: |
     {{
       lookup('ansible.builtin.file',
-              'common/scripts/approve_install_plan.sh')
+             'common/scripts/approve_install_plan.sh')
       | indent(width=4)
     }}
   wait_conditions:
@@ -29,7 +29,7 @@
   script: |
     {{
       lookup('ansible.builtin.file',
-              'common/scripts/leader_election_tune.sh')
+             'common/scripts/leader_election_tune.sh')
       | indent(width=4)
     }}
 
