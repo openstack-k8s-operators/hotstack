@@ -45,10 +45,9 @@
     - "oc wait -n openstack-operators service openstack-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
     - "sleep 30"  # The {.status.loadBalancer} wait conditions are not working?
   run_conditions:
-    - name: Always for `alpha` channel and greater than v1.0.6 for other channels.
-      condition: >-
-        {{
-          openstack_operator_channel == 'alpha' or
-          openstack_operators_starting_csv | default(none) is none or
-          openstack_operators_starting_csv is version('v1.0.6', '>')
-        }}
+    - >-
+      {{
+        openstack_operator_channel == 'alpha' or
+        openstack_operators_starting_csv | default(none) is none or
+        openstack_operators_starting_csv is version('v1.0.6', '>')
+      }}

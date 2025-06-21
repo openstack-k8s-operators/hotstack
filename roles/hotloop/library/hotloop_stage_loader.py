@@ -89,6 +89,77 @@ RETURN = r"""
 stages: []
 """
 
+FALSE_STRINGS = {"false", "False", "FALSE"}
+
+
+def _is_thruty(value):
+    """Determines if a given value is a truthy string.
+
+    This function checks if the input value is a string and not one
+    of the predefined falsey strings. If the value is a string and
+    not in the FALSE_STRINGS set, it returns True if the string is
+    non-empty, and False otherwise. If the value is not a string,
+    it returns the boolean equivalent of the value.
+
+    :param value: The value to evaluate.
+    :return: True if the value is a truthy string, False otherwise.
+    """
+    if not isinstance(value, str):
+        return bool(value)
+
+    return False if value in FALSE_STRINGS else bool(value)
+
+
+def _evaluate_conditions(conditions):
+    """Evaluates whether the given run conditions are met
+
+    :param conditions: The run conditions to evaluate.
+    :return: True if all conditions are true, False otherwise.
+    """
+    if conditions is None:
+        return True
+
+    for condition in conditions:
+        if not _is_thruty(condition):
+            return False
+
+    return True
+
+
+def _validate_run_conditions(conditions):
+    """Validates the 'run_conditions' parameter.
+
+    This function checks if the 'run_conditions' parameter is a list
+    of conditions
+
+    :param conditions: The 'run_conditions' parameter to validate.
+    """
+    if not isinstance(conditions, list):
+        raise TypeError(
+            "'run_conditions' must be a list, {conditions}".format(
+                conditions=type(conditions)
+            )
+        )
+
+
+def _validate_stage(stage, nested=False):
+    """Validate a stage
+
+    :param stage: The stage to validate
+    :raises ValueError: If the stage is invalid
+    """
+    if not isinstance(stage, dict):
+        raise ValueError("All stages must be a dict, {stage}".format(stage=type(stage)))
+
+    if "name" not in stage:
+        raise ValueError("All stages must have a name, {stage}".format(stage=stage))
+
+    if nested and "stages" in stage:
+        raise ValueError("Nested stages cannot be nested, {stage}".format(stage=stage))
+
+    if "run_conditions" in stage:
+        _validate_run_conditions(stage["run_conditions"])
+
 
 def _load_nested(stages):
     """Load and validates nested stages
@@ -119,61 +190,11 @@ def _load_nested(stages):
         # Validate the current stage
         _validate_stage(stage, nested=True)
 
-        result.append(stage)
+        # Evaluate conditions, append if true.
+        if _evaluate_conditions(stage.get("run_conditions", None)):
+            result.append(stage)
 
     return result
-
-
-def _evaluate_conditions(run_conditions):
-    if run_conditions is None:
-        return True
-
-    for run_condition in run_conditions:
-        if not bool(run_condition["condition"]):
-            return False
-
-    return True
-
-
-def _validate_run_conditions(conditions):
-    if not isinstance(conditions, list):
-        raise TypeError(
-            "'run_conditions' must be a list, {conditions}".format(
-                conditions=type(conditions)
-            )
-        )
-    for cond in conditions:
-        if not isinstance(cond, dict):
-            raise TypeError(
-                "'run_conditions' must be a list of dicts, {cond}".format(
-                    cond=type(cond)
-                )
-            )
-        if "name" not in cond or "condition" not in cond:
-            raise ValueError(
-                "'name' or 'condition' is missing from run_condition {cond}".format(
-                    cond=cond
-                )
-            )
-
-
-def _validate_stage(stage, nested=False):
-    """Validate a stage
-
-    :param stage: The stage to validate
-    :raises ValueError: If the stage is invalid
-    """
-    if not isinstance(stage, dict):
-        raise ValueError("All stages must be a dict, {stage}".format(stage=type(stage)))
-
-    if "name" not in stage:
-        raise ValueError("All stages must have a name, {stage}".format(stage=stage))
-
-    if nested and "stages" in stage:
-        raise ValueError("Nested stages cannot be nested, {stage}".format(stage=stage))
-
-    if "run_conditions" in stage:
-        _validate_run_conditions(stage["run_conditions"])
 
 
 def _load_stages(stages):
@@ -197,6 +218,10 @@ def _load_stages(stages):
         # Validate the current stage
         _validate_stage(stage)
 
+        # Evaluate conditions, skip if false
+        if not _evaluate_conditions(stage.get("run_conditions", None)):
+            continue
+
         # Extract nested stages if they exist
         nested = stage.pop("stages", None)
 
@@ -205,10 +230,8 @@ def _load_stages(stages):
         if stage.keys() - {"documentation", "name"}:
             loaded.append(stage)
 
-        conditions = stage.get("run_conditions", None)
-
         # If there are nested stages, load them
-        if nested and _evaluate_conditions(conditions):
+        if nested:
             loaded.extend(_load_nested(nested))
 
     return loaded
