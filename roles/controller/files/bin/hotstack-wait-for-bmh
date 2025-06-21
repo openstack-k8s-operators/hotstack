@@ -1,0 +1,60 @@
+#!/bin/bash
+
+if [ "$EUID" -eq 0 ]; then
+    echo "Please do not run as root."
+    exit
+fi
+
+function usage {
+    echo "Wait for a BaremetalHost resrource to reach one of the states:"
+    echo " - available"
+    echo " - provisioned"
+    echo " - provisioning"
+    echo
+    echo "This command is intended to be run with timeout, for example:"
+    echo "  $ timeout 5m hotstack-wait-for-bmh --namespace openstack --bmh bmh3"
+    echo
+    echo "options:"
+    echo "  --namespace  Namespace (Required)"
+    echo "  --bmh        BaremetalHost name (Required)"
+    echo
+}
+
+function wait_for_baremetal_host {
+    until
+        STATE=$(oc get -n "${NAMESPACE}" baremetalhosts.metal3.io "${BMH}" \
+                -o jsonpath='{.status.provisioning.state}' \
+                | grep -o -e 'available' -e 'provisioned' -e 'provisioning')
+    do
+        sleep 10
+    done
+    echo "BaremetalHost ${BMH} found, state: ${STATE}"
+}
+
+
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        "--namespace")
+            NAMESPACE="$2";
+            shift
+        ;;
+        "--bmh")
+            BMH="$2";
+            shift
+        ;;
+        *)
+            echo "Unknown parameter passed: $1";
+            usage
+            exit 1
+        ;;
+    esac
+    shift
+done
+
+if [[ -z "$NAMESPACE" || -z "$BMH" ]]; then
+    echo "Not enought arguments"
+    usage
+    exit 1
+fi
+
+wait_for_baremetal_host

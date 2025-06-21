@@ -1,9 +1,11 @@
 ---
 controller_ansible_host:
 ansible_inventory: {}
-ssh_key_dir: /home/zuul/.ssh
-data_dir: /home/zuul/data
-cloud_config_dir: "/home/zuul/.hotcloud"
+base_dir: /home/zuul
+bin_dir: "{{ base_dir }}/bin"
+ssh_key_dir: "{{ base_dir }}/.ssh"
+data_dir: "{{ base_dir }}/data"
+cloud_config_dir: "{{ base_dir }}/.hotcloud"
 hotstack_cloud_secrets:
   auth_url: http://cloud.example.com:5000
   application_credential_id: app_credential_id
