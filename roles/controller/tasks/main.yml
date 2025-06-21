@@ -31,11 +31,27 @@
         sleep: 2
         timeout: 300
 
-    - name: Ensure data directory exists
+    - name: Ensure directories exists
       ansible.builtin.file:
-        path: "{{ data_dir }}"
+        path: "{{ item }}"
         state: directory
         mode: '0755'
+      loop:
+        - "{{ data_dir }}"
+        - "{{ bin_dir }}"
+
+    - name: Add bin utilities to the bin_dir
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: >-
+          {{
+            [
+              bin_dir, item | ansible.builtin.basename
+            ] | ansible.builtin.path_join
+          }}
+        mode: '0755'
+      loop:
+        - bin/hotstack-wait-for-bmh
 
     - name: Write ansible inventory to file on controller-0
       when:

@@ -171,15 +171,8 @@ stages:
   - name: BaremetalHosts CRs
     j2_manifest: manifests/dataplanes/baremetal_hosts.yaml.j2
     wait_conditions:
-      - sleep 20
-      - >-
-        oc wait -n openstack-a baremetalhosts.metal3.io bmh-a-0
-        --for jsonpath='{.status.provisioning.state}=available'
-        --timeout=300s
-      - >-
-        oc wait -n openstack-b baremetalhosts.metal3.io bmh-b-0
-        --for jsonpath='{.status.provisioning.state}=available'
-        --timeout=300s
+      - "timeout 5m hotstack-wait-for-bmh --namespace openstack-a --bmh bmh-a-0"
+      - "timeout 5m hotstack-wait-for-bmh --namespace openstack-b --bmh bmh-b-0"
 
   - name: Dataplane nodeset
     manifest: manifests/dataplanes/nodesets.yaml
