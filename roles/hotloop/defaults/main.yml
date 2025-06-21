@@ -15,7 +15,7 @@
 # under the License.
 
 wait_condition_retry_delay: 5
-wait_condition_retries: 25
+wait_condition_retries: 50
 manifests_dir: /home/zuul/manifests
 automation:
   stages: []
