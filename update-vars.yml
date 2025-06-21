@@ -4,5 +4,5 @@
 #
 openstack_operators_update: true
 openstack_operators_image: quay.io/openstack-k8s-operators/openstack-operator-index-upgrade:latest
-openstack_operators_starting_csv: 0.2.0
+openstack_operators_starting_csv: v0.2.0
 openstack_operator_channel: stable-v1.0

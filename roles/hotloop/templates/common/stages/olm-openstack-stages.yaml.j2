@@ -33,7 +33,7 @@
       | indent(width=4)
     }}
 
-- name: Openstack
+- name: Openstack operator initialization resource
   manifest: "{{ role_path }}/files/common/manifests/openstack.yaml"
   wait_conditions:
     - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=300s"
@@ -47,7 +47,7 @@
   run_conditions:
     - >-
       {{
-        openstack_operator_channel == 'alpha' or
         openstack_operators_starting_csv | default(none) is none or
+        openstack_operators_starting_csv is version('v1.0.0', '<') or
         openstack_operators_starting_csv is version('v1.0.6', '>')
       }}
