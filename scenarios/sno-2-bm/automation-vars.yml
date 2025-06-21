@@ -51,3 +51,16 @@ stages:
       - >-
         oc wait -n openstack openstackcontrolplane controlplane
         --for condition=Ready --timeout=60m
+
+  - name: Update openstack-operators OLM
+    stages: >-
+      {{
+        lookup('ansible.builtin.template',
+               'common/stages/openstack-olm-update.yaml.j2')
+      }}
+    run_conditions:
+      - >-
+        {{
+          openstack_operators_update is defined and
+          openstack_operators_update | bool
+        }}
