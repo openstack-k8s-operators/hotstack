@@ -20,7 +20,7 @@ stages:
     stages: >-
       {{
         lookup("ansible.builtin.template",
-               "common/stages/metal-platofrm-provisioning.yaml.j2")
+               "common/stages/metal-platform-provisioning.yaml.j2")
       }}
 
   - name: OLM Dependencies

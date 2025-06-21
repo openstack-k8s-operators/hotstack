@@ -10,14 +10,14 @@
     After you have installed LVM Storage, you must create an LVMCluster custom resource (CR).
   manifest: "{{ role_path }}/files/common/manifests/topolvm.yaml"
   wait_conditions:
-    - "oc wait namespaces openshift-storage --for jsonpath='{.status.phase}=Active' --timeout=300s"
+    - "oc wait namespaces openshift-storage --for jsonpath='{.status.phase}=Active' --timeout=180s"
     - >-
       oc wait -n openshift-storage operatorgroups.operators.coreos.com openshift-storage-operatorgroup
       --for jsonpath='{.status.namespaces}' --timeout=30s
     - >-
       oc wait -n openshift-storage ClusterServiceVersion
       -l operators.coreos.com/lvms-operator.openshift-storage
-      --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
+      --for jsonpath='{.status.phase}=Succeeded' --timeout=180s
 
 - name: TopoLVM LVMCluster
   documentation: |
@@ -32,4 +32,4 @@
       groups.
   manifest: "{{ role_path }}/files/common/manifests/topolvmcluster.yaml"
   wait_conditions:
-    - "oc wait -n openshift-storage lvmcluster.lvm.topolvm.io/lvmcluster --for jsonpath='{.status.state}=Ready' --timeout=300s"
+    - "oc wait -n openshift-storage lvmcluster.lvm.topolvm.io/lvmcluster --for jsonpath='{.status.state}=Ready' --timeout=180s"
