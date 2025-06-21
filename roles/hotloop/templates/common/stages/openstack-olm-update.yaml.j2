@@ -8,18 +8,18 @@
   wait_conditions:
     - >-
       oc wait -n openstack-operators csv -l operators.coreos.com/openstack-operator.openstack-operators=
-      --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
+      --for jsonpath='{.status.phase}=Succeeded' --timeout=180s
 
 - name: Apply Openstack init resource if startingCSV v1.0.6 or earlier
   manifest: "{{ role_path }}/files/common/manifests/openstack.yaml"
   wait_conditions:
-    - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=300s"
-    - "oc wait -n openstack-operators pod --for condition=Ready -l openstack.org/operator-name=openstack-controller --timeout=300s"
-    - "oc wait -n openstack-operators -l openstack.org/operator-name deployment --for condition=Available --timeout=300s"
-    - "oc wait -n openstack-operators -l app.kubernetes.io/name=rabbitmq-cluster-operator deployment --for condition=Available --timeout=300s"
-    - "oc wait -n openstack-operators service infra-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
-    - "oc wait -n openstack-operators service openstack-baremetal-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
-    - "oc wait -n openstack-operators service openstack-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+    - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=180s"
+    - "oc wait -n openstack-operators pod --for condition=Ready -l openstack.org/operator-name=openstack-controller --timeout=180s"
+    - "oc wait -n openstack-operators -l openstack.org/operator-name deployment --for condition=Available --timeout=180s"
+    - "oc wait -n openstack-operators -l app.kubernetes.io/name=rabbitmq-cluster-operator deployment --for condition=Available --timeout=180s"
+    - "oc wait -n openstack-operators service infra-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=180s"
+    - "oc wait -n openstack-operators service openstack-baremetal-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=180s"
+    - "oc wait -n openstack-operators service openstack-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=180s"
   run_conditions:
     - >-
       {{

@@ -42,6 +42,7 @@
   loop: "{{ item.wait_conditions }}"
   loop_control:
     loop_var: wait_cmd
-  until: _wait_result.rc == 0
+  until: (_wait_result.rc == 0 or
+          not _wait_result.stderr is match(".*no matching resources found.*"))
   retries: "{{ wait_condition_retries }}"
   delay: "{{ wait_condition_retry_delay }}"

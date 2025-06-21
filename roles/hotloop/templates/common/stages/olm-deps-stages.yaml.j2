@@ -7,23 +7,23 @@
     each step of this procedure is complete.
   manifest: "{{ role_path }}/files/common/manifests/olm-deps.yaml"
   wait_conditions:
-    - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}=Active' --timeout=300s"
-    - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}=Active' --timeout=300s"
-    - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}=Active' --timeout=300s"
-    - "oc wait -n cert-manager-operator pod --for condition=Ready -l name=cert-manager-operator --timeout=300s"
-    - "oc wait -n cert-manager pod -l app=cainjector --for condition=Ready --timeout=300s"
-    - "oc wait -n cert-manager pod -l app=webhook --for condition=Ready --timeout=300s"
-    - "oc wait -n cert-manager pod -l app=cert-manager --for condition=Ready --timeout=300s"
-    - "oc wait -n metallb-system pod -l control-plane=controller-manager --for condition=Ready --timeout=300s"
-    - "oc wait -n metallb-system pod -l component=webhook-server --for condition=Ready --timeout=300s"
+    - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}=Active' --timeout=30s"
+    - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}=Active' --timeout=30s"
+    - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}=Active' --timeout=30s"
+    - "oc wait -n cert-manager-operator pod --for condition=Ready -l name=cert-manager-operator --timeout=180s"
+    - "oc wait -n cert-manager pod -l app=cainjector --for condition=Ready --timeout=180s"
+    - "oc wait -n cert-manager pod -l app=webhook --for condition=Ready --timeout=180s"
+    - "oc wait -n cert-manager pod -l app=cert-manager --for condition=Ready --timeout=180s"
+    - "oc wait -n metallb-system pod -l control-plane=controller-manager --for condition=Ready --timeout=180s"
+    - "oc wait -n metallb-system pod -l component=webhook-server --for condition=Ready --timeout=180s"
 
 - name: Common MetalLB
   manifest: "{{ role_path }}/files/common/manifests/metallb.yaml"
   wait_conditions:
-    - "oc wait -n metallb-system pod -l component=speaker --for condition=Ready --timeout=300s"
+    - "oc wait -n metallb-system pod -l component=speaker --for condition=Ready --timeout=180s"
 
 - name: Common NMState
   manifest: "{{ role_path }}/files/common/manifests/nmstate.yaml"
   wait_conditions:
-    - "oc wait -n openshift-nmstate pod -l component=kubernetes-nmstate-handler --for condition=Ready --timeout=300s"
-    - "oc wait -n openshift-nmstate deployments/nmstate-webhook --for condition=Available --timeout=300s"
+    - "oc wait -n openshift-nmstate pod -l component=kubernetes-nmstate-handler --for condition=Ready --timeout=180s"
+    - "oc wait -n openshift-nmstate deployments/nmstate-webhook --for condition=Available --timeout=180s"
