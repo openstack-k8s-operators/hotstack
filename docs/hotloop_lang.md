@@ -87,9 +87,9 @@ Here's a breakdown of the common attributes within a stage:
       - "{{ foo is defined }}"
       - >-
         {{
-          openstack_operator_channel == 'alpha' or
-          openstack_operators_starting_csv | default(none) is none or
-          openstack_operators_starting_csv is version('v1.0.6', '>')
+          openstack_operators_starting_csv is defined and
+          openstack_operators_starting_csv is version('v1.0.0', '>=') and
+          openstack_operators_starting_csv is version('v1.0.7', '<')
         }}
     ```
 * **`stages`**: (Optional) This parameter allows you to define nested stages.

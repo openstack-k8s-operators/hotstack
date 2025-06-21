@@ -70,8 +70,8 @@ Schema for a stage item is:
       - "{{ foo is defined }}"
       - >-
         {{
-          openstack_operator_channel == 'alpha' or
           openstack_operators_starting_csv | default(none) is none or
+          openstack_operators_starting_csv is version('v1.0.0', '<') or
           openstack_operators_starting_csv is version('v1.0.6', '>')
         }}
     ```

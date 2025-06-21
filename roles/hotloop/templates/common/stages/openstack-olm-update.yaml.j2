@@ -21,12 +21,9 @@
     - "oc wait -n openstack-operators service openstack-baremetal-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
     - "oc wait -n openstack-operators service openstack-operator-webhook-service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
   run_conditions:
-    # If v1.0.7 or later was used initially, this resource will already exist.
     - >-
       {{
-        openstack_operator_channel == 'stable-v1.0' and
-        (
-          openstack_operators_starting_csv is defined and
-          openstack_operators_starting_csv is version('v1.0.7', '<')
-        )
+        openstack_operators_starting_csv is defined and
+        openstack_operators_starting_csv is version('v1.0.0', '>=') and
+        openstack_operators_starting_csv is version('v1.0.7', '<')
       }}
