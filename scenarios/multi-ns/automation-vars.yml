@@ -1,5 +1,20 @@
 ---
 stages:
+  - name: Metal platform Provisioning CR
+    documentation: |
+      Create a Provisioning custom resource (CR) to enable OCP Metal platform components
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/metal-platform-provisioning.yaml.j2")
+      }}
+  - name: Dependencies
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/deps-stages.yaml.j2")
+      }}
+
   - name: Cinder LVM
     stages: >-
       {{
@@ -12,22 +27,6 @@ stages:
       {{
         lookup("ansible.builtin.template",
                "common/stages/topolvm-stages.yaml.j2")
-      }}
-
-  - name: Metal platform Provisioning CR
-    documentation: |
-      Create a Provisioning custom resource (CR) to enable OCP Metal platform components
-    stages: >-
-      {{
-        lookup("ansible.builtin.template",
-               "common/stages/metal-platform-provisioning.yaml.j2")
-      }}
-
-  - name: OLM Dependencies
-    stages: >-
-      {{
-        lookup("ansible.builtin.template",
-               "common/stages/olm-deps-stages.yaml.j2")
       }}
 
   - name: OLM Openstack

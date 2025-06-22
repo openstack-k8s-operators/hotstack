@@ -1,5 +1,12 @@
 ---
 stages:
+  - name: Dependencies
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/deps-stages.yaml.j2")
+      }}
+
   - name: Cinder LVM
     stages: >-
       {{
@@ -12,13 +19,6 @@ stages:
       {{
         lookup("ansible.builtin.template",
                "common/stages/topolvm-stages.yaml.j2")
-      }}
-
-  - name: OLM Dependencies
-    stages: >-
-      {{
-        lookup("ansible.builtin.template",
-               "common/stages/olm-deps-stages.yaml.j2")
       }}
 
   - name: OLM Openstack

@@ -1,24 +1,4 @@
 ---
-- name: TopoLVM common
-  documentation: |
-    Install the TopoLVM Container Storage Interface (CSI) driver on the OCP
-    cluster.
-
-    It uses LVMS (Logical Volume Manager Storage) to dynamically provision
-    local storage built from block devices on OCP nodes.
-
-    After you have installed LVM Storage, you must create an LVMCluster custom resource (CR).
-  manifest: "{{ role_path }}/files/common/manifests/topolvm.yaml"
-  wait_conditions:
-    - "oc wait namespaces openshift-storage --for jsonpath='{.status.phase}=Active' --timeout=180s"
-    - >-
-      oc wait -n openshift-storage operatorgroups.operators.coreos.com openshift-storage-operatorgroup
-      --for jsonpath='{.status.namespaces}' --timeout=30s
-    - >-
-      oc wait -n openshift-storage ClusterServiceVersion
-      -l operators.coreos.com/lvms-operator.openshift-storage
-      --for jsonpath='{.status.phase}=Succeeded' --timeout=180s
-
 - name: TopoLVM LVMCluster
   documentation: |
     Create a TopoLVM - LVMCluster on the Openshift cluster.
@@ -30,6 +10,6 @@
       volume claims (PVCs).
     * Configure a list of devices that you want to add to the LVM volume
       groups.
-  manifest: "{{ role_path }}/files/common/manifests/topolvmcluster.yaml"
+  manifest: "{{ role_path }}/files/common/manifests/topolvm/topolvmcluster.yaml"
   wait_conditions:
     - "oc wait -n openshift-storage lvmcluster.lvm.topolvm.io/lvmcluster --for jsonpath='{.status.state}=Ready' --timeout=180s"

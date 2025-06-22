@@ -1,19 +1,5 @@
 ---
 stages:
-  - name: Cinder LVM
-    stages: >-
-      {{
-        lookup("ansible.builtin.file",
-               "common/stages/cinder-lvm-label-stages.yaml")
-      }}
-
-  - name: TopoLVM
-    stages: >-
-      {{
-        lookup("ansible.builtin.template",
-               "common/stages/topolvm-stages.yaml.j2")
-      }}
-
   - name: Metal platform Provisioning CR
     documentation: |
       Create a Provisioning custom resource (CR) to enable OCP Metal platform components
@@ -23,11 +9,25 @@ stages:
                "common/stages/metal-platform-provisioning.yaml.j2")
       }}
 
-  - name: OLM Dependencies
+  - name: Cinder LVM
+    stages: >-
+      {{
+        lookup("ansible.builtin.file",
+               "common/stages/cinder-lvm-label-stages.yaml")
+      }}
+
+  - name: Dependencies
     stages: >-
       {{
         lookup("ansible.builtin.template",
-               "common/stages/olm-deps-stages.yaml.j2")
+               "common/stages/deps-stages.yaml.j2")
+      }}
+
+  - name: TopoLVM
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/topolvm-stages.yaml.j2")
       }}
 
   - name: OLM Openstack
