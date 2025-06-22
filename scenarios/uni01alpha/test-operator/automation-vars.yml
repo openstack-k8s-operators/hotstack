@@ -254,6 +254,5 @@ stages:
       done
       set -e
 
-
   - name: Run tempest
     manifest: tempest-tests.yml
