@@ -26,7 +26,7 @@ function usage {
     echo "Wait for a Compute services to be ready"
     echo
     echo "This command is intended to be run with timeout, for example:"
-    echo "  $ timeout 5m hotstack-nova-discover-hosts --namespace openstack --num-computes 3"
+    echo "  $ timeout --foreground 5m hotstack-nova-discover-hosts --namespace openstack --num-computes 3"
     echo
     echo "options:"
     echo "  --namespace      Namespace (Required)"
