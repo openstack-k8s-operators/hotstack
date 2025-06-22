@@ -1,0 +1,50 @@
+- name: "Minor update :: Create OpenStackVersion patch"
+  documentation: |
+    This creates a patch file `{{ manifests_dir }}/patches/openstack_version_patch.yaml`
+    If `openstack_update_custom_images` is defined it will populate the customContainerImages
+    in the OpenstackVersion YAML patch.
+  script: |
+    {{
+      lookup('ansible.builtin.template',
+             'common/scripts/create_openstack_version_patch.sh.j2')
+      | indent(width=4)
+    }}
+
+- name: "Minor update :: Update the target version in the OpenStackVersion custom resource (CR)"
+  documentation: |
+    The `hotstack-openstack-version-patch` script will get the `availableVersion`
+    and us it to replace the string `__TARGET_VERSION__` in the patch file and
+    apply the patch using `oc patch` command.
+  cmd: >-
+    hotstack-openstack-version-patch --namespace openstack --name controlplane
+    --file {{ manifests_dir }}/patches/openstack_version_patch.yaml
+  wait_conditions:
+    - >-
+      oc -n openstack wait openstackversions.core.openstack.org controlplane
+      --for=condition=MinorUpdateOVNControlplane  --timeout=20m
+  run_conditions:
+    - "{{ scenario not in hotstack_non_default_namespace_scenarios }}"
+
+- name: "Minor update :: Update the OVN services on the data plane"
+  manifest: manifests/update/update-ovn.yaml
+  wait_conditions:
+    - >-
+      oc -n openstack wait openstackversions.core.openstack.org controlplane
+      --for=condition=MinorUpdateOVNDataplane --timeout=20m
+
+- name: "Minor update :: Wait for control plane services update to complete"
+  wait_conditions:
+    - >-
+      oc -n openstack wait openstackversions.core.openstack.org controlplane
+      --for=condition=MinorUpdateControlplane --timeout=20m
+  run_conditions:
+    - "{{ scenario not in hotstack_non_default_namespace_scenarios }}"
+
+- name: "Minor update :: Update services on the data plane"
+  manifest: manifests/update/update-services.yaml
+  wait_conditions:
+    - >-
+      oc -n openstack wait openstackversions.core.openstack.org controlplane
+      --for=condition=MinorUpdateControlplane --timeout=20m
+  run_conditions:
+    - "{{ scenario not in hotstack_non_default_namespace_scenarios }}"

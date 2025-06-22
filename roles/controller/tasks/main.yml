@@ -53,6 +53,7 @@
       loop:
         - bin/hotstack-wait-for-bmh
         - bin/hotstack-nova-discover-hosts
+        - bin/hotstack-openstack-version-patch
 
     - name: Write ansible inventory to file on controller-0
       when:

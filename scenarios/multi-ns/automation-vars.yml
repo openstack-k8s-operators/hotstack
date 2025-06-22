@@ -179,10 +179,10 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack-a openstackdataplanenodesets.dataplane.openstack.org
-        openstack-edpm --for condition=SetupReady --timeout=30m
+        openstack-edpm --for condition=SetupReady --timeout=40m
       - >-
         oc wait -n openstack-b openstackdataplanenodesets.dataplane.openstack.org
-        openstack-edpm --for condition=SetupReady --timeout=30m
+        openstack-edpm --for condition=SetupReady --timeout=40m
 
   - name: Dataplane Deployment
     manifest: manifests/dataplanes/deployments.yaml

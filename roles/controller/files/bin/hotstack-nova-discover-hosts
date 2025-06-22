@@ -16,6 +16,11 @@
 
 set -ex
 
+if [ "$EUID" -eq 0 ]; then
+    echo "Please do not run as root."
+    exit
+fi
+
 COMPUTE_SERVICE_LIST_CMD=(openstack compute service list --service nova-compute -f value)
 
 CELL_CONDUCTOR=nova-cell1-conductor-0
