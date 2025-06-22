@@ -34,14 +34,14 @@ stages:
       - >-
         oc wait -n openstack nncp -l osp/nncm-config-type=standard
         --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
-        --timeout=5m
+        --timeout=180s
 
   - name: OpenstackControlPlane
     manifest: manifests/control-plane/control-plane.yaml
     wait_conditions:
       - >-
         oc wait -n openstack openstackcontrolplane controlplane
-        --for condition=Ready --timeout=60m
+        --for condition=Ready --timeout=30m
 
   - name: Dataplane SSH key secret
     cmd: >-
