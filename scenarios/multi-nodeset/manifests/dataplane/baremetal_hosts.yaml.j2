@@ -18,7 +18,6 @@ spec:
     credentialsName: bmc-secret
   bootMACAddress: {{ stack_outputs.ironic_nodes.nodes[0].ports[0].address }}
   bootMode: UEFI
-  online: false
   rootDeviceHints:
     deviceName: /dev/vda
 ---
@@ -41,6 +40,5 @@ spec:
     credentialsName: bmc-secret
   bootMACAddress: {{ stack_outputs.ironic_nodes.nodes[1].ports[0].address }}
   bootMode: UEFI
-  online: false
   rootDeviceHints:
     deviceName: /dev/vda
