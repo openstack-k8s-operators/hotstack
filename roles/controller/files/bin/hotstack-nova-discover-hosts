@@ -1,0 +1,87 @@
+#!/bin/bash
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+set -ex
+
+COMPUTE_SERVICE_LIST_CMD=(openstack compute service list --service nova-compute -f value)
+
+CELL_CONDUCTOR=nova-cell1-conductor-0
+NOVA_MANAGE_LIST_CMD=(nova-manage cell_v2 list_hosts)
+NOVA_MANAGE_DISCOVER_CMD=(nova-manage cell_v2 discover_hosts --verbose)
+
+function usage {
+    echo "Wait for a Compute services to be ready"
+    echo
+    echo "This command is intended to be run with timeout, for example:"
+    echo "  $ timeout 5m hotstack-nova-discover-hosts --namespace openstack --num-computes 3"
+    echo
+    echo "options:"
+    echo "  --namespace      Namespace (Required)"
+    echo "  --num-computes   Minumum number of Nova computes expected to exist"
+    echo
+}
+
+
+function wait_for_compute_services {
+    local found=0
+    until
+        [ "${found}" -ge "${COMPUTES}" ]
+    do
+        found=$(oc -n "${NAMESPACE}" rsh openstackclient "${COMPUTE_SERVICE_LIST_CMD[@]}" | wc -l)
+        [ "${found}" -ge "${COMPUTES}" ] || sleep 10
+    done
+}
+
+function wait_for_disover {
+    local num_computes=$[$COMPUTES +4]
+    local found=0
+    until
+        [ "${found}" -ge "${num_computes}" ]
+    do
+        oc -n "${NAMESPACE}" rsh "${CELL_CONDUCTOR}" "${NOVA_MANAGE_DISCOVER_CMD[@]}" --verbose
+        found=$(oc rsh "${CELL_CONDUCTOR}" "${NOVA_MANAGE_LIST_CMD[@]}" | wc -l)
+        [ "${found}" -ge "${num_computes}" ] || sleep 10
+    done
+}
+
+
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        "--namespace")
+            NAMESPACE="$2";
+            shift
+        ;;
+        "--num-computes")
+            COMPUTES="$2";
+            shift
+        ;;
+        *)
+            echo "Unknown parameter passed: $1";
+            usage
+            exit 1
+        ;;
+    esac
+    shift
+done
+
+if [[ -z "$NAMESPACE" || -z "$COMPUTES" ]]; then
+    echo "Not enought arguments"
+    usage
+    exit 1
+fi
+
+wait_for_compute_services
+wait_for_disover
