@@ -196,7 +196,7 @@ spec:
   horizon:
     apiOverride:
       route: {}
-    enabled: true
+    enabled: false
     template:
       preserveJobs: false
       replicas: 1
