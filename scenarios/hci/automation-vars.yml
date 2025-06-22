@@ -89,3 +89,16 @@ stages:
           openstack_operators_update is defined and
           openstack_operators_update | bool
         }}
+
+  - name: Update controlplane and dataplane
+    stages: >-
+      {{
+        lookup('ansible.builtin.template',
+               'common/stages/openstack-update.yaml.j2')
+      }}
+    run_conditions:
+      - >-
+        {{
+          openstack_update is defined and
+          openstack_update | bool
+        }}

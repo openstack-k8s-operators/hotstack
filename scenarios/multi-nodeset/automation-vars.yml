@@ -119,10 +119,10 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack openstackdataplanenodesets.dataplane.openstack.org
-        openstack-edpm-a --for condition=SetupReady --timeout=30m
+        openstack-edpm-a --for condition=SetupReady --timeout=40m
       - >-
         oc wait -n openstack openstackdataplanenodesets.dataplane.openstack.org
-        openstack-edpm-b --for condition=SetupReady --timeout=30m
+        openstack-edpm-b --for condition=SetupReady --timeout=40m
 
   - name: Dataplane Deployment
     manifest: manifests/dataplane/deployment.yaml
@@ -145,4 +145,17 @@ stages:
         {{
           openstack_operators_update is defined and
           openstack_operators_update | bool
+        }}
+
+  - name: Update controlplane and dataplane
+    stages: >-
+      {{
+        lookup('ansible.builtin.template',
+               'common/stages/openstack-update.yaml.j2')
+      }}
+    run_conditions:
+      - >-
+        {{
+          openstack_update is defined and
+          openstack_update | bool
         }}

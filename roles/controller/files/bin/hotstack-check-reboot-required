@@ -1,0 +1,68 @@
+#!/bin/bash
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+set -ex
+
+OPENSTACK_VERSION=openstackversions.core.openstack.org
+
+if [ "$EUID" -eq 0 ]; then
+    echo "Please do not run as root."
+    exit
+fi
+
+function usage {
+    echo "Check if any nodes need reboot after update"
+    echo
+    echo "Return code 1 for error, if any nodes need a reboot"
+    echo
+    echo "options:"
+    echo "  --namespace      Namespace (Required)"
+    echo "  --name           Name of the NodeSet"
+    echo
+}
+
+function check_reboot_required {
+    echo "TODO(hjensas)"
+    exit 1
+}
+
+
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        "--namespace")
+            NAMESPACE="$2";
+            shift
+        ;;
+        "--name")
+           NAME="$2";
+           shift
+        ;;
+        *)
+            echo "Unknown parameter passed: $1";
+            usage
+            exit 1
+        ;;
+    esac
+    shift
+done
+
+if [[ -z "$NAMESPACE" || -z "$NAME" ]]; then
+    echo "Not enought arguments"
+    usage
+    exit 1
+fi
+
+check_reboot_required

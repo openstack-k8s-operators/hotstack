@@ -32,6 +32,11 @@ hotstack_edpm_bootstrap_command: "common/scripts/upstream_edpm_bootstrap_command
 hotstack_install_ca_url: https://url.corp.redhat.com/hotstack-ca
 hotstack_rhos_release_rpm: https://url.corp.redhat.com/hotstack-rhos-release-latest-noarch-rpm
 
+# Any scenario that does not use default 'openstack' namespace can
+# be added here. Or override it in the scenasrios bootstrap_vars.
+hotstack_non_default_namespace_scenarios:
+  - multi-ns
+
 # For convinience, a default patches for nodesets
 # * Sets edpm_bootstrap_command
 # * Set registries/registry logins if not already set in the nodeset YAML.

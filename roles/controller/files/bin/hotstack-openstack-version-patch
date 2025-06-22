@@ -1,0 +1,98 @@
+#!/bin/bash
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+set -ex
+
+OPENSTACK_VERSION=openstackversions.core.openstack.org
+AVAILABLE_PATH=(-o jsonpath='{.status.availableVersion}')
+DEPLOYED_PATH=(-o jsonpath='{.status.deployedVersion}')
+
+if [ "$EUID" -eq 0 ]; then
+    echo "Please do not run as root."
+    exit
+fi
+
+function usage {
+    echo "Apply a OpenstackVersion patch"
+    echo
+    echo
+    echo "options:"
+    echo "  --namespace      Namespace (Required)"
+    echo "  --name           Name of the OpenStackVersion"
+    echo "  --file           Patch file to apply"
+    echo
+}
+
+function get_versions {
+    AVAILABLE_VERSION=$(oc -n "${NAMESPACE}" get "${OPENSTACK_VERSION}" "${NAME}" "${AVAILABLE_PATH[@]}")
+    DEPLOYED_VERSION=$(oc  -n "${NAMESPACE}" get "${OPENSTACK_VERSION}" "${NAME}" "${DEPLOYED_PATH[@]}")
+
+    if [[ -z "${AVAILABLE_VERSION}" || -z "${DEPLOYED_VERSION}" ]]
+    then
+        echo "ERROR :: Unable to determine deployed and/or available versions."
+        exit 1
+    fi
+
+    if [ "${AVAILABLE_VERSION}" == "${DEPLOYED_VERSION}" ]
+    then
+        echo "Deployed and available versions are the same."
+        exit 0
+    fi
+}
+
+function apply_patch {
+    sed -i s/__TARGET_VERSION__/${AVAILABLE_VERSION}/g ${FILE}
+    oc -n "${NAMESPACE}" patch "${OPENSTACK_VERSION}" "${NAME}" --type=merge --patch-file ${FILE}
+}
+
+
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        "--namespace")
+            NAMESPACE="$2";
+            shift
+        ;;
+        "--name")
+           NAME="$2";
+           shift
+        ;;
+        "--file")
+            FILE="$2";
+            shift
+        ;;
+        *)
+            echo "Unknown parameter passed: $1";
+            usage
+            exit 1
+        ;;
+    esac
+    shift
+done
+
+if [[ -z "$NAMESPACE" || -z "$NAME" || -z "$FILE" ]]; then
+    echo "Not enought arguments"
+    usage
+    exit 1
+fi
+
+if [ ! -f "$FILE" ]; then
+    echo "Patch file: $FILE does not exist."
+    exit 1
+fi
+
+
+get_versions
+apply_patch
