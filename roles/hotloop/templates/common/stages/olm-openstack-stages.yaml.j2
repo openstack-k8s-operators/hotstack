@@ -25,13 +25,20 @@
       oc wait -n openstack-operators csv -l operators.coreos.com/openstack-operator.openstack-operators=
       --for jsonpath='{.status.phase}=Succeeded' --timeout=180s
 
-- name: Patch openstack leader election tuneables
+- name: Patch openstack-operators leader election tuneables
   script: |
     {{
       lookup('ansible.builtin.file',
              'common/scripts/leader_election_tune.sh')
       | indent(width=4)
     }}
+  run_conditions:
+    - >-
+      {{
+        openstack_operators_starting_csv | default(none) is none or
+        openstack_operators_starting_csv is version('v1.0.0', '<') or
+        openstack_operators_starting_csv is version('v1.0.11', '>')
+      }}
 
 - name: Openstack operator initialization resource
   manifest: "{{ role_path }}/files/common/manifests/openstack.yaml"
