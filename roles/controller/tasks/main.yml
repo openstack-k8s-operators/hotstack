@@ -52,6 +52,7 @@
         mode: '0755'
       loop:
         - bin/hotstack-wait-for-bmh
+        - bin/hotstack-nova-discover-hosts
 
     - name: Write ansible inventory to file on controller-0
       when:
