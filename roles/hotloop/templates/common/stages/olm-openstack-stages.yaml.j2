@@ -5,7 +5,7 @@
 
     Once these CRs are created, run the `oc wait` commands to confirm that
     each step of this procedure is complete.
-  j2_manifest: "{{ role_path }}/files/common/manifests/olm-openstack.yaml.j2"
+  j2_manifest: "{{ role_path }}/files/common/manifests/olm/olm-openstack.yaml.j2"
   wait_conditions:
     - "oc wait namespaces openstack-operators --for jsonpath='{.status.phase}=Active' --timeout=30s"
     - "oc wait namespaces openstack --for jsonpath='{.status.phase}=Active' --timeout=30s"
@@ -34,7 +34,7 @@
     }}
 
 - name: Openstack operator initialization resource
-  manifest: "{{ role_path }}/files/common/manifests/openstack.yaml"
+  manifest: "{{ role_path }}/files/common/manifests/olm/openstack-init.yaml"
   wait_conditions:
     - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=180s"
     - "oc wait -n openstack-operators pod --for condition=Ready -l openstack.org/operator-name=openstack-controller --timeout=180s"
