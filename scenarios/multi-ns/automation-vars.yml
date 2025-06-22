@@ -40,8 +40,8 @@ stages:
   - name: Namespaces
     manifest: ./manifests/namespaces.yaml
     wait_conditions:
-      - oc wait namespaces openstack-a --for jsonpath='{.status.phase}=Active' --timeout=1m
-      - oc wait namespaces openstack-b --for jsonpath='{.status.phase}=Active' --timeout=1m
+      - oc wait namespaces openstack-a --for jsonpath='{.status.phase}=Active' --timeout=30s
+      - oc wait namespaces openstack-b --for jsonpath='{.status.phase}=Active' --timeout=30s
 
   - name: Shared NNCP
     manifest: ./manifests/shared_nncp.yaml
@@ -49,7 +49,7 @@ stages:
       - >-
         oc wait -n openstack nncp master-0-shared
         --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
-        --timeout=5m
+        --timeout=120s
 
   - name: NodeNetworkConfigurationPolicy (nncp)
     manifest: manifests/networking/nncp.yaml
@@ -57,11 +57,11 @@ stages:
       - >-
         oc wait -n openstack-a nncp master-0-a
         --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
-        --timeout=5m
+        --timeout=120s
       - >-
         oc wait -n openstack-b nncp master-0-b
         --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
-        --timeout=5m
+        --timeout=120s
 
   - name: NetworkAttchmentDefinition (NAD)
     manifest: manifests/networking/nad.yaml
@@ -80,10 +80,10 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack-a openstackcontrolplane controlplane
-        --for condition=Ready --timeout=60m
+        --for condition=Ready --timeout=30m
       - >-
         oc wait -n openstack-b openstackcontrolplane controlplane
-        --for condition=Ready --timeout=60m
+        --for condition=Ready --timeout=30m
 
   - name: Cloud a - Dataplane SSH key secret
     cmd: >-
@@ -180,10 +180,10 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack-a openstackdataplanenodesets.dataplane.openstack.org
-        openstack-edpm --for condition=SetupReady --timeout=10m
+        openstack-edpm --for condition=SetupReady --timeout=30m
       - >-
         oc wait -n openstack-b openstackdataplanenodesets.dataplane.openstack.org
-        openstack-edpm --for condition=SetupReady --timeout=10m
+        openstack-edpm --for condition=SetupReady --timeout=30m
 
   - name: Dataplane Deployment
     manifest: manifests/dataplanes/deployments.yaml

@@ -34,7 +34,7 @@ stages:
       - >-
         oc wait -n openstack nncp -l osp/nncm-config-type=standard
         --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
-        --timeout=5m
+        --timeout=180s
 
   - name: NetworkAttchmentDefinition (NAD)
     manifest: manifests/control-plane/networking/nad.yaml
@@ -50,7 +50,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack openstackcontrolplane controlplane
-        --for condition=Ready --timeout=60m
+        --for condition=Ready --timeout=30m
 
   - name: Update openstack-operators OLM
     stages: >-
