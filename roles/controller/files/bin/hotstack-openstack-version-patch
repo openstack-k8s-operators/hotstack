@@ -54,7 +54,14 @@ function get_versions {
 }
 
 function apply_patch {
-    sed -i s/__TARGET_VERSION__/${AVAILABLE_VERSION}/g ${FILE}
+    sed -i s/__TARGET_VERSION__/${AVAILABLE_VERSION}/g "${FILE}"
+
+    if grep -q "__TARGET_VERSION__" "${FILE}"
+    then
+        echo "__TARGET_VERSION__ was not upsted in patch file: ${FILE}"
+        exit 1
+    fi
+
     oc -n "${NAMESPACE}" patch "${OPENSTACK_VERSION}" "${NAME}" --type=merge --patch-file ${FILE}
 }
 
