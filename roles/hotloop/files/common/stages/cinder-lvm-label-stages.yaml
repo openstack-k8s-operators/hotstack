@@ -11,4 +11,4 @@
       need any networkAttachments.
     * There can only be one node with the label openstack.org/cinder-lvm=.
       Apply the label using the command: ``oc label node <nodename> openstack.org/cinder-lvm=``
-  cmd: "oc label node master-0 openstack.org/cinder-lvm="
+  command: "oc label node master-0 openstack.org/cinder-lvm="

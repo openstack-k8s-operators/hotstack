@@ -51,9 +51,11 @@
           }}
         mode: '0755'
       loop:
-        - bin/hotstack-wait-for-bmh
+        - bin/hotstack-approve-install-plan
+        - bin/hotstack-leader-election-tune
         - bin/hotstack-nova-discover-hosts
         - bin/hotstack-openstack-version-patch
+        - bin/hotstack-wait-for-bmh
 
     - name: Write ansible inventory to file on controller-0
       when:

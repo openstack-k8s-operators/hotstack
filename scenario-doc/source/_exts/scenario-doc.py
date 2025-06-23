@@ -114,8 +114,8 @@ class HotStackDirective(rst.Directive):
     def process_stage(self, automation_dir, stage):
         name = stage.get("name")
         documentation = stage.get("documentation")
-        cmd = stage.get("cmd")
-        script = stage.get("script")
+        cmd = stage.get("command")
+        script = stage.get("shell")
         manifest = stage.get("manifest")
         j2_manifest = stage.get("j2_manifest")
         wait_conditions = stage.get("wait_conditions", [])

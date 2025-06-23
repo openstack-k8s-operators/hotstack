@@ -3,7 +3,7 @@
     This creates a patch file `{{ manifests_dir }}/patches/openstack_version_patch.yaml`
     If `openstack_update_custom_images` is defined it will populate the customContainerImages
     in the OpenstackVersion YAML patch.
-  script: |
+  shell: |
     {{
       lookup('ansible.builtin.template',
              'common/scripts/create_openstack_version_patch.sh.j2')
@@ -15,7 +15,7 @@
     The `hotstack-openstack-version-patch` script will get the `availableVersion`
     and us it to replace the string `__TARGET_VERSION__` in the patch file and
     apply the patch using `oc patch` command.
-  cmd: >-
+  command: >-
     hotstack-openstack-version-patch --namespace openstack --name controlplane
     --file {{ manifests_dir }}/patches/openstack_version_patch.yaml
   wait_conditions:

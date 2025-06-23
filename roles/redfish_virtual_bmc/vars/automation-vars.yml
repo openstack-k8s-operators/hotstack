@@ -6,7 +6,7 @@ stages:
       - "oc wait namespaces sushy-emulator --for jsonpath='{.status.phase}=Active' --timeout=300s"
 
   - name: "Sushy Emulator : Openstack clouds secret"
-    cmd: >-
+    command: >-
       oc create -n sushy-emulator secret generic os-client-config
       --save-config --dry-run=client
       --from-file=openstack-clouds-yaml={{ cloud_config_dir }}/clouds.yaml
