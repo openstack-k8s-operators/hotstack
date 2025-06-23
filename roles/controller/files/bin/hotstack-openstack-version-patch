@@ -124,6 +124,6 @@ if ! exponential_retry get_versions
 then
     echo "Deployed and available versions are the same."
     exit 1
-else
+fi
 
 apply_patch
