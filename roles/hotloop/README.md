@@ -15,9 +15,10 @@ Schema for a stage item is:
   only.
 * `documentation`: (string) A multi-line string providing a explanation of
   what the stage does.
-* `cmd`: (string) A command to run for the stage.
-* `script`: (string) A shell script to run for the stage.
-  * If commands must run after applying manifests, use a separate stage.
+* `command`: (string) A command to run for the stage.
+* `shell`: (string) A shell script to run for the stage.
+  * If commands or shell commands must run after applying manifests, use a
+    separate stage or place the commands in `wait_conditions`.
 * `manifest`: (string) Path to a static manfiest file to apply with
   `oc apply -f <manifest.yaml>`
 * `j2_manifest`: (string) Path to a dynamic manifest, Jinja2 template, to
@@ -97,7 +98,7 @@ Schema for a stage item is:
 
 
 > **_NOTE_**: Stage items are applied the actions in the following order:
-> `cmd` -> `script` -> `manifest` -> `j2_manifest` -> `wait_conditions` ->
+> `command` -> `shell` -> `manifest` -> `j2_manifest` -> `wait_conditions` ->
 > `stages`.
 
 Example:
@@ -117,7 +118,7 @@ stages:
       * There can only be one node with the label openstack.org/cinder-lvm=.
         Apply the label using the command::
           ``oc label node <nodename> openstack.org/cinder-lvm=``
-    cmd: "oc label node master-0 openstack.org/cinder-lvm="
+    command: "oc label node master-0 openstack.org/cinder-lvm="
 
   - name: Common OLM
     documentation: |
@@ -165,7 +166,7 @@ stages:
         --timeout=5m
 
   - name: Dataplane SSH key secret
-    cmd: >-
+    command: >-
       oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret
       --save-config --dry-run=client
       --from-file=ssh-privatekey=/home/zuul/.ssh/id_rsa
@@ -178,7 +179,7 @@ stages:
         --timeout=30s
 
   - name: Nova migration SSH key secret
-    cmd: >-
+    command: >-
       oc create -n openstack secret generic nova-migration-ssh-key
       --save-config --dry-run=client
       --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate

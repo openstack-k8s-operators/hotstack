@@ -61,10 +61,10 @@ Here's a breakdown of the common attributes within a stage:
           value: openstack-b
     ```
 
-* **`cmd`**: (Optional) Defines a single command-line instruction to be
+* **`command`**: (Optional) Defines a single command-line instruction to be
   executed on the pipeline runner. This is suitable for simple tasks like
   labeling nodes or triggering external scripts.
-* **`script`**: (Optional) Defines a script that will be executed on the
+* **`shell`**: (Optional) Defines a shell script that will be executed on the
   pipeline runner. This is useful for more complex logic or sequences of
   commands.
 * **`wait_conditions`**: (Optional) A list of commands that are executed to
@@ -120,8 +120,8 @@ Here's a breakdown of the common attributes within a stage:
       }}
   - name: Include stages inline as "list"
     stages:
-      - name: Extra inline stage - cmd
-        cmd: uname -a
+      - name: Extra inline stage - command
+        command: uname -a
       - name: Extra inline stage - manifest
         manifest: "manifest.yaml"
     run_conditions:
@@ -133,9 +133,9 @@ Here's a breakdown of the common attributes within a stage:
 The pipeline utilizes different stage types to perform various actions. Here's
 a detailed explanation of each type:
 
-### 1. `cmd` Stage
+### 1. `command` Stage
 
-The `cmd` stage type executes a single command-line instruction. It's
+The `command` stage type executes a single command-line instruction. It's
 straightforward and suitable for simple, direct actions on the system where
 the pipeline is running or against a configured target environment (like an
 OpenShift cluster via `oc`).
@@ -144,23 +144,23 @@ OpenShift cluster via `oc`).
 
 ```yaml
 - name: Node label vrf
-  cmd: oc label node master-0 vrf=true
+  command: oc label node master-0 vrf=true
 ```
 
 In this example, the cmd stage executes the oc label node master-0 vrf=true
 command to label a node named master-0 with the key vrf and value true.
 
-### 2. `script` Stage
+### 2. `shell` Stage
 
-The `script` stage type executes a script. This allows for more complex logic
-and a sequence of commands to be performed within a single stage. The script
-attribute would specify a multiline string.
+The `shell` stage type executes a shell commands. This allows for more complex
+logic and a sequence of commands to be performed within a single stage. The
+shell attribute would specify a multiline string.
 
 **Example:**
 
 ```yaml
 - name: Set a multiattach volume type and create it if needed
-  script: |
+  shell: |
     set -xe -o pipefail
     oc project openstack
 

@@ -1,0 +1,77 @@
+#!/bin/bash
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+set -ex
+
+if [ "$EUID" -eq 0 ]; then
+    echo "Please do not run as root."
+    exit
+fi
+
+function usage {
+    echo "Approve install plan"
+
+    echo "options:"
+    echo "  --namespace  Namespace (Optional)"
+    echo "  --update     Set this for approving update (Optional)"
+    echo
+}
+
+
+NAMESPACE=openstack-operators
+SUBSCRIPTIONS=subscriptions.operators.coreos.com
+INSTALL_PLANS=installplans.operators.coreos.com
+CSV_REF=(-o jsonpath='{ .status.installedCSV }')
+PLAN_REF=(-o jsonpath='{ .status.installPlanRef.name }')
+SUBSCR_STATE=(-o jsonpath='{ .status.state }')
+PATCH=(-p '{"spec":{"approved":true}}' --type merge)
+NAME=openstack-operator
+
+
+function patch_install_plan {
+    PLAN=$(oc -n ${NAMESPACE} get ${SUBSCRIPTIONS} ${NAME} ${PLAN_REF[@]})
+    oc -n ${NAMESPACE} patch ${INSTALL_PLANS} "${PLAN}" "${PATCH[@]}"
+}
+
+function approve_plan {
+    INSTALLED_CSV=$(oc -n ${NAMESPACE} get ${SUBSCRIPTIONS} ${NAME} ${CSV_REF[@]})
+    [ -z "$INSTALLED_CSV" ] && patch_install_plan
+}
+
+function approve_update_plan {
+    STATE=$(oc -n ${NAMESPACE} get ${SUBSCRIPTIONS} ${NAME} ${SUBSCR_STATE[@]})
+    [ "$STATE" == "UpgradePending" ] && patch_install_plan
+}
+
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        "--namespace")
+            NAMESPACE="$2";
+            shift
+        ;;
+        "--update")
+            UPDATE="true";
+            shift
+        ;;
+        *)
+            echo "Unknown parameter passed: $1";
+            usage
+            exit 1
+        ;;
+    esac
+    shift
+done
+
+[ -n "${UPDATE}" ] && approve_update_plan || approve_plan

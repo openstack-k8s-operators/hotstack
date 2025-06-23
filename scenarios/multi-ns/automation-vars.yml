@@ -85,7 +85,7 @@ stages:
         --for condition=Ready --timeout=30m
 
   - name: Cloud a - Dataplane SSH key secret
-    cmd: >-
+    command: >-
       oc create -n openstack-a secret generic dataplane-ansible-ssh-private-key-secret
       --save-config --dry-run=client
       --from-file=authorized_keys=/home/zuul/.ssh/id_rsa.pub
@@ -99,7 +99,7 @@ stages:
         --timeout=30s
 
   - name: Cloud b - Dataplane SSH key secret
-    cmd: >-
+    command: >-
       oc create -n openstack-b secret generic dataplane-ansible-ssh-private-key-secret
       --save-config --dry-run=client
       --from-file=authorized_keys=/home/zuul/.ssh/id_rsa.pub
@@ -113,7 +113,7 @@ stages:
         --timeout=30s
 
   - name: Cloud a - Nova migration SSH key secret
-    cmd: >-
+    command: >-
       oc create -n openstack-a secret generic nova-migration-ssh-key
       --save-config --dry-run=client
       --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate
@@ -126,7 +126,7 @@ stages:
         --timeout=30s
 
   - name: Cloud b - Nova migration SSH key secret
-    cmd: >-
+    command: >-
       oc create -n openstack-b secret generic nova-migration-ssh-key
       --save-config --dry-run=client
       --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate
@@ -142,7 +142,7 @@ stages:
     manifest: manifests/dataplanes/secrets.yaml
 
   - name: Cloud a - BaremetalHosts BMC secret
-    cmd: >-
+    command: >-
       oc create -n openstack-a secret generic bmc-secret
       --save-config --dry-run=client
       --from-literal=username=admin
@@ -155,7 +155,7 @@ stages:
         --timeout=30s
 
   - name: Cloud b - BaremetalHosts BMC secret
-    cmd: >-
+    command: >-
       oc create -n openstack-b secret generic bmc-secret
       --save-config --dry-run=client
       --from-literal=username=admin
@@ -172,6 +172,8 @@ stages:
     wait_conditions:
       - "timeout 5m hotstack-wait-for-bmh --namespace openstack-a --bmh bmh-a-0"
       - "timeout 5m hotstack-wait-for-bmh --namespace openstack-b --bmh bmh-b-0"
+    run_conditions:
+      - "{{ hotstack_skip_bmh is not defined }}"
 
   - name: Dataplane nodeset
     manifest: manifests/dataplanes/nodesets.yaml

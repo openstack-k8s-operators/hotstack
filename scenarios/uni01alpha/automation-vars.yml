@@ -44,7 +44,7 @@ stages:
         --for condition=Ready --timeout=30m
 
   - name: Dataplane SSH key secret
-    cmd: >-
+    command: >-
       oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret
       --save-config --dry-run=client
       --from-file=ssh-privatekey=/home/zuul/.ssh/id_rsa
@@ -57,7 +57,7 @@ stages:
         --timeout=30s
 
   - name: Nova migration SSH key secret
-    cmd: >-
+    command: >-
       oc create -n openstack secret generic nova-migration-ssh-key
       --save-config --dry-run=client
       --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate

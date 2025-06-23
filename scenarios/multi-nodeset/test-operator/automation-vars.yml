@@ -1,7 +1,7 @@
 ---
 stages:
   - name: Set a multiattach volume type and create it if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -11,7 +11,7 @@ stages:
       oc rsh openstackclient openstack volume type set --property multiattach="<is> True" multiattach
 
   - name: Create public network if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -24,7 +24,7 @@ stages:
           --provider-physical-network datacentre
 
   - name: Create subnet on public network if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -37,7 +37,7 @@ stages:
           --dhcp
 
   - name: Create private network if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -45,7 +45,7 @@ stages:
         oc rsh openstackclient openstack network create private --share
 
   - name: Create subnet on private network if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -58,7 +58,7 @@ stages:
           --dhcp
 
   - name: Wait for expected compute services (OSPRH-10942)
-    script: |
+    shell: |
       set -xe -o pipefail
       COMPUTES=2
       RETRIES=10
@@ -73,7 +73,7 @@ stages:
       done
 
   - name: Run nova-manage discover_hosts and wait for host records (OSPRH-10942)
-    script: |
+    shell: |
       set -xe -o pipefail
       COMPUTES={{ 2| int + 4 }}
       RETRIES=10

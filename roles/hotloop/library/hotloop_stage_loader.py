@@ -55,18 +55,18 @@ EXAMPLES = r"""
   hotloop_stage_loader:
     stages:
       - name: Stage 1
-        script: |
+        shell: |
           echo "Hello Earth!"
         stages: |
           ---
           stages:
             - name: An inline nested stage
-              script: |
+              shell: |
                 echo "Hello Mars!"
           ---
           stages:
             - name: Another inline nested stage
-              script: |
+              shell: |
                 echo "Hello Venus!"
       - name: Nested stages from jinja2 template
         stages: >-
@@ -74,10 +74,10 @@ EXAMPLES = r"""
             lookup('ansible.builtin.template', 'automation-vars2.yaml.j2')
           }}
       - name: Stage 2
-        script: |
+        shell: |
           echo "Hello Saturne!"
       - name: Nested stages from file
-        script: |
+        shell: |
           echo "Hello Jupiter!"
         stages: >-
           {{
@@ -88,6 +88,19 @@ EXAMPLES = r"""
 RETURN = r"""
 stages: []
 """
+
+ALLOWED_STAGE_KEYS = {
+    "name",
+    "command",
+    "documentation",
+    "j2_manifest",
+    "manifest",
+    "patches",
+    "run_conditions",
+    "shell",
+    "stages",
+    "wait_conditions",
+}
 
 FALSE_STRINGS = {"false", "False", "FALSE"}
 
@@ -150,6 +163,13 @@ def _validate_stage(stage, nested=False):
     """
     if not isinstance(stage, dict):
         raise ValueError("All stages must be a dict, {stage}".format(stage=type(stage)))
+
+    if stage.keys() - ALLOWED_STAGE_KEYS:
+        raise ValueError(
+            "Stage contains invalid keys: {invalid_keys}".format(
+                invalid_keys=stage.keys() - ALLOWED_STAGE_KEYS
+            )
+        )
 
     if "name" not in stage:
         raise ValueError("All stages must have a name, {stage}".format(stage=stage))

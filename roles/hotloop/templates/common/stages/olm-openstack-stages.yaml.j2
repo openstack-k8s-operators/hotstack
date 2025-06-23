@@ -14,24 +14,14 @@
       --for jsonpath='{.status.state}' --timeout=180s
 
 - name: Approve openstack-operator Install plan
-  script: |
-    {{
-      lookup('ansible.builtin.file',
-             'common/scripts/approve_install_plan.sh')
-      | indent(width=4)
-    }}
+  command: hotstack-approve-install-plan
   wait_conditions:
     - >-
       oc wait -n openstack-operators csv -l operators.coreos.com/openstack-operator.openstack-operators=
       --for jsonpath='{.status.phase}=Succeeded' --timeout=180s
 
 - name: Patch openstack-operators leader election tuneables
-  script: |
-    {{
-      lookup('ansible.builtin.file',
-             'common/scripts/leader_election_tune.sh')
-      | indent(width=4)
-    }}
+  command: hotstack-leader-election-tune
   run_conditions:
     - >-
       {{

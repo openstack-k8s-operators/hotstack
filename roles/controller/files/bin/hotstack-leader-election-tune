@@ -25,9 +25,7 @@ DEPLOYMENT_INDEX=$(oc -n openstack-operators get csv "${CSV_NAME}" -o json | \
       index("openstack-operator-controller-operator") | select( . != null )')
 
 # Older versions don't have these env vars, just exit without error
-if [ -z "$DEPLOYMENT_INDEX" ]; then
-  exit 0
-fi
+[ -z "$DEPLOYMENT_INDEX" ] && exit 0
 
 CONTAINER_INDEX=$(oc -n openstack-operators get csv "${CSV_NAME}" -o json | \
   jq --arg DEPLOYMENT_INDEX "${DEPLOYMENT_INDEX}"\
@@ -39,10 +37,9 @@ LEASE_DURATION_INDEX=$(oc -n openstack-operators get csv "${CSV_NAME}" -o json |
       .spec.template.spec.containers[] |
       select(.name == "operator") | .env | map(.name == "LEASE_DURATION") |
       index(true)')
+
 # Older versions don't have these env vars, just exit without error
-if [ "$LEASE_DURATION_INDEX" == "null" ]; then
-  exit 0
-fi
+[ "$LEASE_DURATION_INDEX" == "null" ] && exit 0
 
 RENEW_DEADLINE_INDEX=$(oc -n openstack-operators get csv "${CSV_NAME}" -o json | \
   jq '.spec.install.spec.deployments[] |

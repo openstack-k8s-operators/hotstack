@@ -1,7 +1,7 @@
 ---
 stages:
   - name: Set a multiattach volume type and create it if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack-a
 
@@ -18,7 +18,7 @@ stages:
       oc rsh openstackclient openstack volume type set --property multiattach="<is> True" multiattach
 
   - name: Create public network if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack-a
 
@@ -43,7 +43,7 @@ stages:
           --provider-physical-network datacentre
 
   - name: Create subnet on public network if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack-a
 
@@ -67,7 +67,7 @@ stages:
 
 
   - name: Create private network if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack-a
 
@@ -80,7 +80,7 @@ stages:
         oc rsh openstackclient openstack network create private --share --mtu 1390
 
   - name: Create subnet on private network if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack-a
 
@@ -101,62 +101,6 @@ stages:
           --allocation-pool start=10.2.0.10,end=10.2.0.250 \
           --gateway 10.2.0.1 \
           --dhcp
-
-  - name: Wait for expected compute services (OSPRH-10942)
-    script: |
-      set -xe -o pipefail
-      COMPUTES=1
-      RETRIES=10
-
-      oc project openstack-a
-      COUNTER=0
-      until [ $(oc rsh openstackclient openstack compute service list --service nova-compute -f value | wc -l) -eq "$COMPUTES" ]; do
-        if [[ "$COUNTER" -ge "$RETRIES" ]]; then
-          exit 1
-        fi
-        COUNTER=$[$COUNTER +1]
-        sleep 10
-      done
-
-      oc project openstack-b
-      COUNTER=0
-      until [ $(oc rsh openstackclient openstack compute service list --service nova-compute -f value | wc -l) -eq "$COMPUTES" ]; do
-        if [[ "$COUNTER" -ge "$RETRIES" ]]; then
-          exit 1
-        fi
-        COUNTER=$[$COUNTER +1]
-        sleep 10
-      done
-
-  - name: Run nova-manage discover_hosts and wait for host records (OSPRH-10942)
-    script: |
-      set -xe -o pipefail
-      COMPUTES={{ 1 | int + 4 }}
-      RETRIES=10
-
-      oc project openstack-a
-      COUNTER=0
-      until [ $(oc rsh nova-cell1-conductor-0 nova-manage cell_v2 list_hosts | wc -l) -eq "$COMPUTES" ]; do
-        if [[ "$COUNTER" -ge "$RETRIES" ]]; then
-          exit 1
-        fi
-        oc rsh nova-cell1-conductor-0 nova-manage cell_v2 discover_hosts --verbose
-        COUNTER=$[$COUNTER +1]
-        sleep 10
-      done
-
-
-      oc project openstack-b
-      COUNTER=0
-      until [ $(oc rsh nova-cell1-conductor-0 nova-manage cell_v2 list_hosts | wc -l) -eq "$COMPUTES" ]; do
-        if [[ "$COUNTER" -ge "$RETRIES" ]]; then
-          exit 1
-        fi
-        oc rsh nova-cell1-conductor-0 nova-manage cell_v2 discover_hosts --verbose
-        COUNTER=$[$COUNTER +1]
-        sleep 10
-      done
-
 
   - name: Run tempest
     manifest: tempest-tests.yml

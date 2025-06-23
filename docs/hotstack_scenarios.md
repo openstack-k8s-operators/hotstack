@@ -43,8 +43,8 @@ Here's a breakdown of the key components:
         * One or more of the following actions:
             * `manifest`:  Path to a YAML file to apply to the cluster (e.g., Kubernetes/OpenShift resources).
             * `j2_manifest`:  Path to a Jinja2 template to render into a YAML manifest before applying.  This allows for dynamic configuration.
-            * `cmd`:  A single command-line command to execute.
-            * `script`:  A multiline string definiing a script (e.g., Bash script) to run.
+            * `command`:  A single command-line command to execute.
+            * `shell`:  A multiline string definiing a shell script (e.g., Bash script) to run.
         * `wait_conditions`:  A list of `oc wait` commands (OpenShift's command-line tool) to execute.  These commands poll the cluster until a specific condition is met, ensuring that resources are ready before the pipeline proceeds.
 
 **4.  `manifests/` (Directory)**

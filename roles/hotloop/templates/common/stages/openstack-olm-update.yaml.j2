@@ -1,10 +1,5 @@
 - name: Approve openstack-operator update Install plan
-  script: |
-    {{
-      lookup('ansible.builtin.file',
-             'common/scripts/approve_update_install_plan.sh')
-      | indent(width=4)
-    }}
+  command: hotstack-approve-install-plan --update
   wait_conditions:
     - >-
       oc wait -n openstack-operators csv -l operators.coreos.com/openstack-operator.openstack-operators=

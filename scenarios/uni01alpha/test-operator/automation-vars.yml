@@ -8,7 +8,7 @@ stages:
         --for jsonpath='{.metadata.annotations}' --timeout=30s
 
   - name: Patch RedFish Sushy Emulator Deployment - add network attachment
-    script: |
+    shell: |
       set -xe -o pipefail
 
       TMP_DIR="$(mktemp -d)"
@@ -29,7 +29,7 @@ stages:
       - "oc -n sushy-emulator wait deployments.apps sushy-emulator --for condition=Available --timeout=300s"
 
   - name: Set a multiattach volume type and create it if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -39,7 +39,7 @@ stages:
       oc rsh openstackclient openstack volume type set --property multiattach="<is> True" multiattach
 
   - name: Create public network if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -52,7 +52,7 @@ stages:
           --provider-physical-network datacentre
 
   - name: Create subnet on public network if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -65,7 +65,7 @@ stages:
           --dhcp
 
   - name: Create private network if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -73,7 +73,7 @@ stages:
         oc rsh openstackclient openstack network create private --share
 
   - name: Create subnet on private network if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -86,7 +86,7 @@ stages:
           --dhcp
 
   - name: Create network for ironic provisioning if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -99,7 +99,7 @@ stages:
             --provider-network-type flat
 
   - name: Create subnet for ironic provisioning if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -113,7 +113,7 @@ stages:
             --allocation-pool start=172.20.1.100,end=172.20.1.200
 
   - name: Create baremetal flavor if needed
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -131,19 +131,19 @@ stages:
             --property capabilities:boot_mode=uefi
 
   - name: Copy ironic_nodes.yaml to the openstackclient pod
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
       oc cp ~/data/ironic_nodes.yaml openstackclient:ironic_nodes.yaml
 
   - name: Enroll nodes in ironic
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
       oc rsh openstackclient openstack baremetal create ironic_nodes.yaml
 
   - name: Wait for ironic nodes to get to state - enroll
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -162,7 +162,7 @@ stages:
       done
 
   - name: Manange ironic nodes
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -170,7 +170,7 @@ stages:
       oc rsh openstackclient openstack baremetal node manage ironic1
 
   - name: Wait for ironic nodes to get to state - manageable
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -190,7 +190,7 @@ stages:
       done
 
   - name: Power off the ironic nodes
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -198,7 +198,7 @@ stages:
       oc rsh openstackclient openstack baremetal node power off ironic1
 
   - name: Set capabilities boot_mode:uefi for ironic nodes
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -206,7 +206,7 @@ stages:
       oc rsh openstackclient openstack baremetal node set --property capabilities='boot_mode:uefi' ironic1
 
   - name: Ensure ironic nodes are powered off
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -226,7 +226,7 @@ stages:
       done
 
   - name: Provide ironic nodes
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 
@@ -234,7 +234,7 @@ stages:
       oc rsh openstackclient openstack baremetal node provide ironic1
 
   - name: Wait for ironic nodes to get to state - available
-    script: |
+    shell: |
       set -xe -o pipefail
       oc project openstack
 

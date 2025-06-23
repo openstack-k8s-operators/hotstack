@@ -57,7 +57,7 @@ function wait_for_disover {
         [ "${found}" -ge "${num_computes}" ]
     do
         oc -n "${NAMESPACE}" rsh "${CELL_CONDUCTOR}" "${NOVA_MANAGE_DISCOVER_CMD[@]}" --verbose
-        found=$(oc rsh "${CELL_CONDUCTOR}" "${NOVA_MANAGE_LIST_CMD[@]}" | wc -l)
+        found=$(oc -n "${NAMESPACE}" rsh "${CELL_CONDUCTOR}" "${NOVA_MANAGE_LIST_CMD[@]}" | wc -l)
         [ "${found}" -ge "${num_computes}" ] || sleep 10
     done
 }
