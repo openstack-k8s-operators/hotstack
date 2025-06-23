@@ -6,8 +6,8 @@ metadata:
   namespace: openstack
 spec:
   nodeSets:
-    - openstack-edpm
-    - networker-nodes
+    - edpm
+    - networkers
   servicesOverride:
     - update
     - reboot-os

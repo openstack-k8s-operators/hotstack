@@ -11,7 +11,7 @@ type: Opaque
 apiVersion: dataplane.openstack.org/v1beta1
 kind: OpenStackDataPlaneNodeSet
 metadata:
-  name: openstack-edpm
+  name: edpm
   namespace: openstack
 spec:
   env:
