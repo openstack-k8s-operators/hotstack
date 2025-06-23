@@ -119,20 +119,42 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack openstackdataplanenodesets.dataplane.openstack.org
-        openstack-edpm-a --for condition=SetupReady --timeout=40m
+        edpm-a --for condition=SetupReady --timeout=40m
       - >-
         oc wait -n openstack openstackdataplanenodesets.dataplane.openstack.org
-        openstack-edpm-b --for condition=SetupReady --timeout=40m
+        edpm-b --for condition=SetupReady --timeout=40m
 
   - name: Dataplane Deployment
     manifest: manifests/dataplane/deployment.yaml
     wait_conditions:
-      - >-
-        oc wait -n openstack openstackdataplanedeployments.dataplane.openstack.org
-        dataplane --for condition=Ready --timeout=40m
-      - >-
-        timeout --foreground 15m hotstack-nova-discover-hosts
-        --namespace openstack --num-computes 2
+      - oc wait -n openstack jobs.batch bootstrap-dataplane-edpm-a --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch bootstrap-dataplane-edpm-b --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch configure-network-dataplane-edpm-a --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch configure-network-dataplane-edpm-b --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch validate-network-dataplane-edpm-a --for condition=Complete --timeout=1m
+      - oc wait -n openstack jobs.batch validate-network-dataplane-edpm-b --for condition=Complete --timeout=1m
+      - oc wait -n openstack jobs.batch install-os-dataplane-edpm-a --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch install-os-dataplane-edpm-b --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch configure-os-dataplane-edpm-a --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch configure-os-dataplane-edpm-b --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch ssh-known-hosts-dataplane --for condition=Complete --timeout=2m
+      - oc wait -n openstack jobs.batch run-os-dataplane-edpm-a --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch run-os-dataplane-edpm-b --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch reboot-os-dataplane-edpm-a --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch reboot-os-dataplane-edpm-b --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch install-certs-dataplane-edpm-a --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch install-certs-dataplane-edpm-b --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch ovn-dataplane-edpm-a --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch ovn-dataplane-edpm-b --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch neutron-metadata-dataplane-edpm-a --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch neutron-metadata-dataplane-edpm-b --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch libvirt-dataplane-edpm-a --for condition=Complete --timeout=20m
+      - oc wait -n openstack jobs.batch libvirt-dataplane-edpm-b --for condition=Complete --timeout=20m
+      - oc wait -n openstack jobs.batch nova-dataplane-edpm-a --for condition=Complete --timeout=20m
+      - oc wait -n openstack jobs.batch nova-dataplane-edpm-b --for condition=Complete --timeout=20m
+      - oc wait -n openstack openstackdataplanedeployment edpm-a --for condition=Ready --timeout=10m
+      - oc wait -n openstack openstackdataplanedeployment edpm-b --for condition=Ready --timeout=10m
+      - timeout --foreground 15m hotstack-nova-discover-hosts --namespace openstack --num-computes 2
 
   - name: Update openstack-operators OLM
     stages: >-

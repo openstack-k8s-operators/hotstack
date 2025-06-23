@@ -6,5 +6,5 @@ metadata:
   namespace: openstack
 spec:
   nodeSets:
-  - openstack-edpm-a
-  - openstack-edpm-b
+  - edpm-a
+  - edpm-b
