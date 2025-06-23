@@ -194,10 +194,10 @@ stages:
         oc wait -n openstack-b openstackdataplanedeployments.dataplane.openstack.org
         dataplane --for condition=Ready --timeout=40m
       - >-
-        timeout --foreground 5m hotstack-nova-discover-hosts
+        timeout --foreground 15m hotstack-nova-discover-hosts
         --namespace openstack-a --num-computes 1
       - >-
-        timeout --foreground 5m hotstack-nova-discover-hosts
+        timeout --foreground 15m hotstack-nova-discover-hosts
         --namespace openstack-b --num-computes 1
 
   - name: Update openstack-operators OLM
