@@ -40,6 +40,19 @@
         - "{{ data_dir }}"
         - "{{ bin_dir }}"
 
+    - name: Add common functions to the bin_dir
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: >-
+          {{
+            [
+              bin_dir, item | ansible.builtin.basename
+            ] | ansible.builtin.path_join
+          }}
+        mode: '0655'
+      loop:
+        - bin/hotstack-common-funcs.sh
+
     - name: Add bin utilities to the bin_dir
       ansible.builtin.copy:
         src: "{{ item }}"

@@ -65,7 +65,7 @@ stages:
         --for condition=Ready --timeout=60m
 
   - name: Dataplane SSH key secret
-    command: >-
+    shell: >-
       oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret
       --save-config --dry-run=client
       --from-file=authorized_keys=/home/zuul/.ssh/id_rsa.pub
@@ -79,7 +79,7 @@ stages:
         --timeout=30s
 
   - name: Nova migration SSH key secret
-    command: >-
+    shell: >-
       oc create -n openstack secret generic nova-migration-ssh-key
       --save-config --dry-run=client
       --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate
@@ -95,7 +95,7 @@ stages:
     manifest: manifests/dataplane/secrets.yaml
 
   - name: BaremetalHosts BMC secret
-    command: >-
+    shell: >-
       oc create -n openstack secret generic bmc-secret
       --save-config --dry-run=client
       --from-literal=username=admin
@@ -115,8 +115,8 @@ stages:
     run_conditions:
       - "{{ hotstack_skip_bmh is not defined }}"
 
-  - name: Dataplane nodeset
-    manifest: manifests/dataplane/nodeset.yaml
+  - name: Dataplane nodesets
+    manifest: manifests/dataplane/nodesets.yaml
     patches: "{{ hotstack_default_nodeset_patches }}"
     wait_conditions:
       - >-
@@ -154,8 +154,7 @@ stages:
       - oc wait -n openstack jobs.batch libvirt-dataplane-edpm-b --for condition=Complete --timeout=20m
       - oc wait -n openstack jobs.batch nova-dataplane-edpm-a --for condition=Complete --timeout=20m
       - oc wait -n openstack jobs.batch nova-dataplane-edpm-b --for condition=Complete --timeout=20m
-      - oc wait -n openstack openstackdataplanedeployment edpm-a --for condition=Ready --timeout=10m
-      - oc wait -n openstack openstackdataplanedeployment edpm-b --for condition=Ready --timeout=10m
+      - oc wait -n openstack openstackdataplanedeployment dataplane --for condition=Ready --timeout=10m
       - timeout --foreground 15m hotstack-nova-discover-hosts --namespace openstack --num-computes 2
 
   - name: Update openstack-operators OLM

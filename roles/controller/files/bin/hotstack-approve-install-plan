@@ -47,12 +47,12 @@ function patch_install_plan {
 
 function approve_plan {
     INSTALLED_CSV=$(oc -n "${NAMESPACE}" get "${SUBSCRIPTIONS}" "${NAME}" "${CSV_REF[@]}")
-    [ -z "$INSTALLED_CSV" ] && patch_install_plan
+    [ -z "$INSTALLED_CSV" ] && patch_install_plan || exit 0
 }
 
 function approve_update_plan {
     STATE=$(oc -n "${NAMESPACE}" get "${SUBSCRIPTIONS}" "${NAME}" "${SUBSCR_STATE[@]}")
-    [ "${STATE}" == "UpgradePending" ] && patch_install_plan
+    [ "${STATE}" == "UpgradePending" ] && patch_install_plan || exit 0
 }
 
 while [[ "$#" -gt 0 ]]; do
@@ -63,7 +63,6 @@ while [[ "$#" -gt 0 ]]; do
         ;;
         "--update")
             UPDATE="true";
-            shift
         ;;
         *)
             echo "Unknown parameter passed: $1";
@@ -74,4 +73,9 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
-[ -n "${UPDATE}" ] && approve_update_plan || approve_plan
+if [ -n "${UPDATE}" ]
+then
+    approve_update_plan
+else
+    approve_plan
+fi

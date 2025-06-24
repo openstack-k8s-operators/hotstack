@@ -174,6 +174,9 @@ def _validate_stage(stage, nested=False):
     if "name" not in stage:
         raise ValueError("All stages must have a name, {stage}".format(stage=stage))
 
+    if not isinstance(stage.get("wait_conditions", []), list):
+        raise ValueError("Wait conditions must be a list, {stage}".format(stage=stage))
+
     if nested and "stages" in stage:
         raise ValueError("Nested stages cannot be nested, {stage}".format(stage=stage))
 

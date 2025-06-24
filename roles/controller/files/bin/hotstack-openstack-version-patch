@@ -16,6 +16,9 @@
 
 set -ex
 
+SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+source "${SCRIPTPATH}"/hotstack-common-funcs.sh
+
 OPENSTACK_VERSION=openstackversions.core.openstack.org
 AVAILABLE_PATH=(-o jsonpath='{.status.availableVersion}')
 DEPLOYED_PATH=(-o jsonpath='{.status.deployedVersion}')
@@ -51,24 +54,6 @@ function get_versions {
         echo "Deployed and available versions are the same. Retrying ..."
         return 1
     fi
-}
-
-function exponential_retry {
-    local cmd="$1"
-    local delay=1
-    local max_delay=64
-    if [ -z ${cmd} ]
-    then
-        echo "exponential_retry must be passed the command or function to run."
-        exit 1
-    fi
-    until (( delay > ${max_delay} )) || "${cmd}"
-    do
-        sleep "${delay}"
-        delay="$(( 2*delay ))"
-    done
-
-    (( delay > ${max_delay} )) && return 1 || return 0
 }
 
 function apply_patch {
@@ -117,8 +102,6 @@ if [ ! -f "$FILE" ]; then
     echo "Patch file: $FILE does not exist."
     exit 1
 fi
-
-
 
 if ! exponential_retry get_versions
 then

@@ -56,7 +56,7 @@ stages:
         --for condition=Ready --timeout=30m
 
   - name: Dataplane SSH key secret
-    command: >-
+    shell: >-
       oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret
       --save-config --dry-run=client
       --from-file=ssh-privatekey=/home/zuul/.ssh/id_rsa
@@ -69,7 +69,7 @@ stages:
         --timeout=30s
 
   - name: Nova migration SSH key secret
-    command: >-
+    shell: >-
       oc create -n openstack secret generic nova-migration-ssh-key
       --save-config --dry-run=client
       --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate
@@ -82,10 +82,10 @@ stages:
         --timeout=30s
 
   - name: EDPM Secrets
-    manifest: manifests/edpm/secrets.yaml
+    manifest: manifests/dataplane/secrets.yaml
 
   - name: EDPM nodeset
-    manifest: manifests/edpm/edpm.yaml
+    manifest: manifests/dataplane/nodeset.yaml
     patches: "{{ hotstack_default_nodeset_patches }}"
     wait_conditions:
       - >-
@@ -93,7 +93,7 @@ stages:
         --for condition=SetupReady --timeout=10m
 
   - name: EDPM deployment
-    manifest: manifests/dataplane.yaml
+    manifest: manifests/dataplane/deployment.yaml
     wait_conditions:
       - oc wait -n openstack jobs.batch bootstrap-dataplane-edpm --for condition=Complete --timeout=10m
       - oc wait -n openstack jobs.batch configure-network-dataplane-edpm --for condition=Complete --timeout=5m
