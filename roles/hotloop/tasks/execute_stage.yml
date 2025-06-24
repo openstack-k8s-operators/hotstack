@@ -44,8 +44,10 @@
     loop_var: wait_cmd
   until: (
       _wait_result.rc == 0
-      or not _wait_result.stderr is match(".*no matching resources found.*")
-      or not _wait_result.stderr is match(".*(NotFound).*")
+      or not (
+        _wait_result.stderr is match(".*no matching resources found.*")
+        or _wait_result.stderr is match(".*(NotFound).*")
+      )
     )
   retries: "{{ wait_condition_retries }}"
   delay: "{{ wait_condition_retry_delay }}"
