@@ -41,18 +41,18 @@ NAME=openstack-operator
 
 
 function patch_install_plan {
-    PLAN=$(oc -n ${NAMESPACE} get ${SUBSCRIPTIONS} ${NAME} ${PLAN_REF[@]})
-    oc -n ${NAMESPACE} patch ${INSTALL_PLANS} "${PLAN}" "${PATCH[@]}"
+    PLAN=$(oc -n "${NAMESPACE}" get "${SUBSCRIPTIONS}" "${NAME}" "${PLAN_REF[@]}")
+    oc -n "${NAMESPACE}" patch "${INSTALL_PLANS}" "${PLAN}" "${PATCH[@]}"
 }
 
 function approve_plan {
-    INSTALLED_CSV=$(oc -n ${NAMESPACE} get ${SUBSCRIPTIONS} ${NAME} ${CSV_REF[@]})
+    INSTALLED_CSV=$(oc -n "${NAMESPACE}" get "${SUBSCRIPTIONS}" "${NAME}" "${CSV_REF[@]}")
     [ -z "$INSTALLED_CSV" ] && patch_install_plan
 }
 
 function approve_update_plan {
-    STATE=$(oc -n ${NAMESPACE} get ${SUBSCRIPTIONS} ${NAME} ${SUBSCR_STATE[@]})
-    [ "$STATE" == "UpgradePending" ] && patch_install_plan
+    STATE=$(oc -n "${NAMESPACE}" get "${SUBSCRIPTIONS}" "${NAME}" "${SUBSCR_STATE[@]}")
+    [ "${STATE}" == "UpgradePending" ] && patch_install_plan
 }
 
 while [[ "$#" -gt 0 ]]; do
