@@ -15,7 +15,7 @@
 # under the License.
 
 - name: "Stage: {{ item.name }} :: Run command"
-  when: item.cmd is defined
+  when: item.command is defined
   ansible.builtin.command:
     cmd: "{{ item.command }}"
 
@@ -42,7 +42,10 @@
   loop: "{{ item.wait_conditions }}"
   loop_control:
     loop_var: wait_cmd
-  until: (_wait_result.rc == 0 or
-          not _wait_result.stderr is match(".*no matching resources found.*"))
+  until: (
+      _wait_result.rc == 0
+      or not _wait_result.stderr is match(".*no matching resources found.*")
+      or not _wait_result.stderr is match(".*(NotFound).*")
+    )
   retries: "{{ wait_condition_retries }}"
   delay: "{{ wait_condition_retry_delay }}"
