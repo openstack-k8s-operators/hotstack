@@ -28,6 +28,7 @@
 
 - name: "Stage: {{ item.name }} :: Copy manifest"
   ansible.builtin.copy:
+    backup: true
     src: >-
       {{
         [
@@ -63,10 +64,8 @@
     loop_var: __patch
 
 - name: "Stage: {{ item.name }} :: Apply static manifest"
-  ansible.builtin.command:
-    chdir: "{{ manifests_dir }}"
-    cmd: >-
-      oc apply -f
+  hotloop_oc_apply_file:
+    file: >-
       {{
         [
           manifests_dir,
