@@ -9,15 +9,6 @@
 
     After you have installed LVM Storage, you must create an LVMCluster custom resource (CR).
   manifest: "{{ role_path }}/files/common/manifests/deps/olm-topolvm.yaml"
-  wait_conditions:
-    - "oc wait namespaces openshift-storage --for jsonpath='{.status.phase}=Active' --timeout=180s"
-    - >-
-      oc wait -n openshift-storage operatorgroups.operators.coreos.com openshift-storage-operatorgroup
-      --for jsonpath='{.status.namespaces}' --timeout=30s
-    - >-
-      oc wait -n openshift-storage ClusterServiceVersion
-      -l operators.coreos.com/lvms-operator.openshift-storage
-      --for jsonpath='{.status.phase}=Succeeded' --timeout=180s
 
 - name: Common OLM Dependencis
   documentation: |
@@ -26,7 +17,17 @@
     Once these CRs are created, run the `oc wait` commands to confirm that
     each step of this procedure is complete.
   manifest: "{{ role_path }}/files/common/manifests/deps/olm-deps.yaml"
+
+- name: Wait for all the OLM dependencies
   wait_conditions:
+    - "oc wait namespaces openshift-storage --for jsonpath='{.status.phase}=Active' --timeout=180s"
+    - >-
+      oc wait -n openshift-storage operatorgroups.operators.coreos.com openshift-storage-operatorgroup
+      --for jsonpath='{.status.namespaces}' --timeout=30s
+    - >-
+      oc wait -n openshift-storage ClusterServiceVersion
+      -l operators.coreos.com/lvms-operator.openshift-storage
+      --for jsonpath='{.status.phase}=Succeeded' --timeout=240s
     - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}=Active' --timeout=30s"
     - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}=Active' --timeout=30s"
     - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}=Active' --timeout=30s"
@@ -39,11 +40,12 @@
 
 - name: Common MetalLB
   manifest: "{{ role_path }}/files/common/manifests/deps/metallb.yaml"
-  wait_conditions:
-    - "oc wait -n metallb-system pod -l component=speaker --for condition=Ready --timeout=180s"
 
 - name: Common NMState
   manifest: "{{ role_path }}/files/common/manifests/deps/nmstate.yaml"
+
+- name: Wait for MetalLB and NMState
   wait_conditions:
+    - "oc wait -n metallb-system pod -l component=speaker --for condition=Ready --timeout=180s"
     - "oc wait -n openshift-nmstate pod -l component=kubernetes-nmstate-handler --for condition=Ready --timeout=180s"
     - "oc wait -n openshift-nmstate deployments/nmstate-webhook --for condition=Available --timeout=180s"
