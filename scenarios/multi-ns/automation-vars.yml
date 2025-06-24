@@ -172,8 +172,6 @@ stages:
     wait_conditions:
       - "timeout 5m hotstack-wait-for-bmh --namespace openstack-a --bmh bmh-a-0"
       - "timeout 5m hotstack-wait-for-bmh --namespace openstack-b --bmh bmh-b-0"
-    run_conditions:
-      - "{{ hotstack_skip_bmh is not defined }}"
 
   - name: Dataplane nodeset
     manifest: manifests/dataplanes/nodesets.yaml

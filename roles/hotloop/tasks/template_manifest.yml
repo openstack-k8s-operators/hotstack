@@ -62,11 +62,9 @@
     label: "{{ __patch.path }}"
     loop_var: __patch
 
-- name: "Stage: {{ item.name }} :: Apply dynamic manifest (Jinja2)"
-  ansible.builtin.command:
-    chdir: "{{ manifests_dir }}"
-    cmd: >-
-      oc apply -f
+- name: "Stage: {{ item.name }} :: Apply static manifest"
+  hotloop_oc_apply_file:
+    file: >-
       {{
         [
           manifests_dir,
