@@ -5,7 +5,7 @@
       oc wait -n openstack-operators csv -l operators.coreos.com/openstack-operator.openstack-operators=
       --for jsonpath='{.status.phase}=Succeeded' --timeout=780s
 
-- name: Apply Openstack init resource if startingCSV v1.0.6 or earlier
+- name: Apply Openstack init resource if starting ClusterServiceVersion >= v1.0.0 and < v1.0.7
   manifest: "{{ role_path }}/files/common/manifests/openstack.yaml"
   wait_conditions:
     - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=180s"
