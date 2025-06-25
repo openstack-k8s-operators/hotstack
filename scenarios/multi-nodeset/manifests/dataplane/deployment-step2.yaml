@@ -2,9 +2,15 @@
 apiVersion: dataplane.openstack.org/v1beta1
 kind: OpenStackDataPlaneDeployment
 metadata:
-  name: dataplane
+  name: dataplane-step-2
   namespace: openstack
 spec:
   nodeSets:
   - edpm-a
   - edpm-b
+  servicesOverride:
+  - install-certs
+  - ovn
+  - neutron-metadata
+  - libvirt
+  - nova
