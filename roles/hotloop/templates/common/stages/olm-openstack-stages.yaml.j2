@@ -18,7 +18,7 @@
   wait_conditions:
     - >-
       oc wait -n openstack-operators csv -l operators.coreos.com/openstack-operator.openstack-operators=
-      --for jsonpath='{.status.phase}=Succeeded' --timeout=180s
+      --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
 
 - name: Patch openstack-operators leader election tuneables
   command: hotstack-leader-election-tune
