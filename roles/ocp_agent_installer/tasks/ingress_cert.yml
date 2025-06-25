@@ -20,6 +20,9 @@
     POD_NAME=$({{ bin_dir }}/oc get pods -n openshift-authentication -o jsonpath='{.items[0].metadata.name}')
     {{ bin_dir }}/oc rsh -n openshift-authentication $POD_NAME \
       cat /run/secrets/kubernetes.io/serviceaccount/ca.crt
+  retries: 10
+  delay: 10
+  until: _ingress_cert.rc == 0
 
 - name: Write ingress cert to ca-trust
   become: true
