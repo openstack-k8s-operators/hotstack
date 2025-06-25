@@ -11,7 +11,7 @@
     - "oc wait namespaces openstack --for jsonpath='{.status.phase}=Active' --timeout=30s"
     - >-
       oc -n openstack-operators wait subscriptions.operators.coreos.com openstack-operator
-      --for jsonpath='{.status.installPlanRef.name}' --timeout=240s
+      --for jsonpath='{.status.installPlanRef.name}' --timeout=300s
 
 - name: Approve openstack-operator Install plan
   command: hotstack-approve-install-plan
