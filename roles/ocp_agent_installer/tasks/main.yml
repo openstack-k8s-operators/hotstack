@@ -109,7 +109,7 @@
     src: "{{ machine_configs_dir }}/"
     dest: "{{ manifests_dir }}/"
 
-- name: Copy conifg assets to manifests dir
+- name: Copy config assets to manifests dir
   ansible.builtin.copy:
     remote_src: true
     src: "{{ config_assets_dir }}/"
