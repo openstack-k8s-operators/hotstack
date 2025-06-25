@@ -75,7 +75,7 @@ spec:
               metallb.universe.tf/loadBalancerIPs: 192.168.122.80
           spec:
             type: LoadBalancer
-      replicas: 1
+      replicas: 2
   galera:
     enabled: true
     templates:
