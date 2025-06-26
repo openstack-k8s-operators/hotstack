@@ -14,13 +14,5 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-hotlog_dir: "{{ playbook_dir }}/logs"
-
-base_dir: /home/zuul
-ocp_agent_installer_cluster_dir: "{{ base_dir }}/ocp-cluster"
-
-hotlog_collect_paths:
-  - "{{ ocp_agent_installer_cluster_dir }}/.openshift_install.log"
-  - "{{ base_dir }}/cluster-custom-config"
-  - "{{ base_dir }}/data"
-  - "{{ base_dir }}/manifests"
+hotstack_work_dir: "{{ playbook_dir }}"
+os_cloud: "{{ lookup('ansible.builtin.env', 'OS_CLOUD') }}"

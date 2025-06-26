@@ -17,141 +17,48 @@
 - name: Assert config is defined
   ansible.builtin.assert:
     that:
-      - install_config is defined
-      - install_config | length > 0
-      - agent_config is defined
-      - agent_config | length > 0
       - pull_secret is defined
       - pull_secret | length > 0
 
-- name: Ensure directory exists
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    mode: '0755'
-  loop:
-    - "{{ bin_dir }}"
-    - "{{ kube_config_dir }}"
-    - "{{ cluster_dir }}"
-    - "{{ manifests_dir }}"
-    - "{{ agent_installer_dir }}"
-    - "{{ cluster_custom_config_dir }}"
-    - "{{ butane_dir }}"
-    - "{{ machine_configs_dir }}"
-    - "{{ config_assets_dir }}"
+- name: Install using agent installer
+  when: not ocp_agent_installer_revive_snapshot | bool
+  ansible.builtin.include_tasks: _install.yml
 
-- name: Install package requirements for agent installer
-  become: true
-  ansible.builtin.dnf:
-    name:
-      - nmstate
-      - butane
-    state: present
+# NOTE(hjensas): The bootstrap certificate is used to bootstrap the cluster
+# and is valid for 24 hours. After 24 hours, the certificate is rotated and
+# the new certificate is valid for 30 days. The snapshot is taken after the
+# bootstrap certificate has rotated, so that no workarounds are needed to get
+# the cluster to a stable state. Snapshots will work without workarounds for
+# the next 30 days.
+- name: Wait for 25 hours to prepare for snapshot
+  when: ocp_agent_installer_prepare_for_snapshot | bool
+  ansible.builtin.pause:
+    minutes: "{{ 25 * 60 }}"
 
-- name: Run tasks/install_client.yml
-  ansible.builtin.include_tasks: install_client.yml
+- name: Prepare for Snapshot - and shutdown
+  when: ocp_agent_installer_prepare_for_snapshot | bool
+  ansible.builtin.command: >-
+    hotstack-snapset
+      --wait-cluster-stable 60s
+      --cordon
+      --shutdown
 
-- name: Run tasks/install_installer.yml
-  ansible.builtin.include_tasks: install_installer.yml
-
-- name: Write OCP install-config.yaml
-  ansible.builtin.copy:
-    content: >-
-      {{
-        install_config | to_nice_yaml(indent=2)
-      }}
-    dest: >-
-      {{
-        [
-          cluster_dir,
-          'install-config.yaml'
-        ] | ansible.builtin.path_join
-      }}
-    mode: '0644'
-
-- name: Replace pull secret in install-config.yaml
-  no_log: true
-  ansible.builtin.replace:
-    path: >-
-      {{
-        [
-          cluster_dir, 'install-config.yaml'
-        ] | ansible.builtin.path_join
-      }}
-    regexp: '^pullSecret: _replaced_$'
-    replace: |
-      pullSecret: '{{ pull_secret | b64decode }}'
-
-- name: Write OCP agent-config.yaml
-  ansible.builtin.copy:
-    content: >-
-      {{
-        agent_config | to_nice_yaml(indent=2)
-      }}
-    dest: >-
-      {{
-        [
-          cluster_dir,
-          'agent-config.yaml'
-        ] | ansible.builtin.path_join
-      }}
-    mode: '0644'
-
-- name: Include tasks to generate machine configs
-  ansible.builtin.include_tasks: machine_configs.yml
-
-- name: Include tasks to generate config assets
-  ansible.builtin.include_tasks: config_assets.yml
-
-- name: Copy machine_configs to manifests dir
-  ansible.builtin.copy:
-    remote_src: true
-    src: "{{ machine_configs_dir }}/"
-    dest: "{{ manifests_dir }}/"
-
-- name: Copy config assets to manifests dir
-  ansible.builtin.copy:
-    remote_src: true
-    src: "{{ config_assets_dir }}/"
-    dest: "{{ manifests_dir }}/"
-
-- name: Run tasks/pxe_assets.yml
-  when: bootstrap_assets == 'pxe'
-  ansible.builtin.include_tasks: pxe_assets.yml
-
-- name: Run tasks/iso_assets.yml
-  when: bootstrap_assets == 'iso'
-  ansible.builtin.include_tasks: iso_assets.yml
-
-- name: Copy auth/kubeconfig to ~/.kube/config
-  ansible.builtin.copy:
-    remote_src: true
-    src: >-
-      {{
-        [
-          cluster_dir,
-          'auth',
-          'kubeconfig'
-        ] | ansible.builtin.path_join
-      }}
-    dest: >-
-      {{
-        [
-          kube_config_dir,
-          'config'
-        ] | ansible.builtin.path_join
-      }}
-
-- name: Wait for bootstrap-complete
-  ansible.builtin.command:
-    cmd: >
-      {{ bin_dir }}/openshift-install --dir {{ cluster_dir }} agent wait-for bootstrap-complete --log-level=info
-
-- name: Wait for install-complete
-  ansible.builtin.command:
-    cmd: >
-      {{ bin_dir }}/openshift-install --dir {{ cluster_dir }} agent wait-for install-complete
-
-- name: Add ingress certificate to CA trust
-  when: add_ingress_cert_to_ca_trust | bool
-  ansible.builtin.include_tasks: ingress_cert.yml
+# NOTE(hjensas): Use the hotstack-snapset utility to wait for cluster
+# stability for 5 seconds, uncordon the nodes then wait for cluster stability,
+# wait for route.openshift.io API version to be available.
+#
+# The wait for cluster stability is repeated with a short stable state
+# requirement. This is faster than waiting one time for a longer time because
+# the timer is reset every time cluster stability is lost.
+#
+# Even if the cluster is stable, the route.openshift.io API version may not be
+# available, wait for it to appear in oc api-versions output.
+- name: Wait for cluster, uncordon, wait for cluster, wait for route API version ...
+  when: ocp_agent_installer_revive_snapshot | bool
+  ansible.builtin.command: >-
+    hotstack-snapset
+      --wait-cluster-stable 5s
+      --uncordon
+      --wait-cluster-stable 60s
+      --wait-cluster-stable 60s
+      --wait-for-api-versions-route

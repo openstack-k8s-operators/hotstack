@@ -67,11 +67,13 @@
         - bin/hotstack-approve-install-plan
         - bin/hotstack-leader-election-tune
         - bin/hotstack-nova-discover-hosts
+        - bin/hotstack-snapset
         - bin/hotstack-openstack-version-patch
         - bin/hotstack-wait-for-bmh
 
     - name: Write ansible inventory to file on controller-0
       when:
+        - ansible_inventory is defined
         - ansible_inventory | length > 0
       ansible.builtin.copy:
         content: "{{ ansible_inventory | to_nice_yaml(indent=2) }}"

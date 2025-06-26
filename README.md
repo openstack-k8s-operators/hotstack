@@ -47,8 +47,6 @@ to install OCP.
 
 ## TODO
 
-* Add more scenarios, for other arhcitectures
-* Figure out snapshots of OCP + automate the process
 * IPv6
 
 ## Pre-requisites
@@ -117,6 +115,7 @@ hotstack_cloud_secrets:
 ### Ansible collections (Dependencies)
 
 ```bash
+ansible-galaxy collection install community.general
 ansible-galaxy collection install community.crypto
 ansible-galaxy collection install openstack.cloud
 ```

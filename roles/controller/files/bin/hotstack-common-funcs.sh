@@ -14,6 +14,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+# Total runtime: 127 seconds before failure
+# Exponential backoff: 1 + 2 + 4 + 8 + 16 + 32 + 64 seconds
 function exponential_retry {
     local cmd="$*"
     local delay=1
@@ -170,4 +172,48 @@ function uncordon_ocp_nodes {
     done
 
     return 0
+}
+
+function wait_for_stable_cluster {
+    local min_time=$1
+    if [ -z "$min_time" ]
+    then
+        min_time="2m"
+    fi
+
+    if ! oc adm wait-for-stable-cluster --minimum-stable-period="${min_time}" --timeout=20m
+    then
+        echo "ERROR: Cluster not stable for the minimal time: ${min_time}"
+        return 1
+    fi
+
+    return 0
+}
+
+function wait_for_api_versions_route {
+    local delay=32
+    local min_delay=1
+    local iterations=0
+
+    until (( delay < min_delay )) || oc api-versions | grep route.openshift.io
+    do
+        sleep "${delay}"
+
+        # Reverse exponential backoff after 8 iterations
+        if (( iterations > 8 ))
+        then
+            delay="$(( delay/2 ))"
+        else
+            (( iterations += 1 ))
+        fi
+    done
+
+    if (( delay < min_delay ))
+    then
+        echo "Wait for api-versions route.openshift.io timed out!"
+        return 1
+    else
+        echo "Fond api-versions route.openshift.io"
+        return 0
+    fi
 }
