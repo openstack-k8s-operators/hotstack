@@ -14,5 +14,13 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-hotstack_work_dir: "{{ playbook_dir }}"
-os_cloud: "{{ lookup('ansible.builtin.env', 'OS_CLOUD') }}"
+- name: Bootstrap virtual infrastructure on Openstack cloud
+  ansible.builtin.import_playbook: 01-infra.yml
+
+- name: Bootstrap controller node
+  ansible.builtin.import_playbook: 02-bootstrap_controller.yml
+
+- name: Install Openshift Container Platform
+  vars:
+    ocp_agent_installer_prep_for_snapshot: true
+  ansible.builtin.import_playbook: 03-install_ocp.yml
