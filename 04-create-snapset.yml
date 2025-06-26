@@ -14,13 +14,18 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-hotlog_dir: "{{ playbook_dir }}/logs"
+- name: Create Hotstack SnapSet
+  hosts: localhost
+  gather_facts: true
+  strategy: linear
+  pre_tasks:
+    - name: Load stack output vars from file
+      ansible.builtin.include_vars:
+        file: "{{ hotstack_work_dir | default(playbook_dir) }}/{{ stack_name }}-outputs.yaml"
+        name: stack_outputs
 
-base_dir: /home/zuul
-ocp_agent_installer_cluster_dir: "{{ base_dir }}/ocp-cluster"
-
-hotlog_collect_paths:
-  - "{{ ocp_agent_installer_cluster_dir }}/.openshift_install.log"
-  - "{{ base_dir }}/cluster-custom-config"
-  - "{{ base_dir }}/data"
-  - "{{ base_dir }}/manifests"
+  roles:
+    - role: hot_snapset
+      vars:
+        controller_ansible_host: "{{ stack_outputs.controller_ansible_host }}"
+        snapset_data: "{{ stack_outputs.snapset_data }}"

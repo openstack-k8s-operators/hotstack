@@ -14,13 +14,16 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-hotlog_dir: "{{ playbook_dir }}/logs"
+- name: Bootstrap virtual infrastructure on Openstack cloud
+  ansible.builtin.import_playbook: 01-infra.yml
 
-base_dir: /home/zuul
-ocp_agent_installer_cluster_dir: "{{ base_dir }}/ocp-cluster"
+- name: Bootstrap controller node
+  ansible.builtin.import_playbook: 02-bootstrap_controller.yml
 
-hotlog_collect_paths:
-  - "{{ ocp_agent_installer_cluster_dir }}/.openshift_install.log"
-  - "{{ base_dir }}/cluster-custom-config"
-  - "{{ base_dir }}/data"
-  - "{{ base_dir }}/manifests"
+- name: Install Openshift Container Platform
+  vars:
+    ocp_agent_installer_prep_for_snapshot: true
+  ansible.builtin.import_playbook: 03-install_ocp.yml
+
+- name: Create Hotstack SnapSet
+  ansible.builtin.import_playbook: 04-create-snapset.yml
