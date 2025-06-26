@@ -16,11 +16,11 @@
 
 - name: Download the installer
   ansible.builtin.get_url:
-    url: "{{ installer_url }}"
+    url: "{{ ocp_agent_installer_installer_url }}"
     dest: >-
       {{
         [
-          agent_installer_dir,
+          ocp_agent_installer_agent_installer_dir,
           'openshift-install-linux.tar.gz'
         ] | ansible.builtin.path_join
       }}
@@ -31,7 +31,7 @@
     src: >-
       {{
         [
-          agent_installer_dir,
+          ocp_agent_installer_agent_installer_dir,
           'openshift-install-linux.tar.gz'
         ] | ansible.builtin.path_join
       }}

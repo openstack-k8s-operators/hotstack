@@ -1,0 +1,124 @@
+#!/bin/bash
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+set -Eeuo pipefail
+
+if [ "$EUID" -eq 0 ]; then
+    echo "Please do not run as root."
+    exit 1
+fi
+
+NODES=
+STABLE_PERIODS=()
+PERIOD_IDX=0
+COMMANDS=()
+
+SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+source "${SCRIPTPATH}"/hotstack-common-funcs.sh
+
+function usage {
+    echo
+    echo "Utilities for preparing and reviving OCP snapshots"
+    echo
+    echo "Executes the specified operations sequentially in the order they"
+    echo "appear on the command line. This allows combining multiple"
+    echo "operations like waiting for stability, then cordoning nodes, then"
+    echo "shutting down - all in a single command with proper sequencing."
+    echo
+    echo "Any option can be specified multiple times, allowing for complex"
+    echo "workflows like:"
+    echo "  --wait-cluster-stable 10s --uncordon --wait-cluster-stable 1m"
+    echo
+    echo "options:"
+    echo "  --wait-cluster-stable <number><s|m> Wait for cluster to be stable for the minimum period"
+    echo "  --cordon                            Mark nodes unschedulable"
+    echo "  --uncordon                          Mark nodes schedulable"
+    echo "  --shutdown                          Shutdown the OCP nodes"
+    echo "  --wait-for-api-versions-route       Wait for the route API version to be available"
+    echo
+}
+
+function wait_stable {
+    wait_for_stable_cluster "${STABLE_PERIODS[${PERIOD_IDX}]}" || exit 1
+    (( PERIOD_IDX += 1 ))
+}
+
+function wait_route {
+    wait_for_api_versions_route || exit 1
+}
+
+function cordon {
+    [ -z "${NODES}" ] && NODES="$(get_ocp_nodes)"
+    cordon_ocp_nodes "${NODES}" || exit 1
+}
+
+function uncordon {
+    [ -z "${NODES}" ] && NODES="$(get_ocp_nodes)"
+    uncordon_ocp_nodes "${NODES}" || exit 1
+}
+
+function shutdown {
+    [ -z "${NODES}" ] && NODES="$(get_ocp_nodes)"
+    shutdown_ocp_nodes "${NODES}" || exit 1
+}
+
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        "--wait-cluster-stable")
+            if ! [[ "$2" =~ ^[0-9]+[sm]$ ]]
+            then
+                echo "Minimum stable period is required in the format of <number><s|m>"
+                usage
+                exit 1
+            fi
+            STABLE_PERIODS+=("$2");
+            COMMANDS+=("wait_stable");
+            shift
+        ;;
+        "--cordon")
+            COMMANDS+=("cordon");
+        ;;
+        "--uncordon")
+            COMMANDS+=("uncordon");
+        ;;
+        "--shutdown")
+            COMMANDS+=("shutdown");
+        ;;
+        "--wait-for-api-versions-route")
+            COMMANDS+=("wait_route");
+        ;;
+        *)
+            echo "Unknown parameter passed: $1";
+            usage
+            exit 1
+        ;;
+    esac
+    shift
+done
+
+if [ ${#COMMANDS[@]} -eq 0 ]
+then
+    echo "Not enough arguments"
+    usage
+    exit 1
+fi
+
+# Run the commands in the order they were passed in
+for cmd in "${COMMANDS[@]}"; do
+    "$cmd"
+done
+
+exit 0

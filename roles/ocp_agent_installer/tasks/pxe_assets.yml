@@ -17,19 +17,19 @@
 - name: Create the boot-artifacts directory
   become: true
   ansible.builtin.file:
-    path: "{{ boot_artifacts_dir }}"
+    path: "{{ ocp_agent_installer_boot_artifacts_dir }}"
     state: directory
     mode: '0755'
 
 - name: Create PXE assets
   ansible.builtin.command:
-    chdir: "{{ cluster_dir }}"
+    chdir: "{{ ocp_agent_installer_cluster_dir }}"
     cmd: >
       {{ bin_dir }}/openshift-install agent create pxe-files
 
 - name: Set serial console in ipxe
   ansible.builtin.lineinfile:
-    path: "{{ cluster_dir }}/boot-artifacts/agent.x86_64.ipxe"
+    path: "{{ ocp_agent_installer_cluster_dir }}/boot-artifacts/agent.x86_64.ipxe"
     backrefs: true
     regexp: "^(kernel.*)$"
     line: '\1 console=ttyS0'
@@ -37,24 +37,24 @@
 - name: Disable net.ifnames
   when: disable_net_ifnames | bool
   ansible.builtin.lineinfile:
-    path: "{{ cluster_dir }}/boot-artifacts/agent.x86_64.ipxe"
+    path: "{{ ocp_agent_installer_cluster_dir }}/boot-artifacts/agent.x86_64.ipxe"
     backrefs: true
     regexp: "^(kernel.*)$"
     line: '\1 net.ifnames=0'
 
-- name: Copy boot-artifacts to the web server - (boot_artifacts_dir)
+- name: Copy boot-artifacts to the web server - (ocp_agent_installer_boot_artifacts_dir)
   become: true
   ansible.builtin.copy:
     remote_src: true
     src: >-
       {{
         [
-          cluster_dir,
+          ocp_agent_installer_cluster_dir,
           'boot-artifacts',
           item
         ] | ansible.builtin.path_join
       }}
-    dest: "{{ boot_artifacts_dir }}"
+    dest: "{{ ocp_agent_installer_boot_artifacts_dir }}"
     owner: root
     group: root
     mode: '0644'
