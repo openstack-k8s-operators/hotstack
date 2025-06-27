@@ -37,7 +37,7 @@
 - name: "Stage: {{ item.name }} :: Wait conditions"
   when: item.wait_conditions is defined
   register: _wait_result
-  ansible.builtin.command:
+  ansible.builtin.shell:
     cmd: "{{ wait_cmd }}"
   loop: "{{ item.wait_conditions }}"
   loop_control:
