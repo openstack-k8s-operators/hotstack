@@ -45,8 +45,12 @@
   until: (
       _wait_result.rc == 0
       or not (
-        _wait_result.stderr is match(".*no matching resources found.*")
-        or _wait_result.stderr is match(".*(NotFound).*")
+        _wait_result.stderr is match(
+          ".*no matching resources found.*")
+        or _wait_result.stderr is match(
+          ".*(NotFound).*")
+        or _wait_result.stderr is match(
+          ".*timed out.*condition.*clusterserviceversions/openstack-operator.*")
       )
     )
   retries: "{{ wait_condition_retries }}"

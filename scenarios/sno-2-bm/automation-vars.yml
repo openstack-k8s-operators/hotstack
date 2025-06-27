@@ -64,3 +64,36 @@ stages:
           openstack_operators_update is defined and
           openstack_operators_update | bool
         }}
+
+  - name: Wait for condition MinorUpdateAvailable True
+    wait_conditions:
+      - >-
+        oc -n openstack wait openstackversions.core.openstack.org controlplane
+        --for=condition=MinorUpdateAvailable=True --timeout=10m
+
+  - name: "Minor update :: Create OpenStackVersion patch"
+    documentation: |
+      This creates a patch file `{{ manifests_dir }}/patches/openstack_version_patch.yaml`
+      If `openstack_update_custom_images` is defined it will populate the customContainerImages
+      in the OpenstackVersion YAML patch.
+    shell: >-
+      {{
+        lookup('ansible.builtin.template',
+              'common/scripts/create_openstack_version_patch.sh.j2')
+      }}
+    run_conditions:
+      - "{{ openstack_update is defined and openstack_update | bool }}"
+
+  - name: "Minor update :: Update the target version in the OpenStackVersion custom resource (CR)"
+    documentation: |
+      The `hotstack-openstack-version-patch` script will get the `availableVersion`
+      and us it to replace the string `__TARGET_VERSION__` in the patch file and
+      apply the patch using `oc patch` command.
+    command: >-
+      hotstack-openstack-version-patch --namespace openstack --name controlplane
+      --file {{ manifests_dir }}/patches/openstack_version_patch.yaml
+    wait_conditions:
+      - oc -n openstack wait openstackversions.core.openstack.org controlplane
+        --for=condition=Ready --timeout=10m
+    run_conditions:
+      - "{{ openstack_update is defined and openstack_update | bool }}"
