@@ -1,3 +1,9 @@
+- name: Wait for condition MinorUpdateAvailable True
+  wait_conditions:
+    - >-
+      oc -n openstack wait openstackversions.core.openstack.org controlplane
+      --for=condition=MinorUpdateAvailable=True --timeout=10m
+
 - name: "Minor update :: Create OpenStackVersion patch"
   documentation: |
     This creates a patch file `{{ manifests_dir }}/patches/openstack_version_patch.yaml`
