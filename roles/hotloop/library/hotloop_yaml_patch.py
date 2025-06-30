@@ -142,7 +142,7 @@ def is_path_in_yaml(data, path, return_value=False):
         the path.
     :param return_value: (bool) If True, return the value at the path if
         it exists.
-    :returns: (bool or sting) True or the value if the path exists,
+    :returns: (bool or string) True or the value if the path exists,
         False otherwise
     """
     _data = copy.deepcopy(data)

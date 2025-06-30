@@ -161,7 +161,7 @@ stages:
         ((counter++))
       done
 
-  - name: Manange ironic nodes
+  - name: Manage ironic nodes
     shell: |
       set -xe -o pipefail
       oc project openstack

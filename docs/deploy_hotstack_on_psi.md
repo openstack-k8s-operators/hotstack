@@ -9,7 +9,7 @@ OpenStack cloud infrastructure such as PSI Clouds.
   - [Key Ansible Playbooks](#key-ansible-playbooks)
 - [Preparing Your OpenStack Environment and Client Machine](#preparing-your-openstack-environment-and-client-machine)
   - [Client-Machine](#client-machine)
-  - [OpenStack Service Prerequisities](#openstack-service-prerequisities)
+  - [OpenStack Service Prerequisites](#openstack-service-prerequisities)
   - [OpenStack Cloud Credentials (cloud-secret.yaml)](#openstack-cloud-credentials-cloud-secretyaml)
   - [Exporting OS\_CLOUD](#exporting-os_cloud)
   - [Customizing bootstrap\_vars.yml](#customizing-bootstrap_varsyml)
@@ -140,7 +140,7 @@ git clone https://github.com/openstack-k8s-operators/hotstack.git
 cd hotstack
 ```
 
-### OpenStack Service Prerequisities
+### OpenStack Service Prerequisites
 
 #### Glance (image service)
 
@@ -151,15 +151,15 @@ Hotstack requires some specific images to exist in the cloud.
 The `ocp_agent_installer` role utilizes "PXE bootstrap-artifacts", meaning
 OpenShift Container Platform (OCP) instances will be network-booted.
 
-Documentaton for to build and upload ipxe image is referenced within the
+Documentation for to build and upload ipxe image is referenced within the
 HotStack repository's [ipxe directory](../ipxe/README.md).
 
 ##### Controller Node Image and sushy-tools-blank image
 
 A dedicated image for the "controller" node must also be available in Glance.
 
-> A custom image becase some packages like `dnsmasq` must be pre-installed in
-> the image to enable the DNS service on the controller to initailize without
+> A custom image because some packages like `dnsmasq` must be pre-installed in
+> the image to enable the DNS service on the controller to initialize without
 > external package downloads.
 
 If using virtual baremetal, a blank non-bootable image must also be build and
@@ -193,7 +193,7 @@ To use existing flavors, override the `stack_parameters` in the
 [`scenarios/3-nodes/bootstrap_vars.yml`](
   ../scenarios/3-nodes/bootstrap_vars.yml))
 
-The follwing `bootstrap_vars.yml` snippet shows flavors that typically exist
+The following `bootstrap_vars.yml` snippet shows flavors that typically exist
 in psi clouds.
 
 ```yaml
@@ -352,7 +352,7 @@ modification include:
 
 ### Run the HotStack playbooks
 
-Running the `bootstap.yml` playbook, which includes all the hotstack playbooks
+Running the `bootstrap.yml` playbook, which includes all the hotstack playbooks
 in order.
 
 ```bash
@@ -373,7 +373,7 @@ Alternatively you can run the playbooks individually:
     -e @~/cloud-secrets.yaml
   ```
 
-- Bootstap the controller node:
+- Bootstrap the controller node:
 
   ```bash
   ansible-playbook -i inventory.yml 02-bootstrap_controller.yml \

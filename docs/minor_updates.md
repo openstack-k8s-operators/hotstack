@@ -5,7 +5,7 @@ OpenStack operators and the OpenStack Controlplane and Dataplane. These
 automation stages are not included by default, to enable updates the
 `openstack_operators_update` and `openstack_update` variables must be set to
 `true`. Additional variables to control the operators index image to use,
-and starting Cluster Service Version (CSV) shoule be defined.
+and starting Cluster Service Version (CSV) should be defined.
 
 An example variable file [`update-vars.yml`](../update-vars.yml) with defaults
 for upstream is provided for convenience.
@@ -17,7 +17,7 @@ for upstream is provided for convenience.
 - [Running scenarios with updates enabled](#running-scenarios-with-updates-enabled)
   - [Examples](#examples)
 - [Including update stages in a scenario](#including-update-stages-in-a-scenario)
-- [Breakdown of the stages for Openstack operatos OLM update](#breakdown-of-the-stages-for-openstack-operatos-olm-update)
+- [Breakdown of the stages for Openstack Operators OLM update](#breakdown-of-the-stages-for-openstack-operators-olm-update)
   - [`openstack-olm-update.yaml.j2`](#openstack-olm-updateyamlj2)
   - [`openstack-update.yaml.j2`](#openstack-updateyamlj2)
 - [Scenario update manifests and examples](#scenario-update-manifests-and-examples)
@@ -103,7 +103,7 @@ Example including the update nested stages:
     }}
 ```
 
-## Breakdown of the stages for Openstack operatos OLM update
+## Breakdown of the stages for Openstack Operators OLM update
 
 ### [`openstack-olm-update.yaml.j2`](../roles/hotloop/templates/common/stages/openstack-olm-update.yaml.j2)
 

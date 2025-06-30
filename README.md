@@ -1,7 +1,7 @@
 # HotStack
 
 This repository hosts tooling for a deploying labs for RHOSO deployment testing/
-development on Openstack cloud infrastucture.
+development on Openstack cloud infrastructure.
 
 ## Roles
 * **dataplane_ssh_keys**: Create SSH keys for dataplane and Nova Migration.
@@ -22,7 +22,7 @@ development on Openstack cloud infrastucture.
 
 The [scenarios](scenarios/) folder contains examples to create the
 resources in the Openstack cloud using the `heat_template.yaml`, Kubernetes
-manifests (CR's), bootsrap variables for the [bootstrap.yml] (./bootstrap.yml)
+manifests (CR's), bootstrap variables for the [bootstrap.yml] (./bootstrap.yml)
 playbook and automation variables to feed the `hotloop` role.
 
 In the Heat stack output the following is made available, for use by the

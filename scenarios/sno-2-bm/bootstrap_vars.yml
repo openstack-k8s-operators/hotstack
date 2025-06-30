@@ -35,7 +35,7 @@ cinder_volume_pvs:
 
 stack_name: "hs-{{ scenario }}-{{ zuul.build[:8] | default('no-zuul') }}"
 stack_parameters:
-  # On missconfigured clouds, uncomment these to avoid issues.
+  # On misconfigured clouds, uncomment these to avoid issues.
   # Ref: https://access.redhat.com/solutions/7059376
   # net_value_specs:
   #   mtu: 1442

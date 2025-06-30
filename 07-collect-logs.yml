@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-- name: Bootstrap architecutre on Openstack cloud
+- name: Collect logs from deployed Hotstack scenario
   hosts: localhost
   gather_facts: true
   strategy: linear

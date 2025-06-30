@@ -1,4 +1,4 @@
-<!-- An AI Assistent was used to write this document -->
+<!-- An AI Assistant was used to write this document -->
 ## Typical Structure of a Hotstack Scenario
 
 A "scenario" in this context defines a set of automated steps to deploy and configure an OpenStack environment, often on an OpenShift cluster.  It's designed to be executed by an automation tool like HotStack. The structure is primarily defined by YAML files, with some ancillary files like Jinja2 templates.

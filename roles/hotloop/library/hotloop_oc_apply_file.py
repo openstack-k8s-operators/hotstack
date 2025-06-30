@@ -31,7 +31,7 @@ DOCUMENTATION = r"""
 ---
 module: hotloop_oc_apply_file
 
-short_description: Appy a manifest file to Kubernetes if different from backup
+short_description: Apply a manifest file to Kubernetes if different from backup
 
 version_added: "2.8"
 
