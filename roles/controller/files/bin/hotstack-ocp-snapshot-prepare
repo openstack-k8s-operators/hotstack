@@ -1,0 +1,113 @@
+#!/bin/bash
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+set -Eeuo pipefail
+set -x
+
+if [ "$EUID" -eq 0 ]; then
+    echo "Please do not run as root."
+    exit 1
+fi
+
+NODES=
+CORDON=
+UNCORDON=
+RM_CSR=
+SHUTDOWN=
+STABLE_PERIOD="2m"
+
+SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+source "${SCRIPTPATH}"/hotstack-common-funcs.sh
+
+function usage {
+    echo "Utilities for preparing OCP snapshots"
+    echo
+    echo
+    echo "options:"
+    echo "  --cordon                   Mark nodes unschedulable"
+    echo "  --remove-csr-signer-certs  Remove CSR Signer Certs"
+    echo "  --minimum-stable-period    Minimum cluster stable period (Default: 2m)"
+    echo "  --shutdown                 Shutdown the OCP nodes"
+    echo "  --bring-back-up            Loop, and approve crs until cluster is up, or timeout. (Default: )"
+    echo
+}
+
+function remove_csr_signer_certs {
+    local namespace="openshift-kube-controller-manager-operator"
+    local csr_signer_secrets=(csr-signer-signer csr-signer)
+    for secret in "${csr_signer_secrets[@]}"
+    do
+        if oc -n "${namespace}" get secrets "${secret}"
+        then
+            echo "Deleting secret: ${secret} in namespace: ${namespace}"
+            delete_secret ${namespace} ${secret}
+            if [ $? -ne 0 ]
+            then
+                echo "ERROR: Unable to delete certificate secret: ${secret}"
+                exit 1
+            fi
+        fi
+    done
+}
+
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        "--cordon")
+            CORDON=True;
+        ;;
+        "--remove-csr-signer-certs")
+            RM_CSR=True;
+        ;;
+        "--shutdown")
+            SHUTDOWN=True;
+        ;;
+        "--minimum-stable-period")
+            STABLE_PERIOD=$2;
+            shift
+        ;;
+        *)
+            echo "Unknown parameter passed: $1";
+            usage
+            exit 1
+        ;;
+    esac
+    shift
+done
+
+if [[ -z "$CORDON" && -z "$RM_CSR" && -z "$SHUTDOWN" ]]
+then
+    echo "Not enought arguments"
+    usage
+    exit 1
+fi
+
+if [ -n "$RM_CSR" ]
+then
+    remove_csr_signer_certs
+    wait_for_stable_cluster $STABLE_PERIOD || exit 1
+fi
+
+if [ -n "$CORDON" ]
+then
+    [ -z "${NODES}" ] && NODES="$(get_ocp_nodes)"
+    cordon_ocp_nodes "${NODES}" || exit 1
+fi
+
+if [ -n "$SHUTDOWN" ]
+then
+    [ -z "${NODES}" ] && NODES="$(get_ocp_nodes)"
+    shutdown_ocp_nodes "${NODES}" || exit 1
+fi

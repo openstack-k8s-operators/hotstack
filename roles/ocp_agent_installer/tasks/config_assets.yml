@@ -21,7 +21,7 @@
     dest: >-
       {{
         [
-          config_assets_dir,
+          ocp_agent_installer_config_assets_dir,
           'ovn_k8s_config.yaml'
         ] | ansible.builtin.path_join
       }}
@@ -33,7 +33,7 @@
     dest: >-
       {{
         [
-          config_assets_dir,
+          ocp_agent_installer_config_assets_dir,
           '95-etcd_config.yaml'
         ] | ansible.builtin.path_join
       }}
@@ -45,7 +45,7 @@
     dest: >-
       {{
         [
-          config_assets_dir,
+          ocp_agent_installer_config_assets_dir,
           '95-image-content-source-policy.yaml'
         ] | ansible.builtin.path_join
       }}
@@ -72,7 +72,7 @@
         dest: >-
           {{
             [
-              config_assets_dir,
+              ocp_agent_installer_config_assets_dir,
               '93-additional-ca-config-map.yaml'
             ] | ansible.builtin.path_join
           }}
@@ -83,7 +83,7 @@
         dest: >-
           {{
             [
-              config_assets_dir,
+              ocp_agent_installer_config_assets_dir,
               '94-additional-ca-config-image.yaml'
             ] | ansible.builtin.path_join
           }}

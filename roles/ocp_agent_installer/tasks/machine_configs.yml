@@ -22,13 +22,13 @@
         role: "{{ item }}"
       ansible.builtin.template:
         src: disable-netifnames.bu.j2
-        dest: "{{ butane_dir }}/90-{{ item }}-disable-netifnames.bu"
+        dest: "{{ ocp_agent_installer_butane_dir }}/90-{{ item }}-disable-netifnames.bu"
       loop: "{{ net_ifnames_roles }}"
     - name: Generate MachineConfig for iscsi
       ansible.builtin.command:
         cmd: >-
-          butane {{ butane_dir }}/90-{{ item }}-disable-netifnames.bu
-          -o {{ machine_configs_dir }}/90-{{ item }}-disable-netifnames.yaml
+          butane {{ ocp_agent_installer_butane_dir }}/90-{{ item }}-disable-netifnames.bu
+          -o {{ ocp_agent_installer_machine_configs_dir }}/90-{{ item }}-disable-netifnames.yaml
       loop: "{{ net_ifnames_roles }}"
 
 - name: Enable iscsi
@@ -39,14 +39,14 @@
         role: "{{ item }}"
       ansible.builtin.template:
         src: enable-iscsi.bu.j2
-        dest: "{{ butane_dir }}/90-{{ item }}-enable-iscsi.bu"
+        dest: "{{ ocp_agent_installer_butane_dir }}/90-{{ item }}-enable-iscsi.bu"
       loop: "{{ iscsi_roles }}"
 
     - name: Generate MachineConfig for iscsi
       ansible.builtin.command:
         cmd: >-
-          butane {{ butane_dir }}/90-{{ item }}-enable-iscsi.bu
-          -o {{ machine_configs_dir }}/90-{{ item }}-enable-iscsi.yaml
+          butane {{ ocp_agent_installer_butane_dir }}/90-{{ item }}-enable-iscsi.bu
+          -o {{ ocp_agent_installer_machine_configs_dir }}/90-{{ item }}-enable-iscsi.yaml
       loop: "{{ iscsi_roles }}"
 
 - name: Enable Multipath
@@ -57,14 +57,14 @@
         role: "{{ item }}"
       ansible.builtin.template:
         src: enable-multipath.bu.j2
-        dest: "{{ butane_dir }}/91-{{ item }}-enable-multipath.bu"
+        dest: "{{ ocp_agent_installer_butane_dir }}/91-{{ item }}-enable-multipath.bu"
       loop: "{{ multipath_roles }}"
 
     - name: Generate MachineConfig for multipath
       ansible.builtin.command:
         cmd: >-
-          butane {{ butane_dir }}/91-{{ item }}-enable-multipath.bu
-          -o {{ machine_configs_dir }}/91-{{ item }}-enable-multipath.yaml
+          butane {{ ocp_agent_installer_butane_dir }}/91-{{ item }}-enable-multipath.bu
+          -o {{ ocp_agent_installer_machine_configs_dir }}/91-{{ item }}-enable-multipath.yaml
       loop: "{{ multipath_roles }}"
 
 - name: LVM cinder-volumes
@@ -75,12 +75,12 @@
         role: "{{ item }}"
       ansible.builtin.template:
         src: lv-cinder-volumes.bu.j2
-        dest: "{{ butane_dir }}/92-{{ item }}-lv-cinder-volumes.bu"
+        dest: "{{ ocp_agent_installer_butane_dir }}/92-{{ item }}-lv-cinder-volumes.bu"
       loop: "{{ cinder_volume_roles }}"
 
     - name: Generate MachineConfig for multipath
       ansible.builtin.command:
         cmd: >-
-          butane {{ butane_dir }}/92-{{ item }}-lv-cinder-volumes.bu
-          -o {{ machine_configs_dir }}/92-{{ item }}-lv-cinder-volumes.yaml
+          butane {{ ocp_agent_installer_butane_dir }}/92-{{ item }}-lv-cinder-volumes.bu
+          -o {{ ocp_agent_installer_machine_configs_dir }}/92-{{ item }}-lv-cinder-volumes.yaml
       loop: "{{ cinder_volume_roles }}"

@@ -1,4 +1,4 @@
----
+#!/bin/bash
 # Copyright Red Hat, Inc.
 # All Rights Reserved.
 #
@@ -13,6 +13,16 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+set -ex
 
-hotstack_work_dir: "{{ playbook_dir }}"
-os_cloud: "{{ lookup('ansible.builtin.env', 'OS_CLOUD') }}"
+if [ "$EUID" -eq 0 ]; then
+    echo "Please do not run as root."
+    exit 1
+fi
+
+NODES=$(oc get nodes -o jsonpath='{.items[*].metadata.name}')
+
+for node in ${NODES}
+do
+    oc debug node/"${node}" -- chroot /host shutdown -h 3
+done

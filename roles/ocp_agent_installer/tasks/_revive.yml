@@ -14,5 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-hotstack_work_dir: "{{ playbook_dir }}"
-os_cloud: "{{ lookup('ansible.builtin.env', 'OS_CLOUD') }}"
+- name: TODO
+  ansible.builtin.debug:
+    msg: "TODO Revive Snapshot"
