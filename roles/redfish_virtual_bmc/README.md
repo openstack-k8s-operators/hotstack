@@ -47,7 +47,7 @@ $ curl -u admin:password http://sushy-emulator.apps.ocp.openstack.lab/redfish/v1
   gather_facts: true
   strategy: linear
   pre_tasks:
-    - name: Load stack ouputs from file
+    - name: Load stack outputs from file
       ansible.builtin.include_vars:
         file: "{{ stack_name }}-outputs.yaml"
         name: stack_outputs

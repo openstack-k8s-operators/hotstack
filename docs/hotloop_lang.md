@@ -1,4 +1,4 @@
-<!-- An AI Assistent was used to write this document -->
+<!-- An AI Assistant was used to write this document -->
 # Hotloop - Pipeline Structured Language Documentation
 
 This document explains the structured language used to define the Hotloop
@@ -74,7 +74,7 @@ Here's a breakdown of the common attributes within a stage:
   pipeline proceeds. Each item in the list is a command-line string.
 * **`run_conditions`**: (Optional) A list of conditions that must be met for a
   stage to execute. Strings `False`, `FALSE` and `false` will be evaluated as
-  `False`, otherwize the python boolean equivalent of the value.
+  `False`, otherwise the python boolean equivalent of the value.
 
   The condition field can use Jinja2 syntax, which allows for dynamic evaluation
   of expressions based on the available variables in the automation

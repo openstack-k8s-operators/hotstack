@@ -6,7 +6,7 @@ and run wait conditions.
 The "stages" are driven by automation vars, examples is available in the
 scenarios repository, see [here](scenarios/uni01alpha/automation-vars.yml).
 
-Scenarios also containe a [manifests](scenarios/uni01alpha/manifests/)
+Scenarios also contain a [manifests](scenarios/uni01alpha/manifests/)
 directory with CRs that will be applied in the order defined in automation
 vars.
 
@@ -58,7 +58,7 @@ Schema for a stage item is:
   manifest, i.e `oc wait --for <condition>`
 * `run_conditions` (list) A list of conditions that must be met for a stage
   to execute. Strings `False`, `FALSE` and `false` will be evaluated as
-  `False`, otherwize the python boolean equivalent of the value.
+  `False`, otherwise the python boolean equivalent of the value.
 
   The condition field can use Jinja2 syntax, which allows for dynamic
   evaluation of expressions based on the available variables in the automation

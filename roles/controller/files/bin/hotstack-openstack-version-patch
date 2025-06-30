@@ -93,7 +93,7 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 if [[ -z "$NAMESPACE" || -z "$NAME" || -z "$FILE" ]]; then
-    echo "Not enought arguments"
+    echo "Not enough arguments"
     usage
     exit 1
 fi

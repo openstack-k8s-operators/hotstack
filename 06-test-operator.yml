@@ -1,5 +1,5 @@
 ---
-- name: Bootstrap architecutre on Openstack cloud
+- name: Run tests using test-operator
   hosts: localhost
   gather_facts: true
   strategy: linear

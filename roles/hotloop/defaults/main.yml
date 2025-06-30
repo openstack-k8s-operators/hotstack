@@ -37,7 +37,7 @@ hotstack_rhos_release_rpm: https://url.corp.redhat.com/hotstack-rhos-release-lat
 hotstack_non_default_namespace_scenarios:
   - multi-ns
 
-# For convinience, a default patches for nodesets
+# For convenience, a default patches for nodesets
 # * Sets edpm_bootstrap_command
 # * Set registries/registry logins if not already set in the nodeset YAML.
 hotstack_default_nodeset_patches:

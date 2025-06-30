@@ -201,7 +201,7 @@ This section explains the resources defined in a Heat Orchestration Template (HO
 
 ### Heat Template Resources for pre-provisioned Dataplane Nodes in HotStack Scenarios
 
-This section explains the resources defined in a Heat Orchestration Template (HOT) used in a HotStack scenario to configure the Dataplane nodes. These resources include user management, hostname configuration, Neutron ports, a trunk port, and a Nova server. This example is for a compute node, but tha same pattern is used for Networker nodes in the scenarios that include that node type. For scenarios featuring multiple Dataplane nodes a single shared `dataplane_users` resource can be used.
+This section explains the resources defined in a Heat Orchestration Template (HOT) used in a HotStack scenario to configure the Dataplane nodes. These resources include user management, hostname configuration, Neutron ports, a trunk port, and a Nova server. This example is for a compute node, but the same pattern is used for Networker nodes in the scenarios that include that node type. For scenarios featuring multiple Dataplane nodes a single shared `dataplane_users` resource can be used.
 
 - **dataplane_users**
    - **Type**: OS::Heat::CloudConfig

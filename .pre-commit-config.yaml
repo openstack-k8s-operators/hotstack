@@ -44,3 +44,11 @@ repos:
     rev: v6.22.2
     hooks:
       - id: ansible-lint
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.6
+    hooks:
+    - id: codespell
+      args:
+      - --write-changes
+      - --ignore-words=.codespell.ignore
