@@ -3,6 +3,8 @@
     - >-
       oc -n openstack wait openstackversions.core.openstack.org controlplane
       --for=condition=MinorUpdateAvailable=True --timeout=10m
+  run_conditions:
+    - "{{ scenario not in hotstack_non_default_namespace_scenarios }}"
 
 - name: "Minor update :: Create OpenStackVersion patch"
   documentation: |
@@ -15,6 +17,8 @@
              'common/scripts/create_openstack_version_patch.sh.j2')
       | indent(width=4)
     }}
+  run_conditions:
+    - "{{ scenario not in hotstack_non_default_namespace_scenarios }}"
 
 - name: "Minor update :: Update the target version in the OpenStackVersion custom resource (CR)"
   documentation: |
@@ -37,6 +41,8 @@
     - >-
       oc -n openstack wait openstackversions.core.openstack.org controlplane
       --for=condition=MinorUpdateOVNDataplane --timeout=20m
+  run_conditions:
+    - "{{ scenario not in hotstack_non_default_namespace_scenarios }}"
 
 - name: "Minor update :: Wait for control plane services update to complete"
   wait_conditions:

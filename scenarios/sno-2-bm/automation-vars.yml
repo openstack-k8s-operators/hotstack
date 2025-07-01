@@ -70,6 +70,8 @@ stages:
       - >-
         oc -n openstack wait openstackversions.core.openstack.org controlplane
         --for=condition=MinorUpdateAvailable=True --timeout=10m
+    run_conditions:
+      - "{{ openstack_update is defined and openstack_update | bool }}"
 
   - name: "Minor update :: Create OpenStackVersion patch"
     documentation: |
