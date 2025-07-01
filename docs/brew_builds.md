@@ -10,19 +10,18 @@ and metadata from 'brew' registries rather than the ones from CDN or quay.io.
 
 ## Table of Contents
 
-- [Using brew builds with Hotstack](#using-brew-builds-with-hotstack)
-  - [Table of Contents](#table-of-contents)
-  - [Get brew registry secret](#get-brew-registry-secret)
-  - [Patch you pull-secret to include the brew registry secret](#patch-you-pull-secret-to-include-the-brew-registry-secret)
-  - [Set hotstack variables to enable brew builds](#set-hotstack-variables-to-enable-brew-builds)
-    - [Set variable to create ImageContentSourcePolicy (ICSP)](#set-variable-to-create-imagecontentsourcepolicy-icsp)
-    - [Additional CA trusts](#additional-ca-trusts)
-    - [Set image reference for openstack-operators CatalogSource](#set-image-reference-for-openstack-operators-catalogsource)
-    - [(Optional) Override the starting CSV in the Subscription](#optional-override-the-starting-csv-in-the-subscription)
-    - [Set EDPM container registries](#set-edpm-container-registries)
-    - [Set EDPM container registry logins](#set-edpm-container-registry-logins)
-    - [Set hotstack EDPM bootstrap command variables](#set-hotstack-edpm-bootstrap-command-variables)
-    - [Set the image to use for dataplane nodes](#set-the-image-to-use-for-dataplane-nodes)
+- [Table of Contents](#table-of-contents)
+- [Get brew registry secret](#get-brew-registry-secret)
+- [Patch you pull-secret to include the brew registry secret](#patch-you-pull-secret-to-include-the-brew-registry-secret)
+- [Set hotstack variables to enable brew builds](#set-hotstack-variables-to-enable-brew-builds)
+  - [Set variable to create ImageContentSourcePolicy (ICSP)](#set-variable-to-create-imagecontentsourcepolicy-icsp)
+  - [Additional CA trusts](#additional-ca-trusts)
+  - [Set image reference for openstack-operators CatalogSource](#set-image-reference-for-openstack-operators-catalogsource)
+  - [(Optional) Override the starting CSV in the Subscription](#optional-override-the-starting-csv-in-the-subscription)
+  - [Set EDPM container registries](#set-edpm-container-registries)
+  - [Set EDPM container registry logins](#set-edpm-container-registry-logins)
+  - [Set hotstack EDPM bootstrap command variables](#set-hotstack-edpm-bootstrap-command-variables)
+  - [Set the image to use for dataplane nodes](#set-the-image-to-use-for-dataplane-nodes)
 
 ## Get brew registry secret
 
@@ -65,9 +64,9 @@ When executing the hotstack scenario play, it is necessary to add variables.
 These variables, which are detailed in subsequent sections, can be incorporated
 in different ways. For example ...
 
-* Directly add them to the hotstack `bootstrap_vars.yml` file specific to the
+- Directly add them to the hotstack `bootstrap_vars.yml` file specific to the
   scenario.
-* Alternatively, use a custom variable file and include it by specifying the
+- Alternatively, use a custom variable file and include it by specifying the
   option `-e @file.yml` when running the `ansible-playbook` command.
 
 ### Set variable to create ImageContentSourcePolicy (ICSP)
@@ -226,8 +225,8 @@ It is also possible to override the following variables for the bootstrap
 command template `brew_edpm_bootstrap_command.sh.j2`:
 
 - `hotstack_rhos_release_args`: Defaults to: `18.0 -r 9.4 -p latest-RHOSO-18.0-RHEL-9`
-- `hotstack_install_ca_url`: Defaults to: https://url.corp.redhat.com/hotstack-ca
-- `hotstack_rhos_release_rpm`: Defaults to: https://url.corp.redhat.com/hotstack-rhos-release-latest-noarch-rpm
+- `hotstack_install_ca_url`: Defaults to: [https://url.corp.redhat.com/hotstack-ca]
+- `hotstack_rhos_release_rpm`: Defaults to: [https://url.corp.redhat.com/hotstack-rhos-release-latest-noarch-rpm]
 
 ### Set the image to use for dataplane nodes
 

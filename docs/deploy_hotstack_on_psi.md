@@ -9,7 +9,7 @@ OpenStack cloud infrastructure such as PSI Clouds.
   - [Key Ansible Playbooks](#key-ansible-playbooks)
 - [Preparing Your OpenStack Environment and Client Machine](#preparing-your-openstack-environment-and-client-machine)
   - [Client-Machine](#client-machine)
-  - [OpenStack Service Prerequisites](#openstack-service-prerequisities)
+  - [OpenStack Service Prerequisites](#openstack-service-prerequisites)
   - [OpenStack Cloud Credentials (cloud-secret.yaml)](#openstack-cloud-credentials-cloud-secretyaml)
   - [Exporting OS\_CLOUD](#exporting-os_cloud)
   - [Customizing bootstrap\_vars.yml](#customizing-bootstrap_varsyml)
@@ -17,7 +17,6 @@ OpenStack cloud infrastructure such as PSI Clouds.
   - [Run the HotStack playbooks](#run-the-hotstack-playbooks)
   - [Run the Test-Operator](#run-the-test-operator)
   - [Cleaning up](#cleaning-up)
-
 
 ## Introduction to Hotstack
 

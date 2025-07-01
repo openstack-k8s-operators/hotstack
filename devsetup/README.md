@@ -1,9 +1,11 @@
 # Developer setup
 
 For development an Openstack cloud is required, a painless way to stand up a
-single node Openstack is to use [packstack](https://github.com/redhat-openstack/packstack).
+single node Openstack is to use [packstack](
+  https://github.com/redhat-openstack/packstack).
 
-[RDO](https://www.rdoproject.org) provides instructions standing up a cloud on CentOS Stream 9 [here](https://www.rdoproject.org/deploy/packstack/)
+[RDO](https://www.rdoproject.org) provides instructions standing up a cloud on
+CentOS Stream 9.
 
 ## Install the repos, packstack and tools
 
@@ -33,9 +35,11 @@ crudini --set packstack.answers general CONFIG_NOVA_LIBVIRT_VIRT_TYPE kvm
 
 ### cinder-volumes
 
-If the node used has extra unused disk it is a good idea to avoid the file backed cinder volume group.
+If the node used has extra unused disk it is a good idea to avoid the file
+backed cinder volume group.
 
-Set the `CONFIG_CINDER_VOLUMES_CREATE` to `n` and pre-create the cinder-volumes volume group, for example:
+Set the `CONFIG_CINDER_VOLUMES_CREATE` to `n` and pre-create the cinder-volumes
+volume group, for example:
 
 ```bash
 pvcreate /dev/sdb

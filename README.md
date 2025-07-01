@@ -4,19 +4,20 @@ This repository hosts tooling for a deploying labs for RHOSO deployment testing/
 development on Openstack cloud infrastructure.
 
 ## Roles
+
 * **dataplane_ssh_keys**: Create SSH keys for dataplane and Nova Migration.
-  See docs [here](roles/dataplane_ssh_keys/README.md).
+  See [README](roles/dataplane_ssh_keys/README.md).
 * **heat_stack**: A role to deploy infrastructure on an Openstack cloud using
-  a Heat template as input. See docs [here](roles/heat_stack/README.md).
+  a Heat template as input. See [README](roles/heat_stack/README.md).
 * **ocp_agent_installer**: A role running the Openshift Agent installer.
-  See docs [here](roles/ocp_agent_installer/README.md)
+  See [README](roles/ocp_agent_installer/README.md)
 * **controller**: A role to wait add the controller to the inventory, wait for
-  it to be reachable and bootstrap. See docs [here](roles/controller/README.md).
+  it to be reachable and bootstrap. See [README](roles/controller/README.md).
 * **hotloop**: A a simple "stages" loop, to run commands,
   apply kubernetes manifests and run wait conditions. See docs
-  [here](roles/hotloop/README.md).
+  [README](roles/hotloop/README.md).
 * **redfish_virtual_bmc**: Role to deploy sushy-emulator (RedFish Virtual BMC)
-  service on the Openshift cluster. See docs [here](roles/redfish_virtual_bmc/README.md).
+  service on the Openshift cluster. See [README](roles/redfish_virtual_bmc/README.md).
 
 ## Scenarios
 
@@ -28,7 +29,7 @@ playbook and automation variables to feed the `hotloop` role.
 In the Heat stack output the following is made available, for use by the
 roles to deploy RHOSO, run tests etc.
 
-```
+```console
 +-------------------------+-------------------------------------------------------------------------------------------+
 | output_key              | description                                                                               |
 +-------------------------+-------------------------------------------------------------------------------------------+
@@ -44,7 +45,6 @@ roles to deploy RHOSO, run tests etc.
 This output is fed to the ansible roles `controller` and `ocp_agent_installer`
 to install OCP.
 
-
 ## TODO
 
 * Add more scenarios, for other arhcitectures
@@ -59,7 +59,7 @@ The ocp_agent_installer is using the "PXE bootstrap-artifacts", so the OCP
 instances must do a network boot. To enable this an ipxe USB image must be
 available in glance on the cloud.
 
-See documentation [here](./ipxe/README.md) for details on building the
+See [README](./ipxe/README.md) for details on building the
 ipxe disk image and uploading it to the cloud.
 
 ### Image for the "controller" node must be available in glance on the cloud
@@ -68,7 +68,7 @@ The image must have some packages pre-seeded, for example dnsmasq must be
 installed so that the DNS service can be initialized without the need to
 download packages, since it is using itself as the resolver ...
 
-See documentation [here](./images/README.md)
+See [README](./images/README.md)
 
 ### Create flavors
 
@@ -96,12 +96,14 @@ Create a file containing cloud secret, for example `cloud-secret.yaml`, regular
 user of application credential can be used.
 
 To create an application credential:
+
 ```bash
 openstack application credential create --unrestricted hotstack-app-credential
 ```
 
 Example cloud-secrets variable file:
-```
+
+```yaml
 hotstack_cloud_secrets:
   auth_url: http://10.1.200.21:5000
   application_credential_id: <APP_CREDENTIAL_ID>
@@ -114,7 +116,7 @@ hotstack_cloud_secrets:
 
 ### Ansible collections (Dependencies)
 
-```
+```bash
 ansible-galaxy collection install community.crypto
 ansible-galaxy collection install openstack.cloud
 ```
