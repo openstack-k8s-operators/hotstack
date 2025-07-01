@@ -14,8 +14,10 @@
 # under the License.
 import os
 import filecmp
+import re
 import shutil
 from subprocess import Popen, PIPE, TimeoutExpired
+from time import sleep
 import yaml
 
 from ansible.module_utils.basic import AnsibleModule
@@ -70,6 +72,28 @@ RETURN = r"""
 """
 
 BACKUP_EXTENSION = ".previous"
+
+RETRYABLE_ERR_REGEX = {r"failed calling webhook.*no endpoints available for service"}
+RETRY_DELAY = 20
+
+
+def is_error_retryable(error):
+    """Check if an error message is retryable.
+
+    Determine if the given error is retryable based on predefined
+    regex patterns.
+
+    :param error: The error message to check.
+    :returns: True if error is retryable, False otherwise.
+    """
+    if not error:
+        return False
+
+    for retryable in RETRYABLE_ERR_REGEX:
+        if re.search(retryable, error, re.IGNORECASE):
+            return True
+
+    return False
 
 
 def apply_manifest(file, timeout=60):
@@ -153,6 +177,10 @@ def run_module():
             module.exit_json(**result)
 
         rc, outs, errs, out_lines, err_lines = apply_manifest(file, timeout=timeout)
+
+        if rc != 0 and is_error_retryable(errs):
+            sleep(RETRY_DELAY)
+            rc, outs, errs, out_lines, err_lines = apply_manifest(file, timeout=timeout)
 
         result["rc"] = rc
         result["stdout"] = outs
