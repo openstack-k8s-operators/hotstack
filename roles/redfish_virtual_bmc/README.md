@@ -9,12 +9,10 @@ This role consist of static kubernetes manifests in [files](./files/) and
 templates manifests in [templates](./templates/).
 
 The [automation-vars.yml](./files/automation-vars.yml) is used with the
-[`hotloop`](../hotloop) role to
-apply the resources on the Openshift cluster.
-
+[`hotloop`](../hotloop) role to apply the resources on the Openshift cluster.
 
 ```bash
-$ curl -u admin:password http://sushy-emulator.apps.ocp.openstack.lab/redfish/v1/Systems/
+curl -u admin:password http://sushy-emulator.apps.ocp.openstack.lab/redfish/v1/Systems/
 ```
 
 ```json
@@ -37,7 +35,6 @@ $ curl -u admin:password http://sushy-emulator.apps.ocp.openstack.lab/redfish/v1
     "@odata.id": "/redfish/v1/Systems",
     "@Redfish.Copyright": "Copyright 2014-2016 Distributed Management Task Force, Inc. (DMTF). For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright."
 ```
-
 
 ## Example playbook
 

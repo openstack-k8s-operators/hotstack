@@ -4,13 +4,15 @@ Implements a simple "stages" loop, to run commands, apply kubernetes manifests
 and run wait conditions.
 
 The "stages" are driven by automation vars, examples is available in the
-scenarios repository, see [here](scenarios/uni01alpha/automation-vars.yml).
+scenarios repository, see [automation-vars.yml](
+  scenarios/uni01alpha/automation-vars.yml).
 
 Scenarios also contain a [manifests](scenarios/uni01alpha/manifests/)
 directory with CRs that will be applied in the order defined in automation
 vars.
 
 Schema for a stage item is:
+
 * `name`: (string) A name for the stage, used in task names for UI purpose
   only.
 * `documentation`: (string) A multi-line string providing a explanation of
@@ -23,11 +25,13 @@ Schema for a stage item is:
   `oc apply -f <manifest.yaml>`
 * `j2_manifest`: (string) Path to a dynamic manifest, Jinja2 template, to
   apply with `oc apply -f <manifest.yaml>`.
-  * **Currently only used for operator image and channel, extensive usage discurraged.**
+  * Currently only used for operator image and channel, extensive usage
+    **discurraged**.
   * If both a static and dynamic manifest is defined in the same stage, the
     static one is applied first - then the dynamic (Jinja2) manifest is applied
     and patches are applied to both manifest and j2_manifest.
-* `patches`: (list) List of YAML patches to apply to `manifests` and/or `j2_manifests`.
+* `patches`: (list) List of YAML patches to apply to `manifests` and/or
+  `j2_manifests`.
   * Each patch must define the `path` and the `value` to replace at the path.
     * `path`: The location in the YAML data for replacement.
     * `value`: The new value to replace the existing one.
@@ -54,6 +58,7 @@ Schema for a stage item is:
           - path: metadata.namespace
             value: openstack-b
     ```
+
 * `wait_conditions` (list) A list of commands to run after applying the
   manifest, i.e `oc wait --for <condition>`
 * `run_conditions` (list) A list of conditions that must be met for a stage
@@ -76,6 +81,7 @@ Schema for a stage item is:
           openstack_operators_starting_csv is version('v1.0.6', '>')
         }}
     ```
+
 * `stages`: (dict, list or YAML string) Nested stages, enable referencing
   stages inline or loading stages from different files by utilizing ansible
   `lookup()`.
@@ -86,6 +92,7 @@ Schema for a stage item is:
   > **NOTE**: Nested stages are not allowed to have their own nested stages.
 
   **Example stage including nested stages**:
+
   ```yaml
   - name: Include stages from template
     stages: >-
@@ -96,12 +103,12 @@ Schema for a stage item is:
       - "{{ extra_stages is defined and extra_stages }}"
   ```
 
-
 > **_NOTE_**: Stage items are applied the actions in the following order:
 > `command` -> `shell` -> `manifest` -> `j2_manifest` -> `wait_conditions` ->
 > `stages`.
 
 Example:
+
 ```yaml
 ---
 stages:

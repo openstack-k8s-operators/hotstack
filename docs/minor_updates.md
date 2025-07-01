@@ -121,7 +121,7 @@ version is within a specific range.
   Operator's Custom Resource Definition (CRD) to reach the 'Succeeded' phase
   before proceeding.
 
-- **Apply Openstack init resource if starting ClusterServiceVersion >= v1.0.0 and < v1.0.7**
+- **Apply Openstack init resource if startingCSV >= v1.0.0 and < v1.0.7**
 
   This task applies the openstack.yaml manifest file, which contains the
   necessary Kubernetes resources for the OpenStack Operator.

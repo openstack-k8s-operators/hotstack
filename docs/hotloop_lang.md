@@ -34,7 +34,8 @@ Here's a breakdown of the common attributes within a stage:
   that will be rendered into a YAML manifest and then applied to the target
   environment. This is useful for creating dynamic configurations based on
   variables.
-* **`patches`** (Optional): A list of YAML patches to apply to `manifests` and/or `j2_manifests`.
+* **`patches`** (Optional): A list of YAML patches to apply to `manifests`
+  and/or `j2_manifests`.
   * Each patch must define:
     * `path`: The location in the YAML data for replacement.
     * `value`: The new value to replace the existing one.
@@ -92,6 +93,7 @@ Here's a breakdown of the common attributes within a stage:
           openstack_operators_starting_csv is version('v1.0.7', '<')
         }}
     ```
+
 * **`stages`**: (Optional) This parameter allows you to define nested stages.
   By utilizing nested stages, you can create more modular and reusable
   automation workflows.
@@ -112,6 +114,7 @@ Here's a breakdown of the common attributes within a stage:
   > **NOTE**: Nested stages are not allowed to have their own nested stages.
 
   **Example nested stages**:
+
   ```yaml
   - name: Include stages from file
     stages: >-
