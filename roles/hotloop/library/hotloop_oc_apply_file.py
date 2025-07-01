@@ -73,8 +73,9 @@ RETURN = r"""
 
 BACKUP_EXTENSION = ".previous"
 
-RETRYABLE_ERR_REGEX = {r"failed calling webhook.*no endpoints available for service"}
-RETRY_DELAY = 20
+RETRYABLE_ERR_REGEX = {r"failed calling webhook.*no endpoints available"}
+INITIAL_RETRY_DELAY = 5
+RETRY_MAX_DELAY = INITIAL_RETRY_DELAY * 12
 
 
 def is_error_retryable(error):
@@ -178,8 +179,10 @@ def run_module():
 
         rc, outs, errs, out_lines, err_lines = apply_manifest(file, timeout=timeout)
 
-        if rc != 0 and is_error_retryable(errs):
-            sleep(RETRY_DELAY)
+        delay = INITIAL_RETRY_DELAY
+        while rc != 0 and is_error_retryable(errs) and delay <= RETRY_MAX_DELAY:
+            sleep(delay)
+            delay = delay * 2
             rc, outs, errs, out_lines, err_lines = apply_manifest(file, timeout=timeout)
 
         result["rc"] = rc
