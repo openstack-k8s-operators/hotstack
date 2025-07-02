@@ -1,6 +1,10 @@
 ---
 stages:
   - name: Dependencies
+    documentation: |
+      Installs essential dependencies and prerequisites for the OpenStack deployment.
+      This includes setting up required operators, namespaces, and foundational
+      components needed by subsequent stages in the deployment pipeline.
     stages: >-
       {{
         lookup("ansible.builtin.template",
@@ -8,6 +12,10 @@ stages:
       }}
 
   - name: Cinder LVM
+    documentation: |
+      Configures Cinder LVM storage backend by applying node labels to designate
+      which OpenShift nodes will provide block storage services. This stage ensures
+      proper node selection for LVM-based Cinder volume operations.
     stages: >-
       {{
         lookup("ansible.builtin.file",
@@ -15,6 +23,10 @@ stages:
       }}
 
   - name: TopoLVM
+    documentation: |
+      Installs and configures TopoLVM (Topology-aware Local Volume Manager) which
+      provides dynamic local storage provisioning for the OpenShift cluster. This
+      enables efficient local storage allocation across the 3-master compact cluster.
     stages: >-
       {{
         lookup("ansible.builtin.template",
@@ -22,6 +34,10 @@ stages:
       }}
 
   - name: OLM Openstack
+    documentation: |
+      Deploys OpenStack operators through Operator Lifecycle Manager (OLM).
+      This stage installs all necessary OpenStack service operators that will
+      manage the lifecycle of OpenStack components on the OpenShift cluster.
     stages: >-
       {{
         lookup("ansible.builtin.template",
@@ -29,6 +45,10 @@ stages:
       }}
 
   - name: NodeNetworkConfigurationPolicy (nncp)
+    documentation: |
+      Applies NodeNetworkConfigurationPolicy resources to configure network
+      interfaces on all three master nodes. This stage sets up VLANs, bridges,
+      and routing required for OpenStack networking across the compact cluster.
     manifest: manifests/networking/nncp.yaml
     wait_conditions:
       - >-
@@ -37,15 +57,33 @@ stages:
         --timeout=180s
 
   - name: NetworkAttchmentDefinition (NAD)
+    documentation: |
+      Creates NetworkAttachmentDefinition resources that define how pods can
+      attach to additional networks beyond the default cluster network. This
+      enables OpenStack services to connect to dedicated networks like storage,
+      internal API, and tenant networks.
     manifest: manifests/networking/nad.yaml
 
   - name: MetalLB - L2Advertisement and IPAddressPool
+    documentation: |
+      Configures MetalLB load balancer with L2 advertisement and IP address pools.
+      This provides load balancing capabilities for OpenStack API endpoints,
+      allowing external access to services running on the compact cluster.
     manifest: manifests/networking/metallb.yaml
 
   - name: Netconfig
+    documentation: |
+      Applies network configuration settings that define the overall network
+      topology for the OpenStack deployment. This stage establishes the network
+      architecture that will be used by all OpenStack services.
     manifest: manifests/networking/netconfig.yaml
 
   - name: OpenstackControlPlane
+    documentation: |
+      Deploys the main OpenStack control plane with all configured services
+      including Nova, Neutron, Cinder, Glance, Keystone, and others. This is
+      the core stage that brings up the complete OpenStack environment with
+      3 replicas for high availability across the compact cluster.
     manifest: manifests/control-plane/control-plane.yaml
     wait_conditions:
       - >-
@@ -53,6 +91,10 @@ stages:
         --for condition=Ready --timeout=30m
 
   - name: Update openstack-operators OLM
+    documentation: |
+      Updates OpenStack operators to newer versions when openstack_operators_update
+      is enabled. This stage handles rolling updates of the operator components
+      while maintaining service availability.
     stages: >-
       {{
         lookup('ansible.builtin.template',
@@ -66,6 +108,10 @@ stages:
         }}
 
   - name: Wait for condition MinorUpdateAvailable True
+    documentation: |
+      Waits for the OpenStack deployment to signal that a minor update is
+      available and ready to be applied. This ensures proper timing in the
+      update process before proceeding with version changes.
     wait_conditions:
       - >-
         oc -n openstack wait openstackversions.core.openstack.org controlplane
@@ -75,9 +121,9 @@ stages:
 
   - name: "Minor update :: Create OpenStackVersion patch"
     documentation: |
-      This creates a patch file `{{ manifests_dir }}/patches/openstack_version_patch.yaml`
-      If `openstack_update_custom_images` is defined it will populate the customContainerImages
-      in the OpenstackVersion YAML patch.
+      Creates a patch file for updating the OpenStackVersion custom resource.
+      This stage prepares the version update configuration, including custom
+      container images if specified, to ensure a controlled update process.
     shell: >-
       {{
         lookup('ansible.builtin.template',
@@ -88,9 +134,10 @@ stages:
 
   - name: "Minor update :: Update the target version in the OpenStackVersion custom resource (CR)"
     documentation: |
-      The `hotstack-openstack-version-patch` script will get the `availableVersion`
-      and us it to replace the string `__TARGET_VERSION__` in the patch file and
-      apply the patch using `oc patch` command.
+      Applies the version update patch to the OpenStackVersion custom resource,
+      triggering the actual minor update process. This stage coordinates the
+      rolling update of all OpenStack services to the target version while
+      maintaining high availability.
     command: >-
       hotstack-openstack-version-patch --namespace openstack --name controlplane
       --file {{ manifests_dir }}/patches/openstack_version_patch.yaml
