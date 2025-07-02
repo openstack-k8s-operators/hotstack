@@ -1,0 +1,263 @@
+---
+stages:
+  - name: Apply ironic network-attachement-definition
+    manifest: manifests/nad.yaml
+    wait_conditions:
+      - >-
+        oc wait -n sushy-emulator network-attachment-definitions.k8s.cni.cncf.io ironic
+        --for jsonpath='{.metadata.annotations}' --timeout=30s
+
+  - name: Patch RedFish Sushy Emulator Deployment - add network attachment
+    shell: |
+      set -xe -o pipefail
+
+      TMP_DIR="$(mktemp -d)"
+      trap 'rm -rf -- "$TMP_DIR"' EXIT
+
+      oc project sushy-emulator
+
+      cat << EOF > ${TMP_DIR}/sushy-emulator-network-annotations-patch.yaml
+      spec:
+        template:
+          metadata:
+            annotations:
+              k8s.v1.cni.cncf.io/networks: '[{"name":"ironic","namespace":"sushy-emulator","interface":"ironic"}]'
+      EOF
+
+      oc patch deployments.apps sushy-emulator --patch-file ${TMP_DIR}/sushy-emulator-network-annotations-patch.yaml
+    wait_conditions:
+      - "oc -n sushy-emulator wait deployments.apps sushy-emulator --for condition=Available --timeout=300s"
+
+  - name: Set a multiattach volume type and create it if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack volume type show multiattach &>/dev/null || \
+          oc rsh openstackclient openstack volume type create multiattach
+
+      oc rsh openstackclient openstack volume type set --property multiattach="<is> True" multiattach
+
+  - name: Create public network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack network show public &>/dev/null || \
+        oc rsh openstackclient openstack network create public \
+          --external \
+          --no-share \
+          --default \
+          --provider-network-type flat \
+          --provider-physical-network datacentre
+
+  - name: Create subnet on public network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack subnet show public_subnet &>/dev/null || \
+        oc rsh openstackclient openstack subnet create public_subnet \
+          --network public \
+          --subnet-range 192.168.122.0/24 \
+          --allocation-pool start=192.168.122.171,end=192.168.122.250 \
+          --gateway 192.168.122.1 \
+          --dhcp
+
+  - name: Create private network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack network show private &>/dev/null || \
+        oc rsh openstackclient openstack network create private --share
+
+  - name: Create subnet on private network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack subnet show private_subnet &>/dev/null || \
+        oc rsh openstackclient openstack subnet create private_subnet \
+          --network private \
+          --subnet-range 10.2.0.0/24 \
+          --allocation-pool start=10.2.0.10,end=10.2.0.250 \
+          --gateway 10.2.0.1 \
+          --dhcp
+
+  - name: Create network for ironic provisioning if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack network show provisioning &>/dev/null || \
+        oc rsh openstackclient \
+          openstack network create provisioning \
+            --share \
+            --provider-physical-network ironic \
+            --provider-network-type flat
+
+  - name: Create subnet for ironic provisioning if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack subnet show provisioning-subnet &>/dev/null || \
+        oc rsh openstackclient \
+          openstack subnet create provisioning-subnet \
+            --network provisioning \
+            --subnet-range 172.20.1.0/24 \
+            --gateway 172.20.1.1 \
+            --dns-nameserver 192.168.122.80 \
+            --allocation-pool start=172.20.1.100,end=172.20.1.200
+
+  - name: Create baremetal flavor if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack flavor show baremetal &>/dev/null || \
+        oc rsh openstackclient \
+          openstack flavor create baremetal \
+            --id 123456789-1234-1234-1234-000000000001 \
+            --ram 1024 \
+            --vcpus 1 \
+            --disk 15 \
+            --property resources:VCPU=0 \
+            --property resources:MEMORY_MB=0 \
+            --property resources:DISK_GB=0 \
+            --property resources:CUSTOM_BAREMETAL=1 \
+            --property capabilities:boot_mode=uefi
+
+  - name: Copy ironic_nodes.yaml to the openstackclient pod
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+      oc cp ~/data/ironic_nodes.yaml openstackclient:ironic_nodes.yaml
+
+  - name: Enroll nodes in ironic
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+      oc rsh openstackclient openstack baremetal create ironic_nodes.yaml
+
+  - name: Wait for ironic nodes to get to state - enroll
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      counter=0
+      retries=100
+      node_state=enroll
+      set +e
+      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"; do
+        if [[ "$counter" -eq "$retries" ]]; then
+          echo "ERROR: Timeout. Nodes did not reach state: enroll"
+          exit 1
+        fi
+        echo "Waiting for nodes to reach state enroll"
+        sleep 10
+        ((counter++))
+      done
+
+  - name: Manage ironic nodes
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack baremetal node manage ironic0
+      oc rsh openstackclient openstack baremetal node manage ironic1
+
+  - name: Wait for ironic nodes to get to state - manageable
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      counter=0
+      retries=100
+      node_state=manageable
+      set +e
+      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"; do
+        if [[ "$counter" -eq "$retries" ]]; then
+          echo "ERROR: Timeout. Nodes did not reach state: manageable"
+          set -e
+          exit 1
+        fi
+        echo "Waiting for nodes to reach state manageable"
+        sleep 10
+        ((counter++))
+      done
+
+  - name: Power off the ironic nodes
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack baremetal node power off ironic0
+      oc rsh openstackclient openstack baremetal node power off ironic1
+
+  - name: Set capabilities boot_mode:uefi for ironic nodes
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack baremetal node set --property capabilities='boot_mode:uefi' ironic0
+      oc rsh openstackclient openstack baremetal node set --property capabilities='boot_mode:uefi' ironic1
+
+  - name: Ensure ironic nodes are powered off
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      counter=0
+      retries=100
+      power_state="off"
+      set +e
+      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Power State" | grep -P "^power.(?!${power_state}).*$"; do
+        if [[ "$counter" -eq "$retries" ]]; then
+          echo "ERROR: Timeout. Nodes did not reach power state: power off"
+          set -e
+          exit 1
+        fi
+        echo "Waiting for nodes to reach power state off"
+        sleep 10
+        ((counter++))
+      done
+
+  - name: Provide ironic nodes
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack baremetal node provide ironic0
+      oc rsh openstackclient openstack baremetal node provide ironic1
+
+  - name: Wait for ironic nodes to get to state - available
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      counter=0
+      retries=100
+      node_state=available
+      set +e
+      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"; do
+        if [[ "$counter" -eq "$retries" ]]; then
+          echo "ERROR: Timeout. Nodes did not reach state: available"
+          set -e
+          exit 1
+        fi
+        echo "Waiting for nodes to reach state: active"
+        sleep 10
+        ((counter++))
+      done
+      set -e
+
+  - name: Wait for expected compute services (OSPRH-10942)
+    wait_conditions:
+      - >-
+        timeout --foreground 5m hotstack-nova-discover-hosts
+        --namespace openstack --num-computes 2
+
+  - name: Run tempest
+    manifest: tempest-tests.yml
