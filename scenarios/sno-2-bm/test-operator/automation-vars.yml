@@ -257,7 +257,7 @@ stages:
     wait_conditions:
       - >-
         timeout --foreground 5m hotstack-nova-discover-hosts
-        --namespace openstack --num-computes 2
+        --namespace openstack --num-computes 1
 
   - name: Run tempest
     manifest: tempest-tests.yml
