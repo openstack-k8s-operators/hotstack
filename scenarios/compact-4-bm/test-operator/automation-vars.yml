@@ -1,6 +1,10 @@
 ---
 stages:
   - name: Apply ironic network-attachement-definition
+    documentation: |
+      Applies the NetworkAttachmentDefinition for the Ironic network to the
+      sushy-emulator namespace. This enables the RedFish virtual BMC emulator
+      to communicate with the Ironic bare metal services over the dedicated network.
     manifest: manifests/nad.yaml
     wait_conditions:
       - >-
@@ -8,6 +12,11 @@ stages:
         --for jsonpath='{.metadata.annotations}' --timeout=30s
 
   - name: Patch RedFish Sushy Emulator Deployment - add network attachment
+    documentation: |
+      Patches the sushy-emulator deployment to attach it to the Ironic network.
+      This provides the baremetal services access to the virtual BMC emulator
+      so that it can manage the lifecycle of the bare metal nodes through
+      RedFish API calls over the provisioning network.
     shell: |
       set -xe -o pipefail
 
@@ -29,6 +38,10 @@ stages:
       - "oc -n sushy-emulator wait deployments.apps sushy-emulator --for condition=Available --timeout=300s"
 
   - name: Set a multiattach volume type and create it if needed
+    documentation: |
+      Creates and configures a Cinder volume type that supports multiattach functionality.
+      This enables volumes to be attached to multiple instances simultaneously,
+      which is useful for clustered applications and high availability scenarios.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -39,6 +52,10 @@ stages:
       oc rsh openstackclient openstack volume type set --property multiattach="<is> True" multiattach
 
   - name: Create public network if needed
+    documentation: |
+      Creates the external public network that provides connectivity to the outside world.
+      This network uses a flat provider network type mapped to the 'datacentre'
+      physical network, enabling floating IP assignments and external access.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -52,6 +69,10 @@ stages:
           --provider-physical-network datacentre
 
   - name: Create subnet on public network if needed
+    documentation: |
+      Creates a subnet on the public network with the IP range that matches
+      the controller's ctlplane network (192.168.122.0/24). This provides
+      the IP pool for floating IPs and external connectivity for instances.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -65,6 +86,10 @@ stages:
           --dhcp
 
   - name: Create private network if needed
+    documentation: |
+      Creates a private tenant network for internal communication between instances.
+      This shared network provides isolated networking for OpenStack workloads
+      and serves as the default network for launching instances.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -73,6 +98,10 @@ stages:
         oc rsh openstackclient openstack network create private --share
 
   - name: Create subnet on private network if needed
+    documentation: |
+      Creates a subnet on the private network with a dedicated IP range (10.2.0.0/24).
+      This provides DHCP-enabled networking for instances launched on the
+      private network, with NAT-based connectivity through the router.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -86,6 +115,10 @@ stages:
           --dhcp
 
   - name: Create network for ironic provisioning if needed
+    documentation: |
+      Creates the provisioning network that Ironic uses for bare metal node
+      deployment and management. This flat network maps to the 'ironic'
+      physical network (172.20.1.0/24) where all 4 bare metal nodes are connected.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -98,6 +131,10 @@ stages:
             --provider-network-type flat
 
   - name: Create subnet for ironic provisioning if needed
+    documentation: |
+      Creates the provisioning subnet for the Ironic network with the controller
+      as the gateway. This subnet provides DHCP services for bare metal nodes
+      during deployment and includes the controller's DNS service for name resolution.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -112,6 +149,11 @@ stages:
             --allocation-pool start=172.20.1.100,end=172.20.1.200
 
   - name: Create baremetal flavor if needed
+    documentation: |
+      Creates a custom flavor specifically designed for bare metal instances.
+      This flavor disables traditional resource counting (CPU, RAM, disk) and
+      instead uses custom resource classes (CUSTOM_BAREMETAL) for proper
+      bare metal scheduling with UEFI boot capability.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -130,18 +172,30 @@ stages:
             --property capabilities:boot_mode=uefi
 
   - name: Copy ironic_nodes.yaml to the openstackclient pod
+    documentation: |
+      Copies the Ironic node definition file into the OpenStack client pod.
+      This YAML file contains the hardware specifications, RedFish BMC
+      credentials, and network configuration for all 4 bare metal nodes.
     shell: |
       set -xe -o pipefail
       oc project openstack
       oc cp ~/data/ironic_nodes.yaml openstackclient:ironic_nodes.yaml
 
   - name: Enroll nodes in ironic
+    documentation: |
+      Enrolls all 4 bare metal nodes into Ironic using the node definition file.
+      This registers the nodes with their RedFish BMC endpoints, MAC addresses,
+      and hardware properties, putting them in the 'enroll' provisioning state.
     shell: |
       set -xe -o pipefail
       oc project openstack
       oc rsh openstackclient openstack baremetal create ironic_nodes.yaml
 
   - name: Wait for ironic nodes to get to state - enroll
+    documentation: |
+      Waits for all 4 bare metal nodes to reach the 'enroll' provisioning state.
+      This ensures that Ironic has successfully registered each node and they
+      are ready for the next phase of the lifecycle management process.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -161,6 +215,10 @@ stages:
       done
 
   - name: Manage ironic nodes
+    documentation: |
+      Transitions all 4 bare metal nodes from 'enroll' to 'manage' state.
+      This enables Ironic to perform power management operations and hardware
+      introspection on the nodes through their RedFish BMC interfaces.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -171,6 +229,10 @@ stages:
       oc rsh openstackclient openstack baremetal node manage ironic3
 
   - name: Wait for ironic nodes to get to state - manageable
+    documentation: |
+      Waits for all 4 bare metal nodes to reach the 'manageable' provisioning state.
+      In this state, Ironic can control the nodes' power state and perform
+      hardware inspection and cleaning operations as needed.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -191,6 +253,11 @@ stages:
       done
 
   - name: Power off the ironic nodes
+    documentation: |
+      Powers off all 4 bare metal nodes using RedFish BMC commands through Ironic.
+      This demonstrates power management capabilities and ensures the nodes
+      are in a known power state before proceeding with configuration and further
+      testing.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -201,6 +268,10 @@ stages:
       oc rsh openstackclient openstack baremetal node power off ironic3
 
   - name: Set capabilities boot_mode:uefi for ironic nodes
+    documentation: |
+      Configures all 4 bare metal nodes with UEFI boot mode capability.
+      This ensures proper UEFI-based deployment which matches the baremetal
+      flavor configuration and enables modern boot functionality.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -211,6 +282,10 @@ stages:
       oc rsh openstackclient openstack baremetal node set --property capabilities='boot_mode:uefi' ironic3
 
   - name: Ensure ironic nodes are powered off
+    documentation: |
+      Verifies that all 4 bare metal nodes have successfully powered off.
+      This validation step ensures that the RedFish power management commands
+      were executed correctly before proceeding to make nodes available.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -231,6 +306,10 @@ stages:
       done
 
   - name: Provide ironic nodes
+    documentation: |
+      Transitions all 4 bare metal nodes from 'manageable' to 'provide' state,
+      making them available for Nova scheduling. This final step in the
+      bare metal lifecycle makes the nodes ready for instance deployment.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -241,6 +320,10 @@ stages:
       oc rsh openstackclient openstack baremetal node provide ironic3
 
   - name: Wait for ironic nodes to get to state - available
+    documentation: |
+      Waits for all 4 bare metal nodes to reach the 'available' provisioning state.
+      Once available, these nodes can be scheduled by Nova for bare metal
+      instance deployment, completing the bare metal provisioning setup.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -262,10 +345,19 @@ stages:
       set -e
 
   - name: Wait for expected compute services (OSPRH-10942)
+    documentation: |
+      Waits for Nova compute services to recognize all 4 bare metal nodes
+      as available compute resources. This ensures the compute scheduler
+      can properly place bare metal instances across the available hardware.
     wait_conditions:
       - >-
         timeout --foreground 5m hotstack-nova-discover-hosts
         --namespace openstack --num-computes 4
 
   - name: Run tempest
+    documentation: |
+      Executes the Tempest test suite to validate the OpenStack deployment
+      functionality. This comprehensive testing includes API validation,
+      bare metal provisioning tests, and end-to-end scenarios to verify
+      the complete 4-node bare metal environment is working correctly.
     manifest: tempest-tests.yml
