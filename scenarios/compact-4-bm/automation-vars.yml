@@ -29,7 +29,7 @@ stages:
       }}
 
   - name: NodeNetworkConfigurationPolicy (nncp)
-    manifest: manifests/control-plane/networking/nncp.yaml
+    manifest: manifests/networking/nncp.yaml
     wait_conditions:
       - >-
         oc wait -n openstack nncp -l osp/nncm-config-type=standard
@@ -37,13 +37,13 @@ stages:
         --timeout=180s
 
   - name: NetworkAttchmentDefinition (NAD)
-    manifest: manifests/control-plane/networking/nad.yaml
+    manifest: manifests/networking/nad.yaml
 
   - name: MetalLB - L2Advertisement and IPAddressPool
-    manifest: manifests/control-plane/networking/metallb.yaml
+    manifest: manifests/networking/metallb.yaml
 
   - name: Netconfig
-    manifest: manifests/control-plane/networking/netconfig.yaml
+    manifest: manifests/networking/netconfig.yaml
 
   - name: OpenstackControlPlane
     manifest: manifests/control-plane/control-plane.yaml

@@ -80,7 +80,7 @@ spec:
                   metallb.universe.tf/loadBalancerIPs: 172.17.0.80
               spec:
                 type: LoadBalancer
-        replicas: 1
+        replicas: 3
       cinderBackup:
         customServiceConfig: |
           [DEFAULT]
@@ -89,7 +89,7 @@ spec:
         - storage
         replicas: 1
       cinderScheduler:
-        replicas: 1
+        replicas: 3
       cinderVolumes:
         lvm-iscsi:
           customServiceConfig: |
@@ -130,16 +130,16 @@ spec:
               metallb.universe.tf/loadBalancerIPs: 192.168.122.80
           spec:
             type: LoadBalancer
-      replicas: 1
+      replicas: 3
   galera:
     enabled: true
     templates:
       openstack:
-        replicas: 1
+        replicas: 3
         secret: osp-secret
         storageRequest: 5G
       openstack-cell1:
-        replicas: 1
+        replicas: 3
         secret: osp-secret
         storageRequest: 5G
   glance:
@@ -203,7 +203,7 @@ spec:
                   metallb.universe.tf/loadBalancerIPs: 192.168.122.80
               spec:
                 type: LoadBalancer
-        replicas: 1
+        replicas: 3
       ironicConductors:
       - customServiceConfig: |
           [conductor]
@@ -220,7 +220,7 @@ spec:
         networkAttachments:
         - ironic
         provisionNetwork: ironic
-        replicas: 1
+        replicas: 3
         storageRequest: 10G
       ironicInspector:
         customServiceConfig: |
@@ -245,7 +245,7 @@ spec:
         preserveJobs: false
         replicas: 1
       ironicNeutronAgent:
-        replicas: 1
+        replicas: 3
       preserveJobs: false
       rpcTransport: oslo
       secret: osp-secret
@@ -331,7 +331,7 @@ spec:
             spec:
               type: LoadBalancer
       preserveJobs: false
-      replicas: 1
+      replicas: 3
       secret: osp-secret
   nova:
     apiOverride:
@@ -348,7 +348,7 @@ spec:
                   metallb.universe.tf/loadBalancerIPs: 172.17.0.80
               spec:
                 type: LoadBalancer
-        replicas: 1
+        replicas: 3
       cellTemplates:
         cell0:
           cellDatabaseAccount: nova-cell0
@@ -373,10 +373,10 @@ spec:
                 metallb.universe.tf/loadBalancerIPs: 172.17.0.80
             spec:
               type: LoadBalancer
-        replicas: 1
+        replicas: 3
       preserveJobs: false
       schedulerServiceTemplate:
-        replicas: 1
+        replicas: 3
       secret: osp-secret
   octavia:
     enabled: false
@@ -391,12 +391,12 @@ spec:
         ovndbcluster-nb:
           dbType: NB
           networkAttachment: internalapi
-          replicas: 1
+          replicas: 3
           storageRequest: 10G
         ovndbcluster-sb:
           dbType: SB
           networkAttachment: internalapi
-          replicas: 1
+          replicas: 3
           storageRequest: 10G
       ovnNorthd:
         logLevel: info
@@ -420,7 +420,7 @@ spec:
             spec:
               type: LoadBalancer
       preserveJobs: false
-      replicas: 1
+      replicas: 3
       secret: osp-secret
   rabbitmq:
     templates:
@@ -433,7 +433,7 @@ spec:
                 metallb.universe.tf/loadBalancerIPs: 172.17.0.85
             spec:
               type: LoadBalancer
-        replicas: 1
+        replicas: 3
       rabbitmq-cell1:
         override:
           service:
@@ -443,7 +443,7 @@ spec:
                 metallb.universe.tf/loadBalancerIPs: 172.17.0.86
             spec:
               type: LoadBalancer
-        replicas: 1
+        replicas: 3
   secret: osp-secret
   storageClass: lvms-local-storage
   swift:
@@ -462,7 +462,7 @@ spec:
                   metallb.universe.tf/loadBalancerIPs: 172.17.0.80
               spec:
                 type: LoadBalancer
-        replicas: 1
+        replicas: 3
       swiftRing:
         ringReplicas: 1
       swiftStorage:
