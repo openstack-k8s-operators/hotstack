@@ -167,6 +167,8 @@ stages:
 
       oc rsh openstackclient openstack baremetal node manage ironic0
       oc rsh openstackclient openstack baremetal node manage ironic1
+      oc rsh openstackclient openstack baremetal node manage ironic2
+      oc rsh openstackclient openstack baremetal node manage ironic3
 
   - name: Wait for ironic nodes to get to state - manageable
     shell: |
@@ -195,6 +197,8 @@ stages:
 
       oc rsh openstackclient openstack baremetal node power off ironic0
       oc rsh openstackclient openstack baremetal node power off ironic1
+      oc rsh openstackclient openstack baremetal node power off ironic2
+      oc rsh openstackclient openstack baremetal node power off ironic3
 
   - name: Set capabilities boot_mode:uefi for ironic nodes
     shell: |
@@ -203,6 +207,8 @@ stages:
 
       oc rsh openstackclient openstack baremetal node set --property capabilities='boot_mode:uefi' ironic0
       oc rsh openstackclient openstack baremetal node set --property capabilities='boot_mode:uefi' ironic1
+      oc rsh openstackclient openstack baremetal node set --property capabilities='boot_mode:uefi' ironic2
+      oc rsh openstackclient openstack baremetal node set --property capabilities='boot_mode:uefi' ironic3
 
   - name: Ensure ironic nodes are powered off
     shell: |
@@ -231,6 +237,8 @@ stages:
 
       oc rsh openstackclient openstack baremetal node provide ironic0
       oc rsh openstackclient openstack baremetal node provide ironic1
+      oc rsh openstackclient openstack baremetal node provide ironic2
+      oc rsh openstackclient openstack baremetal node provide ironic3
 
   - name: Wait for ironic nodes to get to state - available
     shell: |
@@ -257,7 +265,7 @@ stages:
     wait_conditions:
       - >-
         timeout --foreground 5m hotstack-nova-discover-hosts
-        --namespace openstack --num-computes 2
+        --namespace openstack --num-computes 4
 
   - name: Run tempest
     manifest: tempest-tests.yml

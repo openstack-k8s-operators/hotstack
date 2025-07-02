@@ -5,7 +5,7 @@ os_router_external_network: public
 
 controller_ssh_pub_key: "{{ lookup('ansible.builtin.file', '~/.ssh/id_rsa.pub') }}"
 
-scenario: sno-4-bm
+scenario: compact-4-bm
 scenario_dir: scenarios
 stack_template_path: "{{ scenario_dir }}/{{ scenario }}/heat_template.yaml"
 automation_vars_file: "{{ scenario_dir }}/{{ scenario }}/automation-vars.yml"

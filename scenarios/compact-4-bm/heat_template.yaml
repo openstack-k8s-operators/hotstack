@@ -2,7 +2,7 @@
 heat_template_version: rocky
 
 description: >
-  Heat template to set up 3-node infrastructure, 1x Controller, 1x OCP, 1x Compute
+  Heat template to set up infrastructure with 1x Controller, 3x OCP Master (compact cluster), and 4x Ironic nodes
 
 parameters:
   dns_servers:
@@ -203,7 +203,7 @@ resources:
       subnet: {get_resource: ironic-subnet}
 
   #
-  # Instances
+  # Controller node configuration
   #
   controller_users:
     type: OS::Heat::CloudConfig
@@ -240,36 +240,90 @@ resources:
                   $dns1: {get_param: [dns_servers, 0]}
                   $dns2: {get_param: [dns_servers, 1]}
             owner: root:dnsmasq
-          - path: /etc/dnsmasq.d/host_records.conf
+          - path: /etc/dnsmasq.d/host_record.conf
             content:
               str_replace:
                 template: |
-                  # Host records
-                  host-record=controller-0.openstack.lab,$controller0
-                  host-record=api.sno.openstack.lab,$master0
-                  host-record=api-int.sno.openstack.lab,$master0
-                  host-record=master-0.sno.openstack.lab,$master0
+                  host-record=controller-0.ocp.openstack.lab,$controller0
+                  host-record=api.ocp.openstack.lab,$api
+                  host-record=api-int.ocp.openstack.lab,$api_int
+                  host-record=master-0.ocp.openstack.lab,$master0
+                  host-record=master-1.ocp.openstack.lab,$master1
+                  host-record=master-2.ocp.openstack.lab,$master2
                 params:
                   $controller0: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
+                  $api: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
+                  $api_int: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
                   $master0: {get_attr: [master0-machine-port, fixed_ips, 0, ip_address]}
+                  $master1: {get_attr: [master1-machine-port, fixed_ips, 0, ip_address]}
+                  $master2: {get_attr: [master2-machine-port, fixed_ips, 0, ip_address]}
             owner: root:dnsmasq
           - path: /etc/dnsmasq.d/wildcard_records.conf
             content:
               str_replace:
                 template: |
                   # Wildcard records
-                  address=/apps.sno.openstack.lab/$addr
+                  address=/apps.ocp.openstack.lab/$addr
                 params:
-                  $addr: {get_attr: [master0-machine-port, fixed_ips, 0, ip_address]}
+                  $addr: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
             owner: root:dnsmasq
           - path: /etc/resolv.conf
             content: |
-              nameserver: 127.0.0.1
+              nameserver 127.0.0.1
             owner: root:root
           - path: /etc/NetworkManager/conf.d/98-rc-manager.conf
             content: |
               [main]
               rc-manager=unmanaged
+            owner: root:root
+          - path: /etc/haproxy/haproxy.cfg
+            content: |
+              global
+                log         127.0.0.1 local2
+                pidfile     /var/run/haproxy.pid
+                maxconn     4000
+                daemon
+              defaults
+                mode                    http
+                log                     global
+                option                  dontlognull
+                option                  http-server-close
+                option                  redispatch
+                retries                 3
+                timeout http-request    10s
+                timeout queue           1m
+                timeout connect         10s
+                timeout client          1m
+                timeout server          1m
+                timeout http-keep-alive 10s
+                timeout check           10s
+                maxconn                 3000
+              listen api-server-6443
+                bind *:6443
+                mode tcp
+                server master-0 master-0.ocp.openstack.lab:6443 check inter 1s
+                server master-1 master-1.ocp.openstack.lab:6443 check inter 1s
+                server master-2 master-2.ocp.openstack.lab:6443 check inter 1s
+              listen machine-config-server-22623
+                bind *:22623
+                mode tcp
+                server master-0 master-0.ocp.openstack.lab:22623 check inter 1s
+                server master-1 master-1.ocp.openstack.lab:22623 check inter 1s
+                server master-2 master-2.ocp.openstack.lab:22623 check inter 1s
+              listen ingress-router-443
+                bind *:443
+                mode tcp
+                balance source
+                server master-0 master-0.ocp.openstack.lab:443 check inter 1s
+                server master-1 master-1.ocp.openstack.lab:443 check inter 1s
+                server master-2 master-2.ocp.openstack.lab:443 check inter 1s
+              listen ingress-router-80
+                bind *:80
+                mode tcp
+                balance source
+                server master-0 master-0.ocp.openstack.lab:80 check inter 1s
+                server master-1 master-1.ocp.openstack.lab:80 check inter 1s
+                server master-2 master-2.ocp.openstack.lab:80 check inter 1s
             owner: root:root
 
   controller-runcmd:
@@ -280,6 +334,8 @@ resources:
           - ['systemctl', 'enable', 'dnsmasq.service']
           - ['systemctl', 'start', 'dnsmasq.service']
           - ['setenforce', 'permissive']
+          - ['systemctl', 'enable', 'haproxy.service']
+          - ['systemctl', 'start', 'haproxy.service']
           - ['sed', '-i', 's/Listen 80/Listen 8081/g', '/etc/httpd/conf/httpd.conf']
           - ['systemctl', 'enable', 'httpd.service']
           - ['systemctl', 'start', 'httpd.service']
@@ -317,7 +373,9 @@ resources:
       user_data_format: RAW
       user_data: {get_resource: controller-init}
 
+  #
   # OCP Masters
+  #
 
   # DHCP Opts value
   extra-dhcp-opts-value:
@@ -336,7 +394,7 @@ resources:
                 params:
                   $server_address: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
 
-
+  # Master 0
   master0-machine-port:
     type: OS::Neutron::Port
     properties:
@@ -399,7 +457,8 @@ resources:
     properties:
       network: {get_resource: ironic-net}
       port_security_enabled: false
-      fixed_ips: [{ip_address: 172.20.1.10}]
+      fixed_ips:
+        - ip_address: 172.20.1.10
 
   master0-lvms-vol0:
     type: OS::Cinder::Volume
@@ -443,6 +502,224 @@ resources:
         - port: {get_resource: master0-machine-port}
         - port: {get_attr: [master0-trunk0, port_id]}
         - port: {get_resource: master0-ironic-port}
+
+  # Master 1
+  master1-machine-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: machine-net}
+      port_security_enabled: false
+      mac_address: "fa:16:9e:81:f6:11"
+      fixed_ips:
+        - ip_address: 192.168.32.11
+      value_specs: {get_attr: [extra-dhcp-opts-value, value]}
+
+  master1-ctlplane-trunk-parent-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ctlplane-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 192.168.122.11
+
+  master1-internal-api-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: internal-api-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.17.0.11
+
+  master1-storage-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: storage-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.18.0.11
+
+  master1-tenant-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: tenant-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.19.0.11
+
+  master1-trunk0:
+    type: OS::Neutron::Trunk
+    properties:
+      port: {get_resource: master1-ctlplane-trunk-parent-port}
+      sub_ports:
+        - port: {get_resource: master1-internal-api-port}
+          segmentation_id: 20
+          segmentation_type: vlan
+        - port: {get_resource: master1-storage-port}
+          segmentation_id: 21
+          segmentation_type: vlan
+        - port: {get_resource: master1-tenant-port}
+          segmentation_id: 22
+          segmentation_type: vlan
+
+  master1-ironic-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ironic-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.20.1.11
+
+  master1-lvms-vol0:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  master1-cinder-vol0:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  master1-cinder-vol1:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  master1-cinder-vol2:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  master1:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: [ocp_master_params, image]}
+      flavor: {get_param: [ocp_master_params, flavor]}
+      block_device_mapping_v2:
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: master1-lvms-vol0}
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: master1-cinder-vol0}
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: master1-cinder-vol1}
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: master1-cinder-vol2}
+      networks:
+        - port: {get_resource: master1-machine-port}
+        - port: {get_attr: [master1-trunk0, port_id]}
+        - port: {get_resource: master1-ironic-port}
+
+  # Master 2
+  master2-machine-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: machine-net}
+      port_security_enabled: false
+      mac_address: "fa:16:9e:81:f6:12"
+      fixed_ips:
+        - ip_address: 192.168.32.12
+      value_specs: {get_attr: [extra-dhcp-opts-value, value]}
+
+  master2-ctlplane-trunk-parent-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ctlplane-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 192.168.122.12
+
+  master2-internal-api-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: internal-api-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.17.0.12
+
+  master2-storage-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: storage-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.18.0.12
+
+  master2-tenant-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: tenant-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.19.0.12
+
+  master2-trunk0:
+    type: OS::Neutron::Trunk
+    properties:
+      port: {get_resource: master2-ctlplane-trunk-parent-port}
+      sub_ports:
+        - port: {get_resource: master2-internal-api-port}
+          segmentation_id: 20
+          segmentation_type: vlan
+        - port: {get_resource: master2-storage-port}
+          segmentation_id: 21
+          segmentation_type: vlan
+        - port: {get_resource: master2-tenant-port}
+          segmentation_id: 22
+          segmentation_type: vlan
+
+  master2-ironic-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ironic-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.20.1.12
+
+  master2-lvms-vol0:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  master2-cinder-vol0:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  master2-cinder-vol1:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  master2-cinder-vol2:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  master2:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: [ocp_master_params, image]}
+      flavor: {get_param: [ocp_master_params, flavor]}
+      block_device_mapping_v2:
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: master2-lvms-vol0}
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: master2-cinder-vol0}
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: master2-cinder-vol1}
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: master2-cinder-vol2}
+      networks:
+        - port: {get_resource: master2-machine-port}
+        - port: {get_attr: [master2-trunk0, port_id]}
+        - port: {get_resource: master2-ironic-port}
 
   #
   # Ironics
@@ -569,7 +846,7 @@ outputs:
           bios_interface: no-bios
           boot_interface: redfish-virtual-media
           driver_info:
-            redfish_address: http://sushy-emulator.apps.sno.openstack.lab
+            redfish_address: http://sushy-emulator.apps.ocp.openstack.lab
             redfish_system_id:
               str_replace:
                 template: "/redfish/v1/Systems/$SYS_ID"
@@ -585,7 +862,7 @@ outputs:
           bios_interface: no-bios
           boot_interface: redfish-virtual-media
           driver_info:
-            redfish_address: http://sushy-emulator.apps.sno.openstack.lab
+            redfish_address: http://sushy-emulator.apps.ocp.openstack.lab
             redfish_system_id:
               str_replace:
                 template: "/redfish/v1/Systems/$SYS_ID"
@@ -601,7 +878,7 @@ outputs:
           bios_interface: no-bios
           boot_interface: redfish-virtual-media
           driver_info:
-            redfish_address: http://sushy-emulator.apps.sno.openstack.lab
+            redfish_address: http://sushy-emulator.apps.ocp.openstack.lab
             redfish_system_id:
               str_replace:
                 template: "/redfish/v1/Systems/$SYS_ID"
@@ -617,7 +894,7 @@ outputs:
           bios_interface: no-bios
           boot_interface: redfish-virtual-media
           driver_info:
-            redfish_address: http://sushy-emulator.apps.sno.openstack.lab
+            redfish_address: http://sushy-emulator.apps.ocp.openstack.lab
             redfish_system_id:
               str_replace:
                 template: "/redfish/v1/Systems/$SYS_ID"
@@ -638,17 +915,17 @@ outputs:
         architecture: amd64
         hyperthreading: Disabled
         name: master
-        replicas: 1
+        replicas: 3
       compute:
         - architecture: amd64
           hyperthreading: Disabled
           name: worker
           replicas: 0
       metadata:
-        name: sno
+        name: ocp
       networking:
         clusterNetwork:
-          - cidr: 10.128.0.0/16
+          - cidr: 10.128.0.0/14
             hostPrefix: 23
         machineNetwork:
           - cidr: {get_attr: [machine-subnet, cidr]}
@@ -666,7 +943,7 @@ outputs:
       apiVersion: v1beta1
       kind: AgentConfig
       metadata:
-        name: sno
+        name: ocp
       rendezvousIP: {get_attr: [master0-machine-port, fixed_ips, 0, ip_address]}
       additionalNTPSources: {get_param: ntp_servers}
       bootArtifactsBaseURL:
@@ -703,6 +980,63 @@ outputs:
                 type: ethernet
                 state: down
                 mac-address: {get_attr: [master0-ironic-port, mac_address]}
+        - hostname: master-1
+          role: master
+          interfaces:
+            - name: eth0
+              macAddress: {get_attr: [master1-machine-port, mac_address]}
+            - name: eth1
+              macAddress: {get_attr: [master1-ctlplane-trunk-parent-port, mac_address]}
+            - name: eth2
+              macAddress: {get_attr: [master1-ironic-port, mac_address]}
+          networkConfig:
+            interfaces:
+              - name: eth0
+                type: ethernet
+                state: up
+                mac-address: {get_attr: [master1-machine-port, mac_address]}
+                ipv4:
+                  enabled: true
+                  dhcp: true
+                ipv6:
+                  enabled: false
+              - name: eth1
+                type: ethernet
+                state: down
+                mac-address: {get_attr: [master1-ctlplane-trunk-parent-port, mac_address]}
+              - name: eth2
+                type: ethernet
+                state: down
+                mac-address: {get_attr: [master1-ironic-port, mac_address]}
+        - hostname: master-2
+          role: master
+          interfaces:
+            - name: eth0
+              macAddress: {get_attr: [master2-machine-port, mac_address]}
+            - name: eth1
+              macAddress: {get_attr: [master2-ctlplane-trunk-parent-port, mac_address]}
+            - name: eth2
+              macAddress: {get_attr: [master2-ironic-port, mac_address]}
+          networkConfig:
+            interfaces:
+              - name: eth0
+                type: ethernet
+                state: up
+                mac-address: {get_attr: [master2-machine-port, mac_address]}
+                ipv4:
+                  enabled: true
+                  dhcp: true
+                ipv6:
+                  enabled: false
+              - name: eth1
+                type: ethernet
+                state: down
+                mac-address: {get_attr: [master2-ctlplane-trunk-parent-port, mac_address]}
+              - name: eth2
+                type: ethernet
+                state: down
+                mac-address: {get_attr: [master2-ironic-port, mac_address]}
+
   controller_ansible_host:
     description: >
       Controller ansible host, this struct can be passed to the ansible.builtin.add_host module
@@ -737,6 +1071,16 @@ outputs:
         hosts:
           master0:
             ansible_host: {get_attr: [master0-machine-port, fixed_ips, 0, ip_address]}
+            ansible_user: core
+            ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+            ansible_ssh_private_key_file: '~/.ssh/id_rsa'
+          master1:
+            ansible_host: {get_attr: [master1-machine-port, fixed_ips, 0, ip_address]}
+            ansible_user: core
+            ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+            ansible_ssh_private_key_file: '~/.ssh/id_rsa'
+          master2:
+            ansible_host: {get_attr: [master2-machine-port, fixed_ips, 0, ip_address]}
             ansible_user: core
             ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
             ansible_ssh_private_key_file: '~/.ssh/id_rsa'
