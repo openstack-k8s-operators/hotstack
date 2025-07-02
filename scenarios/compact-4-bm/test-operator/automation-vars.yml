@@ -346,13 +346,13 @@ stages:
 
   - name: Wait for expected compute services (OSPRH-10942)
     documentation: |
-      Waits for Nova compute services to recognize all 4 bare metal nodes
-      as available compute resources. This ensures the compute scheduler
-      can properly place bare metal instances across the available hardware.
+      Waits for Nova compute services to recognize the ironic services as
+      available compute resource. This ensures the compute scheduler can
+      properly place bare metal instances across the available hardware.
     wait_conditions:
       - >-
         timeout --foreground 5m hotstack-nova-discover-hosts
-        --namespace openstack --num-computes 4
+        --namespace openstack --num-computes 1
 
   - name: Run tempest
     documentation: |
