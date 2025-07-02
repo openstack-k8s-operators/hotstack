@@ -15,7 +15,7 @@ spec:
         create: true
         overrides: |
           auth.create_isolated_networks false
-          baremetal.available_nodes 2
+          baremetal.available_nodes 4
           baremetal.max_microversion 1.82
           compute-feature-enabled.disk_config false
           compute-feature-enabled.interface_attach false
