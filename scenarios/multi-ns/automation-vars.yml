@@ -167,8 +167,8 @@ stages:
         --for jsonpath='{.metadata.name}'=bmc-secret
         --timeout=30s
 
-  - name: BaremetalHosts CRs
-    j2_manifest: manifests/dataplanes/baremetal_hosts.yaml.j2
+  - name: "Generate and apply baremetal hosts"
+    manifest: manifests/dataplanes/baremetal_hosts.yaml.j2
     wait_conditions:
       - "timeout 5m hotstack-wait-for-bmh --namespace openstack-a --bmh bmh-a-0"
       - "timeout 5m hotstack-wait-for-bmh --namespace openstack-b --bmh bmh-b-0"

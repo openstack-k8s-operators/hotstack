@@ -76,11 +76,10 @@ Role.
     - `documentation`: (Optional) A longer description of the stage's
       purpose.
     - One or more of the following actions:
-      - `manifest`:  Path to a YAML file to apply to the cluster (e.g.,
-        Kubernetes/OpenShift resources).
-      - `j2_manifest`:  Path to a Jinja2 template to render into a YAML
-        manifest before applying.  This allows for dynamic configuration.
-      - `command`:  A single command-line command to execute.
+      - `manifest`:  Path to a YAML file to apply to the OCP cluster.
+        If the file has a `.j2` extension, it will be treated as a Jinja2
+        template and rendered before applying.
+      - `command`:  A command to run on the remote system.
       - `shell`:  A multiline string definiing a shell script (e.g., Bash
               script) to run.
     - `wait_conditions`:  A list of `oc wait` commands (OpenShift's

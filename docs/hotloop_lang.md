@@ -12,7 +12,6 @@ representing a distinct phase in the deployment or configuration process.
   - [1. `command` Stage](#1-command-stage)
   - [2. `shell` Stage](#2-shell-stage)
   - [3. `manifest` Stage](#3-manifest-stage)
-  - [4. `j2_manifest` Stage](#4-j2_manifest-stage)
 
 ## Stages
 
@@ -35,16 +34,11 @@ Here's a breakdown of the common attributes within a stage:
   explanation of what the stage does, its context, and any important
   considerations. This is helpful for understanding the pipeline's flow and
   the purpose of each step.
-- **`manifest`**: (Optional) Specifies the path to a YAML manifest file that
-  will be applied to the target environment (e.g., an OpenShift cluster using
-  `oc apply -f`). This is commonly used for deploying Kubernetes or OpenShift
-  resources.
-- **`j2_manifest`**: (Optional) Specifies the path to a Jinja2 template file
-  that will be rendered into a YAML manifest and then applied to the target
-  environment. This is useful for creating dynamic configurations based on
-  variables.
-- **`patches`** (Optional): A list of YAML patches to apply to `manifests`
-  and/or `j2_manifests`.
+- **`manifest`**: (Optional) Specifies the path to a YAML manifest file
+  to apply to the cluster. The manifest can be a static file or a Jinja2
+  template (detected automatically by `.j2` file extension).
+
+- **`patches`** (Optional): A list of YAML patches to apply to `manifests`.
   - Each patch must define:
     - `path`: The location in the YAML data for replacement.
     - `value`: The new value to replace the existing one.
@@ -71,20 +65,17 @@ Here's a breakdown of the common attributes within a stage:
           value: openstack-b
     ```
 
-- **`command`**: (Optional) Defines a single command-line instruction to be
-  executed on the pipeline runner. This is suitable for simple tasks like
-  labeling nodes or triggering external scripts.
-- **`shell`**: (Optional) Defines a shell script that will be executed on the
-  pipeline runner. This is useful for more complex logic or sequences of
-  commands.
+- **`command`**: (Optional) Specifies a single command to execute.
+- **`shell`**: (Optional) Specifies a multiline shell script to execute.
 - **`wait_conditions`**: (Optional) A list of commands that are executed to
   wait for a specific condition to be met in the target environment. These
   are typically `oc wait` commands in the context of OpenShift, ensuring that
   resources are created, become ready, or reach a desired state before the
   pipeline proceeds. Each item in the list is a command-line string.
+
 - **`run_conditions`**: (Optional) A list of conditions that must be met for a
   stage to execute. Strings `False`, `FALSE` and `false` will be evaluated as
-  `False`, otherwise the python boolean equivalent of the value.
+  booleans to prevent the stage from executing.
 
   The condition field can use Jinja2 syntax, which allows for dynamic evaluation
   of expressions based on the available variables in the automation
@@ -103,9 +94,8 @@ Here's a breakdown of the common attributes within a stage:
         }}
     ```
 
-- **`stages`**: (Optional) This parameter allows you to define nested stages.
-  By utilizing nested stages, you can create more modular and reusable
-  automation workflows.
+- **`stages`**: (Optional) A list of sub-stages to execute. This enables
+  hierarchical stage composition.
 
   You can load stages from external YAML files using Ansible's `lookup()`
   function. This is particularly useful for managing large numbers of stages
@@ -216,43 +206,8 @@ Here, the `manifest` stage applies the YAML file located at
 `openstack_controlplane.yaml`. The `wait_conditions` then ensure that the
 MetalLB speaker pods become ready before the pipeline moves to the next stage.
 
-### 4. `j2_manifest` Stage
-
-The `j2_manifest` stage type renders a Jinja2 template file into a YAML
-manifest and then applies the resulting YAML to the target environment. This
-is powerful for creating dynamic configurations where values are injected into
-the YAML based on variables or context. The `j2_manifest` attribute specifies
-the path to the Jinja2 template file.
-
-In addition to applying the manifest, the `patches` attribute allows you to
-modify the YAML data before deployment. Patches are applied after Jinja2
-templating, replacing the current values at the specified paths without
-merging. This enables you to update and customize the manifest content
-dynamically.
-
-**Example:**
-
-```yaml
-- name: Common OLM
-  j2_manifest: "{{ common_dir }}/olm.yaml.j2"
-  patches:
-    - where:
-        - path: kind
-          value: Subscription
-        - path: metadata.name
-          value: openstack-operator
-        - path: metadata.namespace
-          value: openstack-operators
-      path: "spec.channel"
-      value: "stable-v1.0"
-  wait_conditions:
-    - >-
-      oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}'=Active
-      --timeout=300s
-    # ... other wait conditions ...
-```
-
-In this example, the `olm.yaml.j2` Jinja2 template is rendered, and the
-resulting YAML is applied. The `wait_conditions` then verify the successful
-creation and readiness of the involved kubernetes resources like namespaces,
-operator groups, catalog sources, subscriptions etc.
+For templated manifests (files with `.j2` extension), the Jinja2 template is
+rendered first, then patches are applied, and finally the resulting YAML is
+applied to the cluster. This provides a powerful way to create dynamic
+configurations based on variables while still allowing for runtime customization
+through patches.

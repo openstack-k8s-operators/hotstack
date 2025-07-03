@@ -21,17 +21,12 @@ Schema for a stage item is:
 * `shell`: (string) A shell script to run for the stage.
   * If commands or shell commands must run after applying manifests, use a
     separate stage or place the commands in `wait_conditions`.
-* `manifest`: (string) Path to a static manfiest file to apply with
-  `oc apply -f <manifest.yaml>`
-* `j2_manifest`: (string) Path to a dynamic manifest, Jinja2 template, to
-  apply with `oc apply -f <manifest.yaml>`.
-  * Currently only used for operator image and channel, extensive usage
-    **discurraged**.
-  * If both a static and dynamic manifest is defined in the same stage, the
-    static one is applied first - then the dynamic (Jinja2) manifest is applied
-    and patches are applied to both manifest and j2_manifest.
-* `patches`: (list) List of YAML patches to apply to `manifests` and/or
-  `j2_manifests`.
+* `manifest`: (string) Path to a static or templated manifest file to apply to
+  the cluster. If the file has a `.j2` extension, it will be treated as a
+  Jinja2 template and rendered before applying.
+  For templated manifests, the template is rendered first, then patches are
+  applied.
+* `patches`: (list) List of YAML patches to apply to `manifests`.
   * Each patch must define the `path` and the `value` to replace at the path.
     * `path`: The location in the YAML data for replacement.
     * `value`: The new value to replace the existing one.
@@ -100,12 +95,11 @@ Schema for a stage item is:
         lookup('ansible.builtin.template', 'extra_stages.yaml.j2')
       }}
     run_conditions:
-      - "{{ extra_stages is defined and extra_stages }}"
+      - "{{ extra_stages is defined and extra_stages }}"
   ```
 
 > **_NOTE_**: Stage items are applied the actions in the following order:
-> `command` -> `shell` -> `manifest` -> `j2_manifest` -> `wait_conditions` ->
-> `stages`.
+> `command` -> `shell` -> `manifest` -> `wait_conditions` -> `stages`.
 
 Example:
 
@@ -134,7 +128,7 @@ stages:
 
       Once these CRs are created, run the `oc wait` commands to confirm that
       each step of this procedure is complete.
-    j2_manifest: ../common/olm.yaml.j2
+    manifest: ../common/olm.yaml.j2
     wait_conditions:
       - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}'=Active --timeout=300s"
       - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}'=Active --timeout=300s"
@@ -229,3 +223,138 @@ stages:
       vars:
         work_dir: "{{ scenario_dir }}/{{ scenario }}"
 ```
+
+## Architecture
+
+The hotloop role uses a modular architecture with specialized components that
+work together to execute stages efficiently while providing clean, non-verbose
+Ansible output.
+
+### Design Overview
+
+The system consists of **1 orchestrating action plugin** and **2 specialized
+modules**, plus leveraging Ansible's proven builtin modules:
+
+```mermaid
+graph TD
+    A["hotloop_stage_executor<br/>(Action Plugin)"] --> B["File Operations<br/>copy/template"]
+    A --> C["ansible.builtin.command<br/>(Builtin Module)"]
+    A --> D["ansible.builtin.shell<br/>(Builtin Module)"]
+    A --> E["hotloop_manifest_processor<br/>(Custom Module)"]
+
+    B --> F["ansible.builtin.file<br/>ansible.builtin.copy<br/>ansible.builtin.template"]
+
+    C --> G["Single Command Execution<br/>Mature, feature-complete"]
+    D --> H["Shell Script Execution<br/>Full shell features, well-tested"]
+
+    E --> I["YAML Patching<br/>Path-based updates"]
+    E --> J["Manifest Application<br/>oc apply with retry"]
+
+    K["Stage Definition"] --> A
+
+    style A fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    style C fill:#4CAF50,stroke:#2E7D32,stroke-width:2px,color:#fff
+    style D fill:#4CAF50,stroke:#2E7D32,stroke-width:2px,color:#fff
+    style E fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    style F fill:#9C27B0,stroke:#7B1FA2,stroke-width:2px,color:#fff
+    style G fill:#607D8B,stroke:#455A64,stroke-width:2px,color:#fff
+    style H fill:#607D8B,stroke:#455A64,stroke-width:2px,color:#fff
+    style I fill:#795548,stroke:#5D4037,stroke-width:2px,color:#fff
+    style J fill:#795548,stroke:#5D4037,stroke-width:2px,color:#fff
+```
+
+### Components
+
+#### 1. Action Plugin (`hotloop_stage_executor.py`)
+
+* **Role**: Orchestrator that runs on the Ansible controller
+* **Responsibilities**:
+  * Handles file operations (copy/template) for manifests
+  * Detects stage types and calls appropriate modules
+  * Aggregates results from all modules into a unified response
+  * Uses fully qualified collection names (`ansible.builtin.*`)
+
+#### 2. Command Execution (`ansible.builtin.command`)
+
+* **Role**: Executes single commands using proven Ansible builtin
+* **Responsibilities**:
+  * Handles `command` stage types
+  * Provides mature, well-tested command execution
+  * Supports all standard features (chdir, creates, removes, environment,
+    etc.)
+
+#### 3. Shell Execution (`ansible.builtin.shell`)
+
+* **Role**: Executes shell scripts using proven Ansible builtin
+* **Responsibilities**:
+  * Handles `shell` stage types
+  * Provides full shell features with robust error handling
+  * Supports pipes, redirections, complex shell constructs
+
+#### 4. Manifest Processor (`hotloop_manifest_processor.py`)
+
+* **Role**: Processes Kubernetes manifests
+* **Responsibilities**:
+  * Handles `manifest` stage types (static and templated)
+  * Applies YAML patches using path-based updates
+  * Applies manifests to cluster with retry logic for transient errors
+  * Manages backup files for change detection
+
+#### 5. Wait Condition Handler (`hotloop_wait_condition.py`)
+
+* **Role**: Handles wait conditions separately
+* **Responsibilities**:
+  * Executes wait commands with built-in retry logic
+  * Provides visibility by running as separate Ansible tasks
+  * Handles transient Kubernetes/OpenShift errors
+
+### Execution Flow
+
+1. **Stage Processing**: The action plugin examines each stage definition
+2. **File Operations**: For manifest stages, files are copied or templated
+   from controller to target
+3. **Module Orchestration**: Based on stage contents, the action plugin calls:
+   * `ansible.builtin.command` if `command` is present
+   * `ansible.builtin.shell` if `shell` is present
+   * `hotloop_manifest_processor` if `manifest` is present
+4. **Wait Conditions**: Handled separately as visible Ansible tasks
+5. **Result Aggregation**: All module results are combined into a unified
+   response
+
+### Benefits
+
+* **Single Responsibility**: Each component has one clear, focused purpose
+* **Proven Modules**: Leverages mature, well-tested Ansible builtin modules
+  for command/shell execution
+* **Feature Complete**: Command and shell execution includes all standard
+  Ansible features
+* **Easier Testing**: Custom modules can be tested in isolation; builtin
+  modules are already proven
+* **Better Maintainability**: Less custom code to maintain, changes to one
+  aspect don't affect others
+* **Clean Output**: Eliminates skipped tasks and verbose conditional logic
+* **Extensibility**: Adding new stage types requires only creating new modules
+  or using existing ones
+* **Security**: Builtin modules have been thoroughly vetted for security
+  issues
+* **Familiar Behavior**: Command and shell execution behaves exactly as users
+  expect from Ansible
+
+### Template Detection
+
+The system automatically detects Jinja2 templating based on file extensions:
+
+* Files ending in `.j2` are treated as templates and processed accordingly
+* Static files are copied directly without templating
+* This eliminates the need for separate `j2_manifest` configuration
+
+### Task Simplicity
+
+Despite the complex modular architecture, the user interface remains simple:
+
+* **2 tasks per stage**: Main execution + wait conditions (if present)
+* **Clean output**: No skipped tasks or verbose conditional logic
+* **Unified results**: All module outputs are aggregated transparently
+
+This architecture provides maximum modularity and maintainability while
+delivering a clean, simple experience for users.
