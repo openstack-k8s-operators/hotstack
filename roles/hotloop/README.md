@@ -136,11 +136,10 @@ stages:
       each step of this procedure is complete.
     j2_manifest: ../common/olm.yaml.j2
     wait_conditions:
-      - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}=Active' --timeout=300s"
-      - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}=Active' --timeout=300s"
-      - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}=Active' --timeout=300s"
-      - "oc wait namespaces openstack-operators --for jsonpath='{.status.phase}=Active' --timeout=300s"
-      - "oc wait namespaces openstack --for jsonpath='{.status.phase}=Active' --timeout=300s"
+      - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}'=Active --timeout=300s"
+      - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}'=Active --timeout=300s"
+      - "oc wait namespaces openstack-operators --for jsonpath='{.status.phase}'=Active --timeout=300s"
+      - "oc wait namespaces openstack --for jsonpath='{.status.phase}'=Active --timeout=300s"
       - "oc wait -n cert-manager-operator pod --for condition=Ready -l name=cert-manager-operator --timeout=300s"
       - "oc wait -n cert-manager pod -l app=cainjector --for condition=Ready --timeout=300s"
       - "oc wait -n cert-manager pod -l app=webhook --for condition=Ready --timeout=300s"
@@ -182,7 +181,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
-        --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
+        --for jsonpath='{.metadata.name}'=dataplane-ansible-ssh-private-key-secret
         --timeout=30s
 
   - name: Nova migration SSH key secret
@@ -195,7 +194,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack secret nova-migration-ssh-key
-        --for jsonpath='{.metadata.name}=nova-migration-ssh-key'
+        --for jsonpath='{.metadata.name}'=nova-migration-ssh-key
         --timeout=30s
 ```
 

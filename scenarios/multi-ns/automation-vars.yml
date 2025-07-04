@@ -39,8 +39,8 @@ stages:
   - name: Namespaces
     manifest: ./manifests/namespaces.yaml
     wait_conditions:
-      - oc wait namespaces openstack-a --for jsonpath='{.status.phase}=Active' --timeout=30s
-      - oc wait namespaces openstack-b --for jsonpath='{.status.phase}=Active' --timeout=30s
+      - oc wait namespaces openstack-a --for jsonpath='{.status.phase}'=Active --timeout=30s
+      - oc wait namespaces openstack-b --for jsonpath='{.status.phase}'=Active --timeout=30s
 
   - name: Shared NNCP
     manifest: ./manifests/shared_nncp.yaml
@@ -95,7 +95,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack-a secret dataplane-ansible-ssh-private-key-secret
-        --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
+        --for jsonpath='{.metadata.name}'=dataplane-ansible-ssh-private-key-secret
         --timeout=30s
 
   - name: Cloud b - Dataplane SSH key secret
@@ -109,7 +109,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack-b secret dataplane-ansible-ssh-private-key-secret
-        --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
+        --for jsonpath='{.metadata.name}'=dataplane-ansible-ssh-private-key-secret
         --timeout=30s
 
   - name: Cloud a - Nova migration SSH key secret
@@ -122,7 +122,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack-a secret nova-migration-ssh-key
-        --for jsonpath='{.metadata.name}=nova-migration-ssh-key'
+        --for jsonpath='{.metadata.name}'=nova-migration-ssh-key
         --timeout=30s
 
   - name: Cloud b - Nova migration SSH key secret
@@ -135,7 +135,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack-b secret nova-migration-ssh-key
-        --for jsonpath='{.metadata.name}=nova-migration-ssh-key'
+        --for jsonpath='{.metadata.name}'=nova-migration-ssh-key
         --timeout=30s
 
   - name: Dataplane Secrets
@@ -151,7 +151,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack-a secret bmc-secret
-        --for jsonpath='{.metadata.name}=bmc-secret'
+        --for jsonpath='{.metadata.name}'=bmc-secret
         --timeout=30s
 
   - name: Cloud b - BaremetalHosts BMC secret
@@ -164,7 +164,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack-b secret bmc-secret
-        --for jsonpath='{.metadata.name}=bmc-secret'
+        --for jsonpath='{.metadata.name}'=bmc-secret
         --timeout=30s
 
   - name: BaremetalHosts CRs

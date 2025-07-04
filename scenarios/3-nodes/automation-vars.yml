@@ -68,7 +68,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
-        --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
+        --for jsonpath='{.metadata.name}'=dataplane-ansible-ssh-private-key-secret
         --timeout=30s
 
   - name: Nova migration SSH key secret
@@ -81,7 +81,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack secret nova-migration-ssh-key
-        --for jsonpath='{.metadata.name}=nova-migration-ssh-key'
+        --for jsonpath='{.metadata.name}'=nova-migration-ssh-key
         --timeout=30s
 
   - name: EDPM Secrets
