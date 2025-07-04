@@ -78,7 +78,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
-        --for jsonpath='{.metadata.name}= dataplane-ansible-ssh-private-key-secret'
+        --for jsonpath='{.metadata.name}'=dataplane-ansible-ssh-private-key-secret
         --timeout=30s
 
   - name: Nova migration SSH key secret
@@ -91,7 +91,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack secret nova-migration-ssh-key
-        --for jsonpath='{.metadata.name}=nova-migration-ssh-key'
+        --for jsonpath='{.metadata.name}'=nova-migration-ssh-key
         --timeout=30s
 
   - name: Dataplane Secrets
@@ -107,7 +107,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack secret bmc-secret
-        --for jsonpath='{.metadata.name}=bmc-secret'
+        --for jsonpath='{.metadata.name}'=bmc-secret
         --timeout=30s
 
   - name: BaremetalHosts preProvisioningNetworkData secrets
@@ -115,7 +115,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack secret bmh1-preprovision-network-data
-        --for jsonpath='{.metadata.name}=bmh1-preprovision-network-data'
+        --for jsonpath='{.metadata.name}'=bmh1-preprovision-network-data
         --timeout=30s
 
   - name: BaremetalHosts CRs

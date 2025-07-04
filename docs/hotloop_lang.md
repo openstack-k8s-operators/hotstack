@@ -238,7 +238,7 @@ dynamically.
       value: "stable-v1.0"
   wait_conditions:
     - >-
-      oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}=Active'
+      oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}'=Active
       --timeout=300s
     # ... other wait conditions ...
 ```
