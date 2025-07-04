@@ -18,7 +18,7 @@ set -ex
 
 if [ "$EUID" -eq 0 ]; then
     echo "Please do not run as root."
-    exit
+    exit 1
 fi
 
 function usage {
