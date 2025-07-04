@@ -7,8 +7,8 @@
     each step of this procedure is complete.
   j2_manifest: "{{ role_path }}/files/common/manifests/olm/olm-openstack.yaml.j2"
   wait_conditions:
-    - "oc wait namespaces openstack-operators --for jsonpath='{.status.phase}=Active' --timeout=30s"
-    - "oc wait namespaces openstack --for jsonpath='{.status.phase}=Active' --timeout=30s"
+    - "oc wait namespaces openstack-operators --for jsonpath='{.status.phase}'=Active --timeout=30s"
+    - "oc wait namespaces openstack --for jsonpath='{.status.phase}'=Active --timeout=30s"
     - >-
       oc -n openstack-operators wait subscriptions.operators.coreos.com openstack-operator
       --for jsonpath='{.status.installPlanRef.name}' --timeout=300s
@@ -18,7 +18,7 @@
   wait_conditions:
     - >-
       oc wait -n openstack-operators csv -l operators.coreos.com/openstack-operator.openstack-operators=
-      --for jsonpath='{.status.phase}=Succeeded' --timeout=300s
+      --for jsonpath='{.status.phase}'=Succeeded --timeout=300s
 
 - name: Patch openstack-operators leader election tuneables
   command: hotstack-leader-election-tune

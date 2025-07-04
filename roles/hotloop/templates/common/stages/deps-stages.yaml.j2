@@ -20,17 +20,17 @@
 
 - name: Wait for all the OLM dependencies
   wait_conditions:
-    - "oc wait namespaces openshift-storage --for jsonpath='{.status.phase}=Active' --timeout=180s"
+    - "oc wait namespaces openshift-storage --for jsonpath='{.status.phase}'=Active --timeout=180s"
     - >-
       oc wait -n openshift-storage operatorgroups.operators.coreos.com openshift-storage-operatorgroup
       --for jsonpath='{.status.namespaces}' --timeout=30s
     - >-
       oc wait -n openshift-storage ClusterServiceVersion
       -l operators.coreos.com/lvms-operator.openshift-storage
-      --for jsonpath='{.status.phase}=Succeeded' --timeout=240s
-    - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}=Active' --timeout=30s"
-    - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}=Active' --timeout=30s"
-    - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}=Active' --timeout=30s"
+      --for jsonpath='{.status.phase}'=Succeeded --timeout=240s
+    - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}'=Active --timeout=30s"
+    - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}'=Active --timeout=30s"
+    - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}'=Active --timeout=30s"
     - "oc wait -n metallb-system pod -l control-plane=controller-manager --for condition=Ready --timeout=180s"
     - "oc wait -n metallb-system pod -l component=webhook-server --for condition=Ready --timeout=180s"
     - "oc wait -n cert-manager-operator pod --for condition=Ready -l name=cert-manager-operator --timeout=180s"
