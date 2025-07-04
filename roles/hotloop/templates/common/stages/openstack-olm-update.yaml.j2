@@ -3,7 +3,7 @@
   wait_conditions:
     - >-
       oc -n openstack-operators wait csv -l operators.coreos.com/openstack-operator.openstack-operators
-      --for  jsonpath='{.status.phase}'=Succeeded --timeout=60s
+      --for jsonpath='{.status.phase}'=Succeeded --timeout=60s
 
 - name: Apply Openstack init resource if starting ClusterServiceVersion >= v1.0.0 and < v1.0.7
   manifest: "{{ role_path }}/files/common/manifests/openstack.yaml"

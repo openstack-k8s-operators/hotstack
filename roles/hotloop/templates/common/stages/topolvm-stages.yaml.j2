@@ -12,4 +12,4 @@
       groups.
   manifest: "{{ role_path }}/files/common/manifests/topolvm/topolvmcluster.yaml"
   wait_conditions:
-    - "oc wait -n openshift-storage lvmcluster.lvm.topolvm.io/lvmcluster --for jsonpath='{.status.state}=Ready' --timeout=180s"
+    - "oc wait -n openshift-storage lvmcluster.lvm.topolvm.io/lvmcluster --for jsonpath='{.status.state}'=Ready --timeout=180s"
