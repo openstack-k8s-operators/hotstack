@@ -265,7 +265,7 @@ resources:
                   # Wildcard records
                   address=/apps.sno.openstack.lab/$addr
                 params:
-                  $addr: {get_attr: [master0-machine-port, fixed_ips, 0, ip_address]}
+                  $addr: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
             owner: root:dnsmasq
           - path: /etc/resolv.conf
             content: |
@@ -276,6 +276,47 @@ resources:
               [main]
               rc-manager=unmanaged
             owner: root:root
+          - path: /etc/haproxy/haproxy.cfg
+            content: |
+              global
+                log         127.0.0.1 local2
+                pidfile     /var/run/haproxy.pid
+                maxconn     4000
+                daemon
+              defaults
+                mode                    http
+                log                     global
+                option                  dontlognull
+                option                  http-server-close
+                option                  redispatch
+                retries                 3
+                timeout http-request    10s
+                timeout queue           1m
+                timeout connect         10s
+                timeout client          1m
+                timeout server          1m
+                timeout http-keep-alive 10s
+                timeout check           10s
+                maxconn                 3000
+              listen api-server-6443
+                bind *:6443
+                mode tcp
+                server master-0 master-0.sno.openstack.lab:6443 check inter 1s
+              listen machine-config-server-22623
+                bind *:22623
+                mode tcp
+                server master-0 master-0.sno.openstack.lab:22623 check inter 1s
+              listen ingress-router-443
+                bind *:443
+                mode tcp
+                balance source
+                server master-0 master-0.sno.openstack.lab:443 check inter 1s
+              listen ingress-router-80
+                bind *:80
+                mode tcp
+                balance source
+                server master-0 master-0.sno.openstack.lab:80 check inter 1s
+            owner: root:root
 
   controller-runcmd:
     type: OS::Heat::CloudConfig
@@ -285,6 +326,8 @@ resources:
           - ['systemctl', 'enable', 'dnsmasq.service']
           - ['systemctl', 'start', 'dnsmasq.service']
           - ['setenforce', 'permissive']
+          - ['systemctl', 'enable', 'haproxy.service']
+          - ['systemctl', 'start', 'haproxy.service']
           - ['sed', '-i', 's/Listen 80/Listen 8081/g', '/etc/httpd/conf/httpd.conf']
           - ['systemctl', 'enable', 'httpd.service']
           - ['systemctl', 'start', 'httpd.service']
