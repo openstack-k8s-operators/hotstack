@@ -27,7 +27,7 @@
     - >-
       oc wait -n openshift-storage ClusterServiceVersion
       -l operators.coreos.com/lvms-operator.openshift-storage
-      --for jsonpath='{.status.phase}'=Succeeded --timeout=240s
+      --for jsonpath='{.status.phase}'=Succeeded --timeout=300s
     - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}'=Active --timeout=30s"
     - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}'=Active --timeout=30s"
     - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}'=Active --timeout=30s"
