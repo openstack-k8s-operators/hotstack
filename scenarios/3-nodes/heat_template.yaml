@@ -336,6 +336,7 @@ resources:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: machine-net}
+      mac_address: "fa:16:9e:81:f6:05"
       fixed_ips:
         - ip_address: 192.168.32.254
 
@@ -381,6 +382,7 @@ resources:
     properties:
       network: {get_resource: machine-net}
       port_security_enabled: false
+      mac_address: "fa:16:9e:81:f6:10"
       fixed_ips:
         - ip_address: 192.168.32.10
       value_specs: {get_attr: [extra-dhcp-opts-value, value]}

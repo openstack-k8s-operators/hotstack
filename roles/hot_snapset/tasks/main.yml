@@ -1,0 +1,58 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Assert config is defined
+  ansible.builtin.assert:
+    that:
+      - snapset_data is defined
+      - snapset_data | type_debug == 'dict'
+      - snapset_data | length > 0
+      - snapset_data.instances is defined
+      - snapset_data.instances | type_debug == 'dict'
+      - snapset_data.instances | length > 0
+      - controller_ansible_host is defined
+      - controller_ansible_host | length > 0
+
+- name: Add controller-0 to the Ansible inventory
+  ansible.builtin.add_host: "{{ controller_ansible_host }}"
+
+- name: Shutdown the controller node
+  delegate_to: "{{ controller_ansible_host.name }}"
+  become: true
+  community.general.shutdown:
+    msg: "Shutdown for Hotstack SnapSet"
+
+- name: Wait for servers in SnapSet data to be in SHUTOFF state
+  register: __instance_info
+  openstack.cloud.server_info:
+    cloud: "{{ os_cloud }}"
+    name: "{{ __instance.value.uuid }}"
+  loop: "{{ snapset_data.instances | dict2items }}"
+  loop_control:
+    loop_var: __instance
+  until: (__instance_info.servers[0].status == 'SHUTOFF')
+  retries: 25
+  delay: 10
+
+- name: Create Hotstack SnapSet
+  register: __snapset_result
+  hotstack_snapset:
+    cloud: "{{ os_cloud }}"
+    snapset_data: "{{ snapset_data }}"
+
+- name: Debug
+  ansible.builtin.debug:
+    msg: "{{ __snapset_result }}"

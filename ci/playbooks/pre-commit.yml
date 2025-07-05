@@ -19,6 +19,7 @@
           - ansible-core
     - name: Install ansible galaxy dependencies
       ansible.builtin.shell: |
+        {{ pre_commit_venv_dir }}/bin/ansible-galaxy collection install community.general
         {{ pre_commit_venv_dir }}/bin/ansible-galaxy collection install community.crypto
         {{ pre_commit_venv_dir }}/bin/ansible-galaxy collection install openstack.cloud
     - name: Run pre-commit
