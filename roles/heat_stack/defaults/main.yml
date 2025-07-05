@@ -16,8 +16,3 @@
 
 hotstack_work_dir: "{{ playbook_dir }}"
 os_cloud: "{{ lookup('ansible.builtin.env', 'OS_CLOUD') }}"
-stack_parameters:
-  dns_servers:
-    - 8.8.8.8
-    - 8.8.4.4
-  ntp_servers: []
