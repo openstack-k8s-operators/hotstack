@@ -3,20 +3,50 @@
 This repository hosts tooling for a deploying labs for RHOSO deployment testing/
 development on Openstack cloud infrastructure.
 
+## Table of Contents
+
+- [Documentation](#documentation)
+- [Roles](#roles)
+- [Scenarios](#scenarios)
+- [TODO](#todo)
+- [Pre-requisites](#pre-requisites)
+  - [iPXE image](#ipxe-image)
+  - [Image for the "controller" node](#image-for-the-controller-node-must-be-available-in-glance-on-the-cloud)
+  - [Create flavors](#create-flavors)
+  - [Cloud secret](#cloud-secret)
+  - [Ansible collections (Dependencies)](#ansible-collections-dependencies)
+- [Bootstrap playbook](#bootstrap-playbook)
+- [Running tests](#running-tests)
+- [Cleanup](#cleanup)
+
+## Documentation
+
+For detailed information, see:
+
+- [Scenarios](docs/hotstack_scenarios.md) - Deployment scenarios and configurations
+- [SnapSet](docs/hotstack_snapset.md) - Snapshot functionality for fast deployment
+- [Heat Templates](docs/hotstack_heat_templates.md) - Infrastructure templates
+- [HotLoop Language](docs/hotloop_lang.md) - Automation language reference
+- [PSI Deployment](docs/deploy_hotstack_on_psi.md) - Deployment on PSI cloud
+
 ## Roles
 
-* **dataplane_ssh_keys**: Create SSH keys for dataplane and Nova Migration.
+- **dataplane_ssh_keys**: Create SSH keys for dataplane and Nova Migration.
   See [README](roles/dataplane_ssh_keys/README.md).
-* **heat_stack**: A role to deploy infrastructure on an Openstack cloud using
+- **heat_stack**: A role to deploy infrastructure on an Openstack cloud using
   a Heat template as input. See [README](roles/heat_stack/README.md).
-* **ocp_agent_installer**: A role running the Openshift Agent installer.
-  See [README](roles/ocp_agent_installer/README.md)
-* **controller**: A role to wait add the controller to the inventory, wait for
-  it to be reachable and bootstrap. See [README](roles/controller/README.md).
-* **hotloop**: A a simple "stages" loop, to run commands,
+- **hot_snapset**: Create consistent snapshots of OpenStack instances for rapid
+  deployment restoration. See [README](roles/hot_snapset/README.md).
+- **hotlogs**: Collect logs and data from the controller node for debugging
+  and troubleshooting purposes.
+- **hotloop**: A simple "stages" loop, to run commands,
   apply kubernetes manifests and run wait conditions. See docs
   [README](roles/hotloop/README.md).
-* **redfish_virtual_bmc**: Role to deploy sushy-emulator (RedFish Virtual BMC)
+- **ocp_agent_installer**: A role running the Openshift Agent installer.
+  See [README](roles/ocp_agent_installer/README.md)
+- **controller**: A role to wait add the controller to the inventory, wait for
+  it to be reachable and bootstrap. See [README](roles/controller/README.md).
+- **redfish_virtual_bmc**: Role to deploy sushy-emulator (RedFish Virtual BMC)
   service on the Openshift cluster. See [README](roles/redfish_virtual_bmc/README.md).
 
 ## Scenarios
@@ -47,7 +77,7 @@ to install OCP.
 
 ## TODO
 
-* IPv6
+- IPv6
 
 ## Pre-requisites
 
