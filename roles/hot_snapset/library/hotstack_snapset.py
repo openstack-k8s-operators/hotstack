@@ -110,6 +110,7 @@ INSTANCE_REQUIRED_KEYS = {
 INSTANCE_ALLOWED_KEYS = INSTANCE_REQUIRED_KEYS
 
 SERVER_SHUTOFF = "SHUTOFF"
+IMAGE_CREATE_TIMEOUT = 1200
 
 
 def _create_image_from_server(conn, name, uuid, role, mac_address, uniq):
@@ -128,7 +129,9 @@ def _create_image_from_server(conn, name, uuid, role, mac_address, uniq):
     :return: image id
     """
     image_name = "hotstack-" + name + "-snapshot-" + uniq
-    image = conn.compute.create_server_image(uuid, image_name, wait=True, timeout=900)
+    image = conn.compute.create_server_image(
+        uuid, image_name, wait=True, timeout=IMAGE_CREATE_TIMEOUT
+    )
     conn.image.add_tag(image, "hotstack")
     conn.image.add_tag(image, "name=" + name)
     conn.image.add_tag(image, "role=" + role)
