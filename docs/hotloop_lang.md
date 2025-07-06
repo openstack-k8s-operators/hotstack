@@ -5,6 +5,15 @@ This document explains the structured language used to define the Hotloop
 pipeline. The pipeline is organized into a series of **stages**, each
 representing a distinct phase in the deployment or configuration process.
 
+## Table of Contents
+
+- [Stages](#stages)
+- [Stage Types](#stage-types)
+  - [1. `command` Stage](#1-command-stage)
+  - [2. `shell` Stage](#2-shell-stage)
+  - [3. `manifest` Stage](#3-manifest-stage)
+  - [4. `j2_manifest` Stage](#4-j2_manifest-stage)
+
 ## Stages
 
 A **stage** is a logical unit within the CI pipeline that performs a specific
@@ -20,33 +29,33 @@ workflow and to troubleshoot any potential issues.
 
 Here's a breakdown of the common attributes within a stage:
 
-* **`name`**: (Required) A unique identifier for the stage.
+- **`name`**: (Required) A unique identifier for the stage.
   This name is typically used for logging and monitoring purposes.
-* **`documentation`**: (Optional) A multi-line string providing a detailed
+- **`documentation`**: (Optional) A multi-line string providing a detailed
   explanation of what the stage does, its context, and any important
   considerations. This is helpful for understanding the pipeline's flow and
   the purpose of each step.
-* **`manifest`**: (Optional) Specifies the path to a YAML manifest file that
+- **`manifest`**: (Optional) Specifies the path to a YAML manifest file that
   will be applied to the target environment (e.g., an OpenShift cluster using
   `oc apply -f`). This is commonly used for deploying Kubernetes or OpenShift
   resources.
-* **`j2_manifest`**: (Optional) Specifies the path to a Jinja2 template file
+- **`j2_manifest`**: (Optional) Specifies the path to a Jinja2 template file
   that will be rendered into a YAML manifest and then applied to the target
   environment. This is useful for creating dynamic configurations based on
   variables.
-* **`patches`** (Optional): A list of YAML patches to apply to `manifests`
+- **`patches`** (Optional): A list of YAML patches to apply to `manifests`
   and/or `j2_manifests`.
-  * Each patch must define:
-    * `path`: The location in the YAML data for replacement.
-    * `value`: The new value to replace the existing one.
-  * A patch can optionally include a list of `where` conditions.
-    * Each `where` condition requires:
-      * `path`: The specific location within the YAML data to evaluate.
-      * `value`: The value to compare against at the specified path.
-  * Jinja2 manifests are templated first, then patches are applied.
-  * The `value` replaces the current value, no merge.
-  * Patches apply to all YAML documents in the file with the specified path.
-  * An error is raised if no YAML document in the file has the specified path.
+  - Each patch must define:
+    - `path`: The location in the YAML data for replacement.
+    - `value`: The new value to replace the existing one.
+  - A patch can optionally include a list of `where` conditions.
+    - Each `where` condition requires:
+      - `path`: The specific location within the YAML data to evaluate.
+      - `value`: The value to compare against at the specified path.
+  - Jinja2 manifests are templated first, then patches are applied.
+  - The `value` replaces the current value, no merge.
+  - Patches apply to all YAML documents in the file with the specified path.
+  - An error is raised if no YAML document in the file has the specified path.
 
   **Example patch:**
 
@@ -62,18 +71,18 @@ Here's a breakdown of the common attributes within a stage:
           value: openstack-b
     ```
 
-* **`command`**: (Optional) Defines a single command-line instruction to be
+- **`command`**: (Optional) Defines a single command-line instruction to be
   executed on the pipeline runner. This is suitable for simple tasks like
   labeling nodes or triggering external scripts.
-* **`shell`**: (Optional) Defines a shell script that will be executed on the
+- **`shell`**: (Optional) Defines a shell script that will be executed on the
   pipeline runner. This is useful for more complex logic or sequences of
   commands.
-* **`wait_conditions`**: (Optional) A list of commands that are executed to
+- **`wait_conditions`**: (Optional) A list of commands that are executed to
   wait for a specific condition to be met in the target environment. These
   are typically `oc wait` commands in the context of OpenShift, ensuring that
   resources are created, become ready, or reach a desired state before the
   pipeline proceeds. Each item in the list is a command-line string.
-* **`run_conditions`**: (Optional) A list of conditions that must be met for a
+- **`run_conditions`**: (Optional) A list of conditions that must be met for a
   stage to execute. Strings `False`, `FALSE` and `false` will be evaluated as
   `False`, otherwise the python boolean equivalent of the value.
 
@@ -94,7 +103,7 @@ Here's a breakdown of the common attributes within a stage:
         }}
     ```
 
-* **`stages`**: (Optional) This parameter allows you to define nested stages.
+- **`stages`**: (Optional) This parameter allows you to define nested stages.
   By utilizing nested stages, you can create more modular and reusable
   automation workflows.
 

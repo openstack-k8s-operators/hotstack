@@ -11,6 +11,33 @@ particularly useful for:
 - **CI/CD Pipelines**: Reduce deployment time by starting from pre-configured
   snapshots instead of deploying from scratch
 
+## Table of Contents
+
+- [Overview](#overview)
+- [What is a SnapSet?](#what-is-a-snapset)
+- [How SnapSet Works](#how-snapset-works)
+  - [Important: Bootstrap Certificate Rotation](#important-bootstrap-certificate-rotation)
+- [Creating a SnapSet](#creating-a-snapset)
+  - [Using the Automated Playbook](#using-the-automated-playbook)
+  - [Using Individual Playbooks](#using-individual-playbooks)
+  - [Configuration Variables](#configuration-variables)
+- [SnapSet Process Details](#snapset-process-details)
+  - [Preparation Phase](#preparation-phase)
+  - [Image Creation Phase](#image-creation-phase)
+  - [Generated Image Names and Tags](#generated-image-names-and-tags)
+- [Using SnapSet Images](#using-snapset-images)
+  - [Identifying SnapSet Images](#identifying-snapset-images)
+  - [Restoring from SnapSet](#restoring-from-snapset)
+  - [Reviving OpenShift Clusters](#reviving-openshift-clusters)
+- [SnapSet Data Structure](#snapset-data-structure)
+- [Example: Complete SnapSet Workflow](#example-complete-snapset-workflow)
+  - [1. Create SnapSet](#1-create-snapset)
+  - [2. Verify SnapSet Creation](#2-verify-snapset-creation)
+  - [3. Use SnapSet Images](#3-use-snapset-images)
+  - [4. Deploy a SNO scenario from SnapSet](#4-deploy-a-sno-scenario-from-snapset)
+- [Limitations](#limitations)
+- [Related Documentation](#related-documentation)
+
 ## What is a SnapSet?
 
 A SnapSet is a collection of OpenStack images created from running instances at a
