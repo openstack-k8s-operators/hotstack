@@ -191,7 +191,7 @@ function wait_for_stable_cluster {
 }
 
 function wait_for_api_versions_route {
-    local delay=32
+    local delay=16
     local min_delay=1
     local iterations=0
 
@@ -199,8 +199,8 @@ function wait_for_api_versions_route {
     do
         sleep "${delay}"
 
-        # Reverse exponential backoff after 8 iterations
-        if (( iterations > 8 ))
+        # Reverse exponential backoff after 32 iterations
+        if (( iterations > 32 ))
         then
             delay="$(( delay/2 ))"
         else
