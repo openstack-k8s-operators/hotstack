@@ -175,18 +175,30 @@ resources:
               [main]
               rc-manager=unmanaged
             owner: root:root
+          - path: /etc/dnsmasq.d/tftpboot.conf
+            content: |
+              enable-tftp
+              tftp-root=/var/lib/tftpboot
+              tftp-mtu=1442
+            owner: root:root
+          - path: /var/lib/tftpboot/poap.py
+            content: {get_file: ../sno-nxsw/poap.py}
+            owner: root:root
+          - path: /var/lib/tftpboot/poap.cfg
+            content: {get_file: ../sno-nxsw/poap.cfg}
+            owner: root:root
 
   controller-runcmd:
     type: OS::Heat::CloudConfig
     properties:
       cloud_config:
         runcmd:
-          - ['systemctl', 'enable', 'dnsmasq.service']
-          - ['systemctl', 'start', 'dnsmasq.service']
           - ['setenforce', 'permissive']
           - ['sed', '-i', 's/Listen 80/Listen 8081/g', '/etc/httpd/conf/httpd.conf']
           - ['systemctl', 'enable', 'httpd.service']
           - ['systemctl', 'start', 'httpd.service']
+          - ['systemctl', 'enable', 'dnsmasq.service']
+          - ['systemctl', 'start', 'dnsmasq.service']
 
   controller-init:
     type: OS::Heat::MultipartMime

@@ -5,4 +5,6 @@
     # Ignore control-plane.yaml
     '''\.*/control-plane.yaml''',
     '''\.*/defaults/main.yml''',
+    # Ignore poap.cfg
+    '''scenarios/.*/poap.cfg''',
   ]

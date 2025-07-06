@@ -50,6 +50,12 @@ repos:
         - pyyaml
       files: nncp.(yaml|yml)$
       types: [file, yaml]
+    - id: poap-md5sum-management
+      name: Format POAP script with md5sum management
+      entry: scenarios/sno-nxsw/manage-poap-md5sum.sh
+      language: system
+      files: ^scenarios/sno-nxsw/poap\.py$
+      pass_filenames: false
 
   - repo: https://github.com/ansible/ansible-lint
     rev: v6.22.2
