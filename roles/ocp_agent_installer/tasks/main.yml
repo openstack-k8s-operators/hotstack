@@ -39,6 +39,7 @@
   when: ocp_agent_installer_prepare_for_snapshot | bool
   ansible.builtin.command: >-
     hotstack-snapset
+      --uncordon
       --wait-cluster-stable 60s
       --cordon
       --shutdown
