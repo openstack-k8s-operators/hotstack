@@ -40,6 +40,17 @@ repos:
     hooks:
       - id: black
 
+  - repo: local
+    hooks:
+    - id: NNCP validate
+      name: Check NNCP with nmstate validate
+      entry: ./ci/nmstate_validate.py
+      language: python
+      additional_dependencies:
+        - pyyaml
+      files: nncp.(yaml|yml)$
+      types: [file, yaml]
+
   - repo: https://github.com/ansible/ansible-lint
     rev: v6.22.2
     hooks:
