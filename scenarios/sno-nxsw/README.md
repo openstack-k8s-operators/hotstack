@@ -141,7 +141,7 @@ The images are very particular when it comes to what hardware is supported,
 when the image ensure to set the properties as shown in the example below.
 
 ```bash
-openstack image create nexus9300v.9.3.15\
+openstack image create nexus9300v.9.3.15 \
   --disk-format qcow2 \
   --file nexus9300v.9.3.15.qcow2 \
   --public \

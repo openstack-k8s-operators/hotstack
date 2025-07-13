@@ -1,32 +1,32 @@
 ---
 stages:
-  # - name: Apply ironic network-attachement-definition
-  #   manifest: manifests/nad.yaml
-  #   wait_conditions:
-  #     - >-
-  #       oc wait -n sushy-emulator network-attachment-definitions.k8s.cni.cncf.io ironic
-  #       --for jsonpath='{.metadata.annotations}' --timeout=30s
+  - name: Apply ironic network-attachement-definition
+    manifest: manifests/nad.yaml
+    wait_conditions:
+      - >-
+        oc wait -n sushy-emulator network-attachment-definitions.k8s.cni.cncf.io ironic
+        --for jsonpath='{.metadata.annotations}' --timeout=30s
 
-  # - name: Patch RedFish Sushy Emulator Deployment - add network attachment
-  #   shell: |
-  #     set -xe -o pipefail
+  - name: Patch RedFish Sushy Emulator Deployment - add network attachment
+    shell: |
+      set -xe -o pipefail
 
-  #     TMP_DIR="$(mktemp -d)"
-  #     trap 'rm -rf -- "$TMP_DIR"' EXIT
+      TMP_DIR="$(mktemp -d)"
+      trap 'rm -rf -- "$TMP_DIR"' EXIT
 
-  #     oc project sushy-emulator
+      oc project sushy-emulator
 
-  #     cat << EOF > ${TMP_DIR}/sushy-emulator-network-annotations-patch.yaml
-  #     spec:
-  #       template:
-  #         metadata:
-  #           annotations:
-  #             k8s.v1.cni.cncf.io/networks: '[{"name":"ironic","namespace":"sushy-emulator","interface":"ironic"}]'
-  #     EOF
+      cat << EOF > ${TMP_DIR}/sushy-emulator-network-annotations-patch.yaml
+      spec:
+        template:
+          metadata:
+            annotations:
+              k8s.v1.cni.cncf.io/networks: '[{"name":"ironic","namespace":"sushy-emulator","interface":"ironic"}]'
+      EOF
 
-  #     oc patch deployments.apps sushy-emulator --patch-file ${TMP_DIR}/sushy-emulator-network-annotations-patch.yaml
-  #   wait_conditions:
-  #     - "oc -n sushy-emulator wait deployments.apps sushy-emulator --for condition=Available --timeout=300s"
+      oc patch deployments.apps sushy-emulator --patch-file ${TMP_DIR}/sushy-emulator-network-annotations-patch.yaml
+    wait_conditions:
+      - "oc -n sushy-emulator wait deployments.apps sushy-emulator --for condition=Available --timeout=300s"
 
   - name: Set a multiattach volume type and create it if needed
     shell: |
@@ -94,9 +94,10 @@ stages:
         oc rsh openstackclient \
           openstack network create provisioning \
             --share \
+            --disable-port-security \
             --provider-physical-network ironic \
             --provider-network-type vlan \
-            --provider-segment 100
+            --provider-segment 101
 
   - name: Create subnet for ironic provisioning if needed
     shell: |
@@ -109,7 +110,7 @@ stages:
             --network provisioning \
             --subnet-range 172.20.1.0/24 \
             --gateway 172.20.1.1 \
-            --dns-nameserver 192.168.122.80 \
+            --dns-nameserver 172.20.1.80 \
             --allocation-pool start=172.20.1.100,end=172.20.1.200
 
   - name: Create tenant network vlan 103 if needed
@@ -121,6 +122,7 @@ stages:
         oc rsh openstackclient \
           openstack network create vlan103 \
             --share \
+            --disable-port-security \
             --provider-physical-network ironic \
             --provider-network-type vlan \
             --provider-segment 103
@@ -136,7 +138,7 @@ stages:
             --network vlan103 \
             --subnet-range 172.20.3.0/24 \
             --gateway 172.20.3.1 \
-            --dns-nameserver 192.168.122.80 \
+            --dns-nameserver 192.168.32.254 \
             --allocation-pool start=172.20.3.100,end=172.20.3.200
 
   - name: Create tenant network vlan 104 if needed
@@ -148,6 +150,7 @@ stages:
         oc rsh openstackclient \
           openstack network create vlan104 \
             --share \
+            --disable-port-security \
             --provider-physical-network ironic \
             --provider-network-type vlan \
             --provider-segment 104
@@ -163,7 +166,7 @@ stages:
             --network vlan104 \
             --subnet-range 172.20.4.0/24 \
             --gateway 172.20.4.1 \
-            --dns-nameserver 192.168.122.80 \
+            --dns-nameserver 192.168.32.254 \
             --allocation-pool start=172.20.4.100,end=172.20.4.200
 
   - name: Create baremetal flavor if needed
