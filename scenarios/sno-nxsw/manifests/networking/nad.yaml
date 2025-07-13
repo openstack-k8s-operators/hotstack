@@ -36,7 +36,7 @@ spec:
       "cniVersion": "0.3.1",
       "name": "ironic",
       "type": "bridge",
-      "bridge": "ironicbr",
+      "bridge": "ironic",
       "mtu": 1442,
       "ipam": {
         "type": "whereabouts",

@@ -70,6 +70,19 @@ stages:
     manifest: manifests/control-plane.yaml
     wait_conditions:
       - >-
+        oc -n openstack wait openstackcontrolplanes.core.openstack.org controlplane
+        --for condition=OpenStackControlPlaneDNSReadyCondition --timeout=600s
+
+  - name: Extra DNS LoadBalancer on Ironic network
+    manifest: manifests/dnsmasq-dns-ironic.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack service dnsmasq-dns-ironic
+        --for jsonpath='.status.loadBalancer' --timeout=60s
+
+  - name: Wait for OpenstackControlPlane
+    wait_conditions:
+      - >-
         oc wait -n openstack openstackcontrolplane controlplane
         --for condition=Ready --timeout=30m
 

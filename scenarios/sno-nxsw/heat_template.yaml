@@ -249,6 +249,7 @@ resources:
       ip_version: 4
       cidr: 172.20.5.0/29
       enable_dhcp: false
+      gateway_ip: null
 
   ironic1-br-subnet:
     type: OS::Neutron::Subnet
@@ -256,6 +257,8 @@ resources:
       network: {get_resource: ironic1-br-net}
       ip_version: 4
       cidr: 172.20.5.8/29
+      enable_dhcp: false
+      gateway_ip: null
 
   #
   # Routers
@@ -672,24 +675,28 @@ resources:
     properties:
       network: {get_resource: trunk-net}
       port_security_enabled: false
+      mac_address: "22:57:f8:dd:fe:08"
 
   switch-trunk-ironic-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: ironic-net}
       port_security_enabled: false
+      mac_address: "22:57:f8:dd:fe:09"
 
   switch-trunk-tenant-vlan103-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: tenant-vlan103}
       port_security_enabled: false
+      mac_address: "22:57:f8:dd:fe:0a"
 
   switch-trunk-tenant-vlan104-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: tenant-vlan104}
       port_security_enabled: false
+      mac_address: "22:57:f8:dd:fe:0b"
 
   switch-trunk:
     type: OS::Neutron::Trunk
@@ -713,12 +720,14 @@ resources:
     properties:
       network: {get_resource: ironic0-br-net}
       port_security_enabled: false
+      mac_address: "22:57:f8:dd:fe:0c"
 
   switch-ironic1-br-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: ironic1-br-net}
       port_security_enabled: false
+      mac_address: "22:57:f8:dd:fe:0d"
 
   switch:
     type: OS::Nova::Server
