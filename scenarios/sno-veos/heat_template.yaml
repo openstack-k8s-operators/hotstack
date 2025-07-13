@@ -68,7 +68,7 @@ parameters:
   switch_params:
     type: json
     default:
-      image: hotstack-nxos10.5.3.F
+      image: vEOS-lab-4.34.1F
       flavor: hotstack.medium
 
 resources:
@@ -208,7 +208,9 @@ resources:
       ip_version: 4
       cidr: 172.20.1.0/24
       enable_dhcp: false
-      allocation_pools: [{start: 172.20.1.100, end: 172.20.1.150}]
+      allocation_pools:
+        - start: 172.20.1.100
+          end: 172.20.1.150
 
   trunk-subnet:
     type: OS::Neutron::Subnet
@@ -250,6 +252,7 @@ resources:
       ip_version: 4
       cidr: 172.20.5.0/29
       enable_dhcp: false
+      gateway_ip: null
 
   ironic1-br-subnet:
     type: OS::Neutron::Subnet
@@ -257,6 +260,8 @@ resources:
       network: {get_resource: ironic1-br-net}
       ip_version: 4
       cidr: 172.20.5.8/29
+      enable_dhcp: false
+      gateway_ip: null
 
   #
   # Routers
@@ -417,11 +422,11 @@ resources:
               tftp-root=/var/lib/tftpboot
               tftp-mtu=1442
             owner: root:root
-          - path: /var/lib/tftpboot/poap.py
-            content: {get_file: poap.py}
+          - path: /var/lib/tftpboot/ztp.config
+            content: {get_file: ztp.config}
             owner: root:root
-          - path: /var/lib/tftpboot/poap.cfg
-            content: {get_file: poap.cfg}
+          - path: /var/lib/tftpboot/startup-config
+            content: {get_file: startup-config}
             owner: root:root
 
   controller-runcmd:
@@ -655,7 +660,7 @@ resources:
                   $server_address: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
             ip_version: 4
           - opt_name: "67"
-            opt_value: "poap.py"
+            opt_value: "ztp.config"
             ip_version: 4
 
   switch-machine-port:
@@ -663,7 +668,7 @@ resources:
     properties:
       network: {get_resource: machine-net}
       port_security_enabled: false
-      mac_address: "22:57:f8:dd:fe:aa"
+      mac_address: "22:57:f8:dd:fe:ab"
       fixed_ips:
         - ip_address: 192.168.32.6
       value_specs: {get_attr: [switch-extra-dhcp-opts-value, value]}
@@ -673,24 +678,28 @@ resources:
     properties:
       network: {get_resource: trunk-net}
       port_security_enabled: false
+      mac_address: "22:57:f8:dd:fe:08"
 
   switch-trunk-ironic-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: ironic-net}
       port_security_enabled: false
+      mac_address: "22:57:f8:dd:fe:09"
 
   switch-trunk-tenant-vlan103-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: tenant-vlan103}
       port_security_enabled: false
+      mac_address: "22:57:f8:dd:fe:0a"
 
   switch-trunk-tenant-vlan104-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: tenant-vlan104}
       port_security_enabled: false
+      mac_address: "22:57:f8:dd:fe:0b"
 
   switch-trunk:
     type: OS::Neutron::Trunk
@@ -714,12 +723,14 @@ resources:
     properties:
       network: {get_resource: ironic0-br-net}
       port_security_enabled: false
+      mac_address: "22:57:f8:dd:fe:0c"
 
   switch-ironic1-br-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: ironic1-br-net}
       port_security_enabled: false
+      mac_address: "22:57:f8:dd:fe:0d"
 
   switch:
     type: OS::Nova::Server
@@ -829,9 +840,9 @@ outputs:
             - address: {get_attr: [ironic0-port, mac_address]}
               physical_network: ironic
               local_link_connection:
-                switch_info: nxos.openstack.lab
-                switch_id: "22:dd:fe:aa:1b:08"
-                port_id: "ethernet1/2"
+                switch_info: veos.openstack.lab
+                switch_id: "22:dd:fe:ab:1b:08"
+                port_id: "ethernet2"
         - name: ironic1
           driver: redfish
           bios_interface: no-bios
@@ -849,9 +860,9 @@ outputs:
             - address: {get_attr: [ironic1-port, mac_address]}
               physical_network: ironic
               local_link_connection:
-                switch_info: nxos.openstack.lab
-                switch_id: "22:dd:fe:aa:1b:08"
-                port_id: "ethernet1/3"
+                switch_info: veos.openstack.lab
+                switch_id: "22:dd:fe:ab:1b:08"
+                port_id: "ethernet3"
 
   ocp_install_config:
     description: OCP install-config.yaml
