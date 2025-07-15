@@ -197,21 +197,19 @@ stages:
       This ensures that Ironic has successfully registered each node and they
       are ready for the next phase of the lifecycle management process.
     shell: |
-      set -xe -o pipefail
       oc project openstack
 
       counter=0
-      retries=100
+      max_retries=100
       node_state=enroll
-      set +e
       until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"; do
-        if [[ "$counter" -eq "$retries" ]]; then
+        ((counter++))
+        if (( counter > max_retries )); then
           echo "ERROR: Timeout. Nodes did not reach state: enroll"
           exit 1
         fi
         echo "Waiting for nodes to reach state enroll"
         sleep 10
-        ((counter++))
       done
 
   - name: Manage ironic nodes
@@ -234,22 +232,19 @@ stages:
       In this state, Ironic can control the nodes' power state and perform
       hardware inspection and cleaning operations as needed.
     shell: |
-      set -xe -o pipefail
       oc project openstack
 
       counter=0
-      retries=100
+      max_retries=100
       node_state=manageable
-      set +e
       until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"; do
-        if [[ "$counter" -eq "$retries" ]]; then
+        ((counter++))
+        if (( counter > max_retries )); then
           echo "ERROR: Timeout. Nodes did not reach state: manageable"
-          set -e
           exit 1
         fi
         echo "Waiting for nodes to reach state manageable"
         sleep 10
-        ((counter++))
       done
 
   - name: Power off the ironic nodes
@@ -287,22 +282,19 @@ stages:
       This validation step ensures that the RedFish power management commands
       were executed correctly before proceeding to make nodes available.
     shell: |
-      set -xe -o pipefail
       oc project openstack
 
       counter=0
-      retries=100
+      max_retries=100
       power_state="off"
-      set +e
       until ! oc rsh openstackclient openstack baremetal node list -f value -c "Power State" | grep -P "^power.(?!${power_state}).*$"; do
-        if [[ "$counter" -eq "$retries" ]]; then
+        ((counter++))
+        if (( counter > max_retries )); then
           echo "ERROR: Timeout. Nodes did not reach power state: power off"
-          set -e
           exit 1
         fi
         echo "Waiting for nodes to reach power state off"
         sleep 10
-        ((counter++))
       done
 
   - name: Provide ironic nodes
@@ -325,24 +317,20 @@ stages:
       Once available, these nodes can be scheduled by Nova for bare metal
       instance deployment, completing the bare metal provisioning setup.
     shell: |
-      set -xe -o pipefail
       oc project openstack
 
       counter=0
-      retries=100
+      max_retries=100
       node_state=available
-      set +e
       until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"; do
-        if [[ "$counter" -eq "$retries" ]]; then
+        ((counter++))
+        if (( counter > max_retries )); then
           echo "ERROR: Timeout. Nodes did not reach state: available"
-          set -e
           exit 1
         fi
-        echo "Waiting for nodes to reach state: active"
+        echo "Waiting for nodes to reach state: available"
         sleep 10
-        ((counter++))
       done
-      set -e
 
   - name: Wait for expected compute services (OSPRH-10942)
     documentation: |
