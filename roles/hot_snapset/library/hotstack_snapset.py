@@ -191,7 +191,7 @@ def validate_servers_state(servers):
         if server.status != SERVER_SHUTOFF:
             raise ansible_exc.AnsibleValidationError(
                 "instance {server} is not in the {required_state} state".format(
-                    server=server.id, requiered_state=SERVER_SHUTOFF
+                    server=server.id, required_state=SERVER_SHUTOFF
                 )
             )
 
