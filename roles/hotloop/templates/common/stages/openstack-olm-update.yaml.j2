@@ -19,6 +19,7 @@
     - >-
       {{
         openstack_operators_starting_csv is defined and
+        openstack_operators_starting_csv is not none and
         openstack_operators_starting_csv is version('v1.0.0', '>=') and
         openstack_operators_starting_csv is version('v1.0.7', '<')
       }}
