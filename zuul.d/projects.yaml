@@ -4,3 +4,4 @@
     github-check:
       jobs:
         - hotstack-pre-commit
+        - vexxhost-hotstack-ipxe-image
