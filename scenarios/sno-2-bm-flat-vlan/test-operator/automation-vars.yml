@@ -147,17 +147,17 @@ stages:
       oc project openstack
 
       counter=0
-      retries=100
+      max_retries=100
       node_state=enroll
-      set +e
-      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"; do
-        if [[ "$counter" -eq "$retries" ]]; then
+      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"
+      do
+        ((counter++))
+        if (( counter > max_retries )); then
           echo "ERROR: Timeout. Nodes did not reach state: enroll"
           exit 1
         fi
         echo "Waiting for nodes to reach state enroll"
         sleep 10
-        ((counter++))
       done
 
   - name: Manage ironic nodes
@@ -172,18 +172,17 @@ stages:
       oc project openstack
 
       counter=0
-      retries=100
+      max_retries=100
       node_state=manageable
-      set +e
-      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"; do
-        if [[ "$counter" -eq "$retries" ]]; then
+      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"
+      do
+        ((counter++))
+        if (( counter > max_retries )); then
           echo "ERROR: Timeout. Nodes did not reach state: manageable"
-          set -e
           exit 1
         fi
         echo "Waiting for nodes to reach state manageable"
         sleep 10
-        ((counter++))
       done
 
   - name: Power off the ironic nodes
@@ -205,18 +204,17 @@ stages:
       oc project openstack
 
       counter=0
-      retries=100
+      max_retries=100
       power_state="off"
-      set +e
-      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Power State" | grep -P "^power.(?!${power_state}).*$"; do
-        if [[ "$counter" -eq "$retries" ]]; then
+      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Power State" | grep -P "^power.(?!${power_state}).*$"
+      do
+        ((counter++))
+        if (( counter > max_retries )); then
           echo "ERROR: Timeout. Nodes did not reach power state: power off"
-          set -e
           exit 1
         fi
         echo "Waiting for nodes to reach power state off"
         sleep 10
-        ((counter++))
       done
 
   - name: Provide ironic nodes
@@ -231,20 +229,17 @@ stages:
       oc project openstack
 
       counter=0
-      retries=100
+      max_retries=100
       node_state=available
-      set +e
       until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"; do
-        if [[ "$counter" -eq "$retries" ]]; then
+        ((counter++))
+        if (( counter > max_retries )); then
           echo "ERROR: Timeout. Nodes did not reach state: available"
-          set -e
           exit 1
         fi
-        echo "Waiting for nodes to reach state: active"
+        echo "Waiting for nodes to reach state: available"
         sleep 10
-        ((counter++))
       done
-      set -e
 
   - name: Wait for expected compute services (OSPRH-10942)
     wait_conditions:
