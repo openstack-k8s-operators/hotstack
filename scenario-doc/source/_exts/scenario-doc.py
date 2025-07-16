@@ -89,12 +89,12 @@ class HotStackDirective(rst.Directive):
         node += literal(text="Apply the manifest:")
         node += literal_block(text="oc apply -f {}".format(manifest_basename))
 
-    def add_j2_manifest(self, automation_dir, j2_manifest, node):
-        j2_manifest_path = os.path.join(automation_dir, j2_manifest)
-        j2_manifest_basename = os.path.basename(j2_manifest)
-        with open(j2_manifest_path, "r") as f:
+    def add_template_manifest(self, automation_dir, manifest, node):
+        manifest_path = os.path.join(automation_dir, manifest)
+        manifest_basename = os.path.basename(manifest)
+        with open(manifest_path, "r") as f:
             content = f.read()
-        manifest_name, _ = os.path.splitext(j2_manifest_basename)
+        manifest_name, _ = os.path.splitext(manifest_basename)
         j2_template = Template(content)
         rendered_content = j2_template.render(self.bootstrap_vars)
         node += literal(text="File: {}".format(manifest_name))
@@ -112,28 +112,29 @@ class HotStackDirective(rst.Directive):
             node += literal_block(text=condition)
 
     def process_stage(self, automation_dir, stage):
-        name = stage.get("name")
+        _node = section()
+        _node += title(text=stage.get("name", "Unnamed Stage"), level=2)
+
         documentation = stage.get("documentation")
-        cmd = stage.get("command")
-        script = stage.get("shell")
-        manifest = stage.get("manifest")
-        j2_manifest = stage.get("j2_manifest")
-        wait_conditions = stage.get("wait_conditions", [])
-
-        _node = section(ids=[name], name=name)
-        _node += title(text=name)
-        _node.document = self.state.document
-
         if documentation:
             self.add_doc(documentation, _node)
+
+        cmd = stage.get("command")
         if cmd:
             self.add_cmd(cmd, _node)
+
+        script = stage.get("shell")
         if script:
             self.add_script(script, _node)
+
+        manifest = stage.get("manifest")
         if manifest:
-            self.add_manifest(automation_dir, manifest, _node)
-        if j2_manifest:
-            self.add_j2_manifest(automation_dir, j2_manifest, _node)
+            if manifest.endswith(".j2"):
+                self.add_template_manifest(automation_dir, manifest, _node)
+            else:
+                self.add_manifest(automation_dir, manifest, _node)
+
+        wait_conditions = stage.get("wait_conditions")
         if wait_conditions:
             self.add_wait_conditions(wait_conditions, _node)
 

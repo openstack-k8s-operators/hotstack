@@ -14,44 +14,19 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-- name: "Stage: {{ item.name }} :: Run command"
-  when: item.command is defined
-  ansible.builtin.command:
-    cmd: "{{ item.command }}"
+- name: "Execute stage: {{ item.name }}"
+  hotloop_stage_executor:
+    stage: "{{ item }}"
+    work_dir: "{{ work_dir }}"
+    manifests_dir: "{{ manifests_dir }}"
+    template_vars: "{{ hostvars[inventory_hostname] }}"
 
-- name: "Stage: {{ item.name }} :: Run shell"
-  when: item.shell is defined
-  ansible.builtin.shell:
-    cmd: "{{ item.shell }}"
-
-- name: "Stage: {{ item.name }} :: Apply static manifest"
-  when: item.manifest is defined
-  ansible.builtin.include_tasks: static_manifest.yml
-
-- name: "Stage: {{ item.name }} :: Apply templates manifest"
-  when: item.j2_manifest is defined
-  ansible.builtin.include_tasks: template_manifest.yml
-
-# TODO(hjensas): When we have https://github.com/kubernetes/kubernetes/pull/125868
-# the retries can be replaced with `oc wait --for=create --timeout=300s`
-- name: "Stage: {{ item.name }} :: Wait conditions"
+- name: "Stage: {{ item.name }} :: Wait condition: {{ wait_cmd }}"
   when: item.wait_conditions is defined
-  register: _wait_result
-  ansible.builtin.command:
-    cmd: "{{ wait_cmd }}"
+  hotloop_wait_condition:
+    command: "{{ wait_cmd }}"
+    retries: "{{ wait_condition_retries }}"
+    delay: "{{ wait_condition_retry_delay }}"
   loop: "{{ item.wait_conditions }}"
   loop_control:
     loop_var: wait_cmd
-  until: (
-      _wait_result.rc == 0
-      or not (
-        _wait_result.stderr is match(
-          ".*no matching resources found.*")
-        or _wait_result.stderr is match(
-          ".*(NotFound).*")
-        or _wait_result.stderr is match(
-          ".*timed out.*condition.*clusterserviceversions/openstack-operator.*")
-      )
-    )
-  retries: "{{ wait_condition_retries }}"
-  delay: "{{ wait_condition_retry_delay }}"

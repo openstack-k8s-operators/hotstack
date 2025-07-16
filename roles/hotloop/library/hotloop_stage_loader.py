@@ -93,7 +93,6 @@ ALLOWED_STAGE_KEYS = {
     "name",
     "command",
     "documentation",
-    "j2_manifest",
     "manifest",
     "patches",
     "run_conditions",

@@ -3,7 +3,7 @@ stages:
   - name: "Sushy Emulator : Namespace"
     manifest: namespace.yaml
     wait_conditions:
-      - "oc wait namespaces sushy-emulator --for jsonpath='{.status.phase}'=Active --timeout=300s"
+      - "oc wait namespace sushy-emulator --for jsonpath='{.status.phase}'=Active --timeout=300s"
 
   - name: "Sushy Emulator : Openstack clouds secret"
     shell: >-

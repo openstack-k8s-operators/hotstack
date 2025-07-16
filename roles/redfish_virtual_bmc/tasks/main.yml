@@ -68,6 +68,16 @@
             ] | ansible.builtin.path_join
           }}
 
+    - name: Debug - List all files in tempdir after templating
+      ansible.builtin.find:
+        paths: "{{ _tempdir.path }}"
+        recurse: true
+      register: _tempdir_files_final
+
+    - name: Debug - Show final tempdir contents
+      ansible.builtin.debug:
+        msg: "Final files in tempdir {{ _tempdir.path }}: {{ _tempdir_files_final.files | map(attribute='path') | list }}"
+
     - name: Load automation vars
       ansible.builtin.include_vars:
         file: automation-vars.yml
