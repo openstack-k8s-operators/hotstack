@@ -198,7 +198,7 @@ def _load_nested(stages):
         stages = yaml.safe_load(stages)
 
     if isinstance(stages, dict):
-        stages = stage.get("stages", [])
+        stages = stages.get("stages", [])
     elif isinstance(stages, list):
         pass
     else:
