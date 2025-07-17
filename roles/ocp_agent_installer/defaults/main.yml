@@ -14,8 +14,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-ocp_agent_installer_prepare_for_snapshot: false
-ocp_agent_installer_revive_snapshot: false
+hotstack_prepare_for_snapshot: false
+hotstack_revive_snapshot: false
 
 
 # Can be one of ['pxe', 'iso']

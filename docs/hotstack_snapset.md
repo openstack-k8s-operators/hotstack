@@ -128,14 +128,14 @@ Key configuration variables for SnapSet creation:
 
 ```yaml
 # Enable snapshot preparation during OCP installation
-ocp_agent_installer_prepare_for_snapshot: true
+hotstack_prepare_for_snapshot: true
 ```
 
 ## SnapSet Process Details
 
 ### Preparation Phase
 
-When `ocp_agent_installer_prepare_for_snapshot` is enabled:
+When `hotstack_prepare_for_snapshot` is enabled:
 
 1. **Bootstrap Certificate Wait**: The system waits 25 hours to allow OpenShift's
    bootstrap certificate rotation to complete. This ensures that 30-day client
@@ -167,6 +167,7 @@ hotstack-{instance_name}-snapshot-{unique_id}
 Each image is tagged with:
 
 - `hotstack`: General Hotstack identifier
+- `hotstack-snapset`: Hotstack SnapSet identifier
 - `name={name}`: Instance name
 - `role={role}`: Instance role (controller, ocp_master, etc.)
 - `snap_id={unique_id}`: Unique snapshot set identifier
@@ -179,7 +180,7 @@ Each image is tagged with:
 List available snapset images:
 
 ```bash
-openstack image list --tag hotstack
+openstack image list --tag hotstack-snapset
 ```
 
 Find images from a specific snapset:
@@ -205,7 +206,7 @@ When booting from snapset images, use the revive mode:
 
 ```yaml
 # In bootstrap_vars.yml
-ocp_agent_installer_revive_snapshot: true
+hotstack_revive_snapshot: true
 ```
 
 The revive process:
@@ -248,7 +249,7 @@ ansible-playbook -i inventory.yml create-snapset.yml \
 
 ```bash
 # List created images
-openstack image list --tag hotstack
+openstack image list --tag hotstack-snapset
 
 # Check specific snapset
 openstack image list --tag snap_id=AbCdEf
@@ -276,7 +277,7 @@ stack_parameters:
 ansible-playbook -i inventory.yml bootstrap.yml \
   -e @scenarios/sno-bmh-tests/bootstrap_vars.yml \
   -e @~/cloud-secrets.yaml \
-  -e ocp_agent_installer_revive_snapshot=true
+  -e hotstack_revive_snapshot=true
 ```
 
 ## Limitations

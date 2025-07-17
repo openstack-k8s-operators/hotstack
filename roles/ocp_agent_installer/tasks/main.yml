@@ -21,7 +21,7 @@
       - pull_secret | length > 0
 
 - name: Install using agent installer
-  when: not ocp_agent_installer_revive_snapshot | bool
+  when: not hotstack_revive_snapshot | bool
   ansible.builtin.include_tasks: _install.yml
 
 # NOTE(hjensas): The bootstrap certificate is used to bootstrap the cluster
@@ -31,12 +31,12 @@
 # the cluster to a stable state. Snapshots will work without workarounds for
 # the next 30 days.
 - name: Wait for 25 hours to prepare for snapshot
-  when: ocp_agent_installer_prepare_for_snapshot | bool
+  when: hotstack_prepare_for_snapshot | bool
   ansible.builtin.pause:
     minutes: "{{ 25 * 60 }}"
 
 - name: Prepare for Snapshot - and shutdown
-  when: ocp_agent_installer_prepare_for_snapshot | bool
+  when: hotstack_prepare_for_snapshot | bool
   ansible.builtin.command: >-
     hotstack-snapset
       --uncordon
@@ -55,7 +55,7 @@
 # Even if the cluster is stable, the route.openshift.io API version may not be
 # available, wait for it to appear in oc api-versions output.
 - name: Wait for cluster, uncordon, wait for cluster, wait for route API version ...
-  when: ocp_agent_installer_revive_snapshot | bool
+  when: hotstack_revive_snapshot | bool
   ansible.builtin.command: >-
     hotstack-snapset
       --wait-cluster-stable 5s
