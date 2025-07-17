@@ -1,0 +1,34 @@
+hostname veos.openstack.lab
+
+username admin password password privilege 15
+
+interface Management1
+   description ZTP_Management_Interface
+   ip address 192.168.32.6/24
+   no shutdown
+
+ip route 0.0.0.0/0 192.168.32.1
+
+feature ssh
+ssh key rsa 2048
+
+vlan 102
+   name Native VLAN
+
+interface Ethernet1
+   description Trunk port
+   switchport mode trunk
+   switchport trunk allowed vlan 101,102,103,104
+   no shutdown
+
+interface Ethernet2
+   description Access port ironic0
+   switchport mode access
+   switchport access vlan 102
+   no shutdown
+
+interface Ethernet2
+   description Access port ironic1
+   switchport mode access
+   switchport access vlan 102
+   no shutdown
