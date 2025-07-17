@@ -6,3 +6,15 @@
       Run pre-commit in pod
     timeout: 450
     run: ci/playbooks/pre-commit.yml
+
+- job:
+    name: vexxhost-hotstack-ipxe-image
+    parent: base-hotstack-ixpe-image-periodic
+    nodeset: hotstack-image
+    description: |
+      Build ipxe image
+    timeout: 900
+    vars:
+      cloud_name: vexxhost
+    files:
+      - ^ipxe/.*
