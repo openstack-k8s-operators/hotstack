@@ -24,6 +24,18 @@
       - controller_ssh_pub_key is defined
       - dataplane_ssh_public_key is defined
 
+- name: Get latest snapset and update stack parameters
+  when: hotstack_revive_snapshot | bool
+  register: _latest_snapset
+  hotstack_get_latest_snapset:
+    cloud: "{{ os_cloud }}"
+
+- name: Debug latest snapset information
+  when: hotstack_revive_snapshot | bool
+  ansible.builtin.debug:
+    msg:
+      "{{ _latest_snapset.output }}"
+
 - name: Create stack
   openstack.cloud.stack:
     cloud: "{{ os_cloud }}"
@@ -33,6 +45,7 @@
     parameters: >-
       {{
         stack_parameters
+        | ansible.builtin.combine(_latest_snapset.output | default({}), recursive=true)
         | ansible.builtin.combine({'dataplane_ssh_pub_key': dataplane_ssh_public_key})
       }}
     wait: false

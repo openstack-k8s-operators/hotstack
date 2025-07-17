@@ -1,6 +1,6 @@
 ---
-ocp_agent_installer_prepare_for_snapshot: true
-ocp_agent_installer_min_stable_period: 3m
+hotstack_prepare_for_snapshot: true
+hotstack_min_stable_period: 3m
 
 os_cloud: default
 os_floating_network: public

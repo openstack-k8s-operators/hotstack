@@ -133,6 +133,7 @@ def _create_image_from_server(conn, name, uuid, role, mac_address, uniq):
         uuid, image_name, wait=True, timeout=IMAGE_CREATE_TIMEOUT
     )
     conn.image.add_tag(image, "hotstack")
+    conn.image.add_tag(image, "hotstack-snapset")
     conn.image.add_tag(image, "name=" + name)
     conn.image.add_tag(image, "role=" + role)
     conn.image.add_tag(image, "snap_id=" + uniq)

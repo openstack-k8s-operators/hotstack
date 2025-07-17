@@ -84,6 +84,7 @@ hotstack-{instance_name}-snapshot-{unique_id}
 Each image is tagged with:
 
 - `hotstack`: General hotstack identifier
+- `hotstack-snapset`: General hotstack-snapset identifier
 - `name={name}`: Instance name
 - `role={role}`: Instance role
 - `snap_id={unique_id}`: Unique snapshot set identifier

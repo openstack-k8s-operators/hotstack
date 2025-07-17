@@ -16,3 +16,4 @@
 
 hotstack_work_dir: "{{ playbook_dir }}"
 os_cloud: "{{ lookup('ansible.builtin.env', 'OS_CLOUD') }}"
+hotstack_revive_snapshot: false

@@ -32,10 +32,6 @@ This scenario serves as a **SnapSet preparation environment** that:
 - Minimal Single Node OpenShift deployment optimized for snapshot creation
 - Bootstrap certificate rotation handling (25-hour wait period)
 - Stability period configuration for reliable snapshots
-- iSCSI and multipath support for storage consistency
-- Multiple Cinder volumes for future OpenStack functionality
-- TopoLVM for local storage management
-- OpenShift cluster ready for OpenStack deployment
 
 ## Networks
 
@@ -79,23 +75,6 @@ OpenShift 4 clusters require special handling for certificate rotation:
 - **Cluster Viability**: Prevents certificate-related issues when restoring
   from snapshots
 
-### Snapshot Optimization
-
-- **Stable Period**: 3-minute minimum stable period after certificate rotation
-- **Agent Installer**: Configured for snapshot preparation mode
-  (`ocp_agent_installer_prepare_for_snapshot: true`)
-- **Storage Optimization**: iSCSI and multipath enabled for storage reliability
-
-### Storage Configuration
-
-- **Storage Volumes**: Multiple persistent volumes prepared for future
-  OpenStack services
-  - `/dev/vdc`: Primary volume for Cinder storage
-  - `/dev/vdd`: Secondary volume for Cinder storage
-  - `/dev/vde`: Tertiary volume for Cinder storage
-- **TopoLVM**: Local volume management configured for future OpenStack services
-- **LVMS**: Logical Volume Manager Storage
-
 ## Usage
 
 ### Creating SnapSet Images
@@ -134,7 +113,7 @@ After snapshot creation, the images can be used in other scenarios:
 
 ```bash
 # List available snapset images
-openstack image list --tag hotstack
+openstack image list --tag hotstack-snapset
 
 # Find specific snapset
 openstack image list --tag snap_id=AbCdEf
@@ -143,7 +122,7 @@ openstack image list --tag snap_id=AbCdEf
 ansible-playbook -i inventory.yml bootstrap.yml \
   -e @scenarios/sno-2-bm/bootstrap_vars.yml \
   -e @~/cloud-secrets.yaml \
-  -e ocp_agent_installer_revive_snapshot=true
+  -e hotstack_revive_snapshot=true
 ```
 
 ## SnapSet Creation Process
@@ -173,6 +152,7 @@ Created images follow the naming convention:
 Each image is tagged with:
 
 - `hotstack`: General Hotstack identifier
+- `hotstack-snapset`: Hotstack SnapSet identifier
 - `name={instance_name}`: Instance name
 - `role={role}`: Instance role (controller, ocp_master)
 - `snap_id={unique_id}`: Unique snapshot set identifier
@@ -198,8 +178,6 @@ Each image is tagged with:
 - OpenStack cloud with snapshot support
 - Flavors: hotstack.small (controller), hotstack.xxlarge (SNO master)
 - Images: hotstack-controller, ipxe-boot-usb
-- Support for multiple storage volumes
-- iSCSI and multipath support
 - Pull secret for OpenShift installation
 - **Time**: Minimum 25+ hours for complete SnapSet creation
 - Network connectivity for all defined subnets
@@ -208,8 +186,6 @@ Each image is tagged with:
 
 - **Certificate Rotation Handling**: Proper 25-hour wait for OpenShift
   certificate safety
-- **Storage Readiness**: Multiple volumes prepared for future OpenStack
-  functionality
 - **Stability Assurance**: Multiple validation phases before snapshot creation
 - **Metadata Rich**: Comprehensive tagging for easy image management
 - **Reusability**: Created images can be used across multiple scenario types
@@ -224,14 +200,10 @@ Each image is tagged with:
 
 ### Key Configuration Parameters
 
-- `ocp_agent_installer_prepare_for_snapshot: true` - Enables snapshot
+- `hotstack_prepare_for_snapshot: true` - Enables snapshot
   preparation mode
-- `ocp_agent_installer_min_stable_period: 3m` - Minimum stability period after
+- `hotstack_min_stable_period: 3m` - Minimum stability period after
   certificate rotation
-- `enable_iscsi: true` - Ensures storage protocol consistency
-- `enable_multipath: true` - Provides storage path redundancy
-- `cinder_volume_pvs: [/dev/vdc, /dev/vdd, /dev/vde]` - Multiple volumes
-  prepared for future OpenStack functionality
 
 ## Integration with Other Scenarios
 
