@@ -1,0 +1,34 @@
+---
+- name: GitOps Subscription
+  documentation: |
+    Subscribe to OpenShift GitOps operator via kustomize from the rhoso-gitops
+    repository. This sets up the necessary operator subscriptions for GitOps-based
+    RHOSO deployment workflow.
+  kustomize:
+    directory: https://github.com/openstack-gitops/rhoso-gitops/base/initialize/gitops/subscribe?ref=main
+  wait_conditions:
+    - >-
+      oc wait namespace  openshift-gitops-operator
+      --for jsonpath='{.status.phase}'=Active --timeout=120s
+    - >-
+      oc -n openshift-gitops-operator wait operatorgroups.operators.coreos.com
+      openshift-gitops-operator
+      --for jsonpath='{.status.namespaces}' --timeout=30s
+    - >-
+      oc -n openshift-gitops-operator wait subscription openshift-gitops-operator
+      --for jsonpath='{.status.state}'=AtLatestKnown --timeout=600s
+    - >-
+      oc wait namespace openshift-gitops
+      --for jsonpath='{.status.phase}'=Active --timeout=120s
+
+- name: GitOps Enable
+  documentation: |
+    Enable and configure OpenShift GitOps via kustomize from the rhoso-gitops
+    repository. This stage configures the GitOps components and prepares the
+    cluster for GitOps-based deployments.
+  kustomize:
+    directory: https://github.com/openstack-gitops/rhoso-gitops/base/initialize/gitops/enable?ref=main
+  wait_conditions:
+    - >-
+      oc wait -n openshift-gitops deployment openshift-gitops-server
+      --for condition=Available --timeout=300s

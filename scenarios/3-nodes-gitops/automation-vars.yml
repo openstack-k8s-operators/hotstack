@@ -1,0 +1,35 @@
+---
+stages:
+  - name: TopoLVM Dependencies
+    documentation: |
+      Install the TopoLVM operator via OLM (Operator Lifecycle Manager).
+      This stage deploys the operator component that will manage TopoLVM
+      resources on the OpenShift cluster. The operator must be installed
+      before creating LVMCluster custom resources.
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/topolvm-deps-stages.yaml.j2")
+      }}
+
+  - name: TopoLVM
+    documentation: |
+      Installs and configures TopoLVM (Topology-aware Local Volume Manager) which
+      provides dynamic local storage provisioning for the OpenShift cluster. This
+      enables efficient local storage allocation across the 3-node cluster.
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/topolvm-stages.yaml.j2")
+      }}
+
+  - name: GitOps
+    documentation: |
+      Install and configure OpenShift GitOps via kustomize from the rhoso-gitops
+      repository. This stage configures the GitOps components and prepares the
+      cluster for GitOps-based deployments.
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/gitops-stages.yaml.j2")
+      }}
