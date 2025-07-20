@@ -64,7 +64,11 @@ EXAMPLES = r"""
 RETURN = r"""
 """
 
-RETRYABLE_ERR_REGEX = {r"failed calling webhook.*no endpoints available"}
+RETRYABLE_ERR_REGEX = {
+    r"failed calling webhook.*no endpoints available",
+    r".*tcp.*:6443: connect: connection refused.*",
+    r".*connection to the server.*:6443 was refused.*",
+}
 INITIAL_RETRY_DELAY = 5
 RETRY_MAX_DELAY = INITIAL_RETRY_DELAY * 12
 

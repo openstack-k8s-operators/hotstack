@@ -116,6 +116,8 @@ def is_retryable_error(stderr):
         r".*no matching resources found.*",
         r".*(NotFound).*",
         r".*timed out.*condition.*clusterserviceversions/openstack-operator.*",
+        r".*tcp.*:6443: connect: connection refused.*",
+        r".*connection to the server.*:6443 was refused.*",
     ]
 
     for pattern in retryable_patterns:
