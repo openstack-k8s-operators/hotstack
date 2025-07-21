@@ -1,111 +1,35 @@
 ---
 stages:
   - name: TopoLVM Dependencies
+    documentation: |
+      Install the TopoLVM operator via OLM (Operator Lifecycle Manager).
+      This stage deploys the operator component that will manage TopoLVM
+      resources on the OpenShift cluster. The operator must be installed
+      before creating LVMCluster custom resources.
     stages: >-
       {{
         lookup("ansible.builtin.template",
                "common/stages/topolvm-deps-stages.yaml.j2")
       }}
 
-  - name: Dependencies
-    stages: >-
-      {{
-        lookup("ansible.builtin.template",
-               "common/stages/deps-stages.yaml.j2")
-      }}
-
   - name: TopoLVM
+    documentation: |
+      Installs and configures TopoLVM (Topology-aware Local Volume Manager) which
+      provides dynamic local storage provisioning for the OpenShift cluster. This
+      enables efficient local storage allocation across the 3-node cluster.
     stages: >-
       {{
         lookup("ansible.builtin.template",
                "common/stages/topolvm-stages.yaml.j2")
       }}
 
-  - name: OLM Openstack
+  - name: GitOps
+    documentation: |
+      Install and configure OpenShift GitOps via kustomize from the rhoso-gitops
+      repository. This stage configures the GitOps components and prepares the
+      cluster for GitOps-based deployments.
     stages: >-
       {{
         lookup("ansible.builtin.template",
-               "common/stages/olm-openstack-stages.yaml.j2")
+               "common/stages/gitops-stages.yaml.j2")
       }}
-
-  - name: NodeNetworkConfigurationPolicy (nncp)
-    manifest: manifests/control-plane/nncp/nncp.yaml
-    wait_conditions:
-      - >-
-        oc wait -n openstack nncp -l osp/nncm-config-type=standard
-        --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
-        --timeout=5m
-
-  - name: OpenstackControlPlane
-    manifest: manifests/control-plane/control-plane.yaml
-    wait_conditions:
-      - >-
-        oc wait -n openstack openstackcontrolplane controlplane
-        --for condition=Ready --timeout=60m
-
-  - name: Dataplane SSH key secret
-    command: >-
-      oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret
-      --save-config --dry-run=client
-      --from-file=ssh-privatekey=/home/zuul/.ssh/id_rsa
-      --from-file=ssh-publickey=/home/zuul/.ssh/id_rsa.pub
-      --type=Opaque -o yaml | oc apply -f -
-    wait_conditions:
-      - >-
-        oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
-        --for jsonpath='{.metadata.name}'=dataplane-ansible-ssh-private-key-secret
-        --timeout=30s
-
-  - name: Nova migration SSH key secret
-    command: >-
-      oc create -n openstack secret generic nova-migration-ssh-key
-      --save-config --dry-run=client
-      --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate
-      --from-file=ssh-publickey=/home/zuul/.ssh/id_nova_migrate.pub
-      --type=Opaque -o yaml | oc apply -f -
-    wait_conditions:
-      - >-
-        oc wait -n openstack secret nova-migration-ssh-key
-        --for jsonpath='{.metadata.name}'=nova-migration-ssh-key
-        --timeout=30s
-
-  - name: EDPM nodeset (pre-ceph)
-    manifest: manifests/edpm-pre-ceph/nodeset/nodeset.yaml
-    patches: "{{ hotstack_default_nodeset_patches }}"
-    wait_conditions:
-      - >-
-        oc -n openstack wait openstackdataplanenodeset openstack-edpm
-        --for condition=SetupReady --timeout=10m
-
-  - name: EDPM deployment (pre-ceph)
-    manifest: manifests/edpm-pre-ceph/deployment/deployment.yaml
-    wait_conditions:
-      - >-
-        oc -n openstack wait openstackdataplanedeployment edpm-deployment-pre-ceph
-        --for condition=Ready --timeout=40m
-
-  - name: Update openstack-operators OLM
-    stages: >-
-      {{
-        lookup('ansible.builtin.template',
-               'common/stages/openstack-olm-update.yaml.j2')
-      }}
-    run_conditions:
-      - >-
-        {{
-          openstack_operators_update is defined and
-          openstack_operators_update | bool
-        }}
-
-  - name: Update controlplane and dataplane
-    stages: >-
-      {{
-        lookup('ansible.builtin.template',
-               'common/stages/openstack-update.yaml.j2')
-      }}
-    run_conditions:
-      - >-
-        {{
-          openstack_update is defined and
-          openstack_update | bool
-        }}

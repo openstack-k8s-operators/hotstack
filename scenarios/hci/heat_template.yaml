@@ -401,6 +401,7 @@ resources:
       network: {get_resource: machine-net}
       port_security_enabled: false
       fixed_ips: [{ip_address: 192.168.34.10}]
+      mac_address: "52:54:01:6c:46:10"
       value_specs: {get_attr: [extra-dhcp-opts-value, value]}
 
   master0-ctlplane-trunk-parent-port:
@@ -409,6 +410,7 @@ resources:
       network: {get_resource: ctlplane-net}
       port_security_enabled: false
       fixed_ips: [{ip_address: 192.168.122.10}]
+      mac_address: "52:54:01:6c:47:10"
 
   master0-internal-api-port:
     type: OS::Neutron::Port
@@ -481,6 +483,7 @@ resources:
       network: {get_resource: machine-net}
       port_security_enabled: false
       fixed_ips: [{ip_address: 192.168.34.11}]
+      mac_address: "52:54:02:6c:46:11"
       value_specs: {get_attr: [extra-dhcp-opts-value, value]}
 
   master1-ctlplane-trunk-parent-port:
@@ -489,6 +492,7 @@ resources:
       network: {get_resource: ctlplane-net}
       port_security_enabled: false
       fixed_ips: [{ip_address: 192.168.122.11}]
+      mac_address: "52:54:02:6c:47:11"
 
   master1-internal-api-port:
     type: OS::Neutron::Port
@@ -561,6 +565,7 @@ resources:
       network: {get_resource: machine-net}
       port_security_enabled: false
       fixed_ips: [{ip_address: 192.168.34.12}]
+      mac_address: "52:54:00:6c:46:12"
       value_specs: {get_attr: [extra-dhcp-opts-value, value]}
 
   master2-ctlplane-trunk-parent-port:
@@ -569,6 +574,7 @@ resources:
       network: {get_resource: ctlplane-net}
       port_security_enabled: false
       fixed_ips: [{ip_address: 192.168.122.12}]
+      mac_address: "52:54:00:6c:47:12"
 
   master2-internal-api-port:
     type: OS::Neutron::Port
@@ -671,6 +677,7 @@ resources:
       network: {get_resource: ctlplane-net}
       port_security_enabled: false
       fixed_ips: [{ip_address: 192.168.122.100}]
+      mac_address: "52:54:03:6c:46:c9"
 
   compute0-internal-api-port:
     type: OS::Neutron::Port
@@ -775,6 +782,7 @@ resources:
       network: {get_resource: ctlplane-net}
       port_security_enabled: false
       fixed_ips: [{ip_address: 192.168.122.101}]
+      mac_address: "52:54:04:6c:46:d1"
 
   compute1-internal-api-port:
     type: OS::Neutron::Port
@@ -879,6 +887,7 @@ resources:
       network: {get_resource: ctlplane-net}
       port_security_enabled: false
       fixed_ips: [{ip_address: 192.168.122.102}]
+      mac_address: "52:54:05:6c:46:d3"
 
   compute2-internal-api-port:
     type: OS::Neutron::Port
@@ -1026,7 +1035,7 @@ outputs:
           interfaces:
             - name: eth0
               macAddress: {get_attr: [master0-machine-port, mac_address]}
-            - name: eth0
+            - name: eth1
               macAddress: {get_attr: [master0-ctlplane-trunk-parent-port, mac_address]}
           rootDeviceHints:
             deviceName: /dev/vda
@@ -1128,6 +1137,7 @@ outputs:
             ansible_user: zuul
             ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
             ansible_ssh_private_key_file: '~/.ssh/id_rsa'
+            machine_mac: {get_attr: [controller-machine-port, mac_address]}
       ocps:
         hosts:
           master0:
@@ -1135,16 +1145,22 @@ outputs:
             ansible_user: core
             ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
             ansible_ssh_private_key_file: '~/.ssh/id_rsa'
+            machine_mac: {get_attr: [master0-machine-port, mac_address]}
+            ctlplane_mac: {get_attr: [master0-ctlplane-trunk-parent-port, mac_address]}
           master1:
             ansible_host: {get_attr: [master1-machine-port, fixed_ips, 0, ip_address]}
             ansible_user: core
             ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
             ansible_ssh_private_key_file: '~/.ssh/id_rsa'
+            machine_mac: {get_attr: [master1-machine-port, mac_address]}
+            ctlplane_mac: {get_attr: [master1-ctlplane-trunk-parent-port, mac_address]}
           master2:
-            ansible_host: {get_attr: [master1-machine-port, fixed_ips, 0, ip_address]}
+            ansible_host: {get_attr: [master2-machine-port, fixed_ips, 0, ip_address]}
             ansible_user: core
             ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
             ansible_ssh_private_key_file: '~/.ssh/id_rsa'
+            machine_mac: {get_attr: [master2-machine-port, mac_address]}
+            ctlplane_mac: {get_attr: [master2-ctlplane-trunk-parent-port, mac_address]}
       computes:
         hosts:
           compute0:
@@ -1152,8 +1168,16 @@ outputs:
             ansible_user: cloud-admin
             ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
             ansible_ssh_private_key_file: '~/.ssh/id_rsa'
+            ctlplane_mac: {get_attr: [compute0-ctlplane-trunk-parent-port, mac_address]}
           compute1:
             ansible_host: {get_attr: [compute1-ctlplane-trunk-parent-port, fixed_ips, 0, ip_address]}
             ansible_user: cloud-admin
             ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
             ansible_ssh_private_key_file: '~/.ssh/id_rsa'
+            ctlplane_mac: {get_attr: [compute1-ctlplane-trunk-parent-port, mac_address]}
+          compute2:
+            ansible_host: {get_attr: [compute2-ctlplane-trunk-parent-port, fixed_ips, 0, ip_address]}
+            ansible_user: cloud-admin
+            ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+            ansible_ssh_private_key_file: '~/.ssh/id_rsa'
+            ctlplane_mac: {get_attr: [compute2-ctlplane-trunk-parent-port, mac_address]}
