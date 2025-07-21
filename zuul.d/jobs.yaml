@@ -12,7 +12,7 @@
     parent: base-hotstack-ixpe-image-periodic
     nodeset: hotstack-image-vexxhost
     description: |
-      Build ipxe image
+      Build Hotstack ipxe image
     timeout: 900
     vars:
       cloud_name: vexxhost
@@ -24,7 +24,19 @@
     parent: base-hotstack-blank-image-periodic
     nodeset: hotstack-image-vexxhost
     description: |
-      Build ipxe image
+      Build Hotstack blank image
+    timeout: 900
+    vars:
+      cloud_name: vexxhost
+    files:
+      - ^images/.*
+
+- job:
+    name: vexxhost-hotstack-controller-image
+    parent: base-hotstack-controller-image-periodic
+    nodeset: hotstack-image-vexxhost
+    description: |
+      Build Hotstack controller image
     timeout: 900
     vars:
       cloud_name: vexxhost
