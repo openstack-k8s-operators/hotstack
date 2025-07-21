@@ -32,6 +32,10 @@
   when: item.j2_manifest is defined
   ansible.builtin.include_tasks: template_manifest.yml
 
+- name: "Stage: {{ item.name }} :: Apply kustomize"
+  when: item.kustomize is defined
+  ansible.builtin.include_tasks: kustomize.yml
+
 - name: "Stage: {{ item.name }} :: Wait conditions"
   when: item.wait_conditions is defined
   hotloop_wait_condition:

@@ -30,6 +30,17 @@ Schema for a stage item is:
   * If both a static and dynamic manifest is defined in the same stage, the
     static one is applied first - then the dynamic (Jinja2) manifest is applied
     and patches are applied to both manifest and j2_manifest.
+* `kustomize`: (dict) Configuration for applying Kustomize directories with
+  `oc apply -k <directory>`.
+  * `directory`: (string) Path to a Kustomize directory or HTTP URL.
+    * Supports both local directories and remote HTTP/HTTPS URLs.
+    * For local directories, the entire directory is copied to the controller
+      before applying.
+    * For URLs, applies directly without local copying.
+    * Local directories must contain a valid kustomization file
+      (`kustomization.yaml`, `kustomization.yml`, or `Kustomization`).
+  * `timeout`: (int) Timeout in seconds for the operation. Defaults to 60
+    seconds if not specified.
 * `patches`: (list) List of YAML patches to apply to `manifests` and/or
   `j2_manifests`.
   * Each patch must define the `path` and the `value` to replace at the path.
@@ -104,8 +115,8 @@ Schema for a stage item is:
   ```
 
 > **_NOTE_**: Stage items are applied the actions in the following order:
-> `command` -> `shell` -> `manifest` -> `j2_manifest` -> `wait_conditions` ->
-> `stages`.
+> `command` -> `shell` -> `manifest` -> `j2_manifest` -> `kustomize` ->
+> `wait_conditions` -> `stages`.
 
 Example:
 
@@ -196,6 +207,24 @@ stages:
         oc wait -n openstack secret nova-migration-ssh-key
         --for jsonpath='{.metadata.name}'=nova-migration-ssh-key
         --timeout=30s
+
+  - name: Apply local Kustomize configuration
+    documentation: |
+      Apply a local Kustomize directory. The directory will be copied to the
+      controller and applied using 'oc apply -k'.
+    kustomize:
+      directory: manifests/kustomize/my-config
+      timeout: 120
+    wait_conditions:
+      - "oc wait -n my-namespace deployment my-app --for condition=Available --timeout=300s"
+
+  - name: Apply remote Kustomize configuration
+    documentation: |
+      Apply a remote Kustomize configuration from a Git repository.
+      No local copying is performed for URLs.
+    kustomize:
+      directory: "https://github.com/example/repo/config/overlays/production?ref=v1.2.3"
+      timeout: 180
 ```
 
 ## Example playbook

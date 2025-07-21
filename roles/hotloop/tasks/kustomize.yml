@@ -1,0 +1,68 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: "Stage: {{ item.name }} :: Check if kustomize directory is URL"
+  ansible.builtin.set_fact:
+    _kustomize_is_url: "{{ item.kustomize.directory.startswith(('http://', 'https://')) }}"
+    _kustomize_dir_name: "{{ item.kustomize.directory | dirname | ansible.builtin.basename }}"
+
+- name: "Stage: {{ item.name }} :: Ensure kustomize dir"
+  when: not _kustomize_is_url
+  ansible.builtin.file:
+    path: >-
+      {{
+        [
+          manifests_dir,
+          _kustomize_dir_name
+        ] | ansible.builtin.path_join
+      }}
+    state: directory
+    mode: '0755'
+
+- name: "Stage: {{ item.name }} :: Copy kustomize directory"
+  when: not _kustomize_is_url
+  ansible.builtin.copy:
+    src: >-
+      {{
+        [
+          work_dir,
+          item.kustomize.directory
+        ] | ansible.builtin.path_join
+      }}/
+    dest: >-
+      {{
+        [
+          manifests_dir,
+          _kustomize_dir_name
+        ] | ansible.builtin.path_join
+      }}/
+
+- name: "Stage: {{ item.name }} :: Set kustomize directory path"
+  ansible.builtin.set_fact:
+    _kustomize_apply_dir: >-
+      {{
+        item.kustomize.directory if _kustomize_is_url else
+        [
+          manifests_dir,
+          _kustomize_dir_name
+        ] | ansible.builtin.path_join
+      }}
+
+- name: "Stage: {{ item.name }} :: Apply Kustomize directory"
+  hotloop_oc_apply_kustomize:
+    directory: "{{ _kustomize_apply_dir }}"
+    timeout: "{{ item.kustomize.timeout | default(60) }}"
+  register: kustomize_result
