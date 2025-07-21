@@ -94,12 +94,18 @@ ALLOWED_STAGE_KEYS = {
     "command",
     "documentation",
     "j2_manifest",
+    "kustomize",
     "manifest",
     "patches",
     "run_conditions",
     "shell",
     "stages",
     "wait_conditions",
+}
+
+ALLOWED_KUSTOMIZE_KEYS = {
+    "directory",
+    "timeout",
 }
 
 FALSE_STRINGS = {"false", "False", "FALSE"}
@@ -155,6 +161,49 @@ def _validate_run_conditions(conditions):
         )
 
 
+def _validate_kustomize(kustomize_config):
+    """Validates the 'kustomize' parameter.
+
+    This function checks if the 'kustomize' parameter is a dict with
+    valid keys and required fields.
+
+    :param kustomize_config: The 'kustomize' parameter to validate.
+    """
+    if not isinstance(kustomize_config, dict):
+        raise TypeError(
+            "'kustomize' must be a dict, got {kustomize_type}".format(
+                kustomize_type=type(kustomize_config)
+            )
+        )
+
+    if kustomize_config.keys() - ALLOWED_KUSTOMIZE_KEYS:
+        raise ValueError(
+            "kustomize contains invalid keys: {invalid_keys}. Allowed keys: {allowed_keys}".format(
+                invalid_keys=kustomize_config.keys() - ALLOWED_KUSTOMIZE_KEYS,
+                allowed_keys=ALLOWED_KUSTOMIZE_KEYS,
+            )
+        )
+
+    if "directory" not in kustomize_config:
+        raise ValueError("kustomize must have a 'directory' field")
+
+    if not isinstance(kustomize_config["directory"], str):
+        raise TypeError(
+            "kustomize 'directory' must be a string, got {directory_type}".format(
+                directory_type=type(kustomize_config["directory"])
+            )
+        )
+
+    if "timeout" in kustomize_config and not isinstance(
+        kustomize_config["timeout"], int
+    ):
+        raise TypeError(
+            "kustomize 'timeout' must be an integer, got {timeout_type}".format(
+                timeout_type=type(kustomize_config["timeout"])
+            )
+        )
+
+
 def _validate_stage(stage, nested=False):
     """Validate a stage
 
@@ -182,6 +231,9 @@ def _validate_stage(stage, nested=False):
 
     if "run_conditions" in stage:
         _validate_run_conditions(stage["run_conditions"])
+
+    if "kustomize" in stage:
+        _validate_kustomize(stage["kustomize"])
 
 
 def _load_nested(stages):
