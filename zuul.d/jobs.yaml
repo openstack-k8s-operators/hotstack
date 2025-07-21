@@ -42,3 +42,18 @@
       cloud_name: vexxhost
     files:
       - ^images/.*
+
+- job:
+    name: vexxhost-hotstack-sno-2-bm
+    parent: base-hotstack
+    nodeset: hotstack-image-vexxhost
+    description: |
+      Hotstack scenario: sno-2-bm
+    timeout: 5400
+    attempts: 1
+    vars:
+      cloud_name: vexxhost
+      scenario: sno-2-bm
+    files:
+      - ^scenarios/sno-2-bm/.*
+      - ^roles/.*
