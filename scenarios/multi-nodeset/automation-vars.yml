@@ -16,6 +16,13 @@ stages:
                "common/stages/cinder-lvm-label-stages.yaml")
       }}
 
+  - name: TopoLVM Dependencies
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/topolvm-deps-stages.yaml.j2")
+      }}
+
   - name: Dependencies
     stages: >-
       {{
