@@ -6,3 +6,4 @@
         - hotstack-pre-commit
         - vexxhost-hotstack-ipxe-image
         - vexxhost-hotstack-blank-image
+        - vexxhost-hotstack-controller-image
