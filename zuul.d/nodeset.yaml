@@ -5,7 +5,7 @@
       - name: container
         label: pod-centos-9-stream
 - nodeset:
-    name: hotstack-image
+    name: hotstack-image-vexxhost
     nodes:
       - name: hotstack
         label: cloud-centos-9-stream-tripleo-vexxhost

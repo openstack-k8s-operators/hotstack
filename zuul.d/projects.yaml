@@ -5,3 +5,4 @@
       jobs:
         - hotstack-pre-commit
         - vexxhost-hotstack-ipxe-image
+        - vexxhost-hotstack-blank-image
