@@ -13,6 +13,7 @@ representing a distinct phase in the deployment or configuration process.
   - [2. `shell` Stage](#2-shell-stage)
   - [3. `manifest` Stage](#3-manifest-stage)
   - [4. `j2_manifest` Stage](#4-j2_manifest-stage)
+  - [5. `kustomize` Stage](#5-kustomize-stage)
 
 ## Stages
 
@@ -43,6 +44,14 @@ Here's a breakdown of the common attributes within a stage:
   that will be rendered into a YAML manifest and then applied to the target
   environment. This is useful for creating dynamic configurations based on
   variables.
+- **`kustomize`**: (Optional) Configuration for applying Kustomize directories
+  to the target environment using `oc apply -k`. Contains the following
+  sub-parameters:
+  - **`directory`**: Specifies the path to a Kustomize directory or HTTP URL.
+    Supports both local directories (which are copied to the controller) and
+    remote URLs (applied directly).
+  - **`timeout`**: Specifies the timeout in seconds for the operation.
+    Defaults to 60 seconds if not specified.
 - **`patches`** (Optional): A list of YAML patches to apply to `manifests`
   and/or `j2_manifests`.
   - Each patch must define:
@@ -256,3 +265,67 @@ In this example, the `olm.yaml.j2` Jinja2 template is rendered, and the
 resulting YAML is applied. The `wait_conditions` then verify the successful
 creation and readiness of the involved kubernetes resources like namespaces,
 operator groups, catalog sources, subscriptions etc.
+
+### 5. `kustomize` Stage
+
+The `kustomize` stage type applies a Kustomize directory to the target
+environment using `oc apply -k`. This stage type is designed to work with
+Kustomize configurations, which provide a powerful way to manage Kubernetes
+manifests through composition, customization, and templating.
+
+The `kustomize.directory` attribute can specify either:
+
+- A local directory path containing Kustomize configuration files
+- An HTTP/HTTPS URL pointing to a remote Kustomize configuration
+
+For local directories, the entire directory structure is copied to the
+controller before being applied. For URLs, the Kustomize configuration is
+applied directly without local copying. This allows for flexible deployment
+strategies, including GitOps workflows where configurations are pulled from
+remote repositories.
+
+Local directories must contain a valid kustomization file:
+
+- `kustomization.yaml` (recommended)
+- `kustomization.yml` (alternative)
+- `Kustomization` (legacy format)
+
+The optional `kustomize.timeout` attribute allows you to specify how long to
+wait for the Kustomize operation to complete, defaulting to 60 seconds.
+
+**Example with local directory:**
+
+```yaml
+- name: Deploy application with Kustomize
+  documentation: |
+    Deploy the application using a local Kustomize overlay. This includes
+    the base configuration plus environment-specific customizations.
+  kustomize:
+    directory: "manifests/overlays/production"
+    timeout: 120
+  wait_conditions:
+    - "oc wait -n myapp deployment myapp --for condition=Available --timeout=300s"
+    - "oc wait -n myapp service myapp --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+```
+
+**Example with remote URL:**
+
+```yaml
+- name: Deploy from upstream Kustomize config
+  documentation: |
+    Deploy directly from a remote Git repository using Kustomize.
+    This enables GitOps workflows where configurations are maintained
+    in version control and deployed without local copies.
+  kustomize:
+    directory: "https://github.com/myorg/k8s-configs/deploy/overlays/staging?ref=v2.1.0"
+    timeout: 180
+  wait_conditions:
+    - "oc wait -n staging deployment --all --for condition=Available --timeout=600s"
+```
+
+In the first example, the local `manifests/overlays/production` directory is
+copied to the controller and applied. In the second example, the Kustomize
+configuration is pulled directly from the specified Git repository and branch.
+
+The `wait_conditions` ensure that deployed resources reach the desired state
+before proceeding to the next stage, providing reliable deployment workflows.
