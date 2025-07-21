@@ -1,15 +1,4 @@
 ---
-- name: TopoLVM common
-  documentation: |
-    Install the TopoLVM Container Storage Interface (CSI) driver on the OCP
-    cluster.
-
-    It uses LVMS (Logical Volume Manager Storage) to dynamically provision
-    local storage built from block devices on OCP nodes.
-
-    After you have installed LVM Storage, you must create an LVMCluster custom resource (CR).
-  manifest: "{{ role_path }}/files/common/manifests/deps/olm-topolvm.yaml"
-
 - name: Common OLM Dependencies
   documentation: |
     Install the OpenStack K8S dependencies. (Namespaces, OperatorGroup, and Subscription CRs.)

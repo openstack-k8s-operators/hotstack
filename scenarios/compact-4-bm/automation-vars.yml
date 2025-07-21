@@ -1,5 +1,12 @@
 ---
 stages:
+  - name: TopoLVM Dependencies
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/topolvm-deps-stages.yaml.j2")
+      }}
+
   - name: Dependencies
     documentation: |
       Installs essential dependencies and prerequisites for the OpenStack deployment.

@@ -8,6 +8,14 @@ stages:
         lookup("ansible.builtin.template",
                "common/stages/metal-platform-provisioning.yaml.j2")
       }}
+
+  - name: TopoLVM Dependencies
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/topolvm-deps-stages.yaml.j2")
+      }}
+
   - name: Dependencies
     stages: >-
       {{
