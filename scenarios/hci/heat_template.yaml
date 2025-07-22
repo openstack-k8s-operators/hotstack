@@ -105,12 +105,6 @@ resources:
       port_security_enabled: false
       value_specs: {get_param: net_value_specs}
 
-  octavia-net:
-    type: OS::Neutron::Net
-    properties:
-      port_security_enabled: false
-      value_specs: {get_param: net_value_specs}
-
   #
   # Subnets
   #
@@ -171,14 +165,6 @@ resources:
       enable_dhcp: false
       allocation_pools: [{start: 172.19.0.100, end: 172.19.0.150}]
 
-  octavia-subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      network: {get_resource: octavia-net}
-      ip_version: 4
-      cidr: 172.23.0.0/24
-      enable_dhcp: false
-      allocation_pools: [{start: 172.23.0.100, end: 172.23.0.150}]
 
   #
   # Routers
@@ -433,12 +419,12 @@ resources:
       port_security_enabled: false
       fixed_ips: [{ip_address: 172.19.0.5}]
 
-  master0-octavia-port:
+  master0-storagemgmt-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: octavia-net}
+      network: {get_resource: storagemgmt-net}
       port_security_enabled: false
-      fixed_ips: [{ip_address: 172.23.0.5}]
+      fixed_ips: [{ip_address: 172.20.0.5}]
 
   master0-trunk0:
     type: OS::Neutron::Trunk
@@ -454,7 +440,7 @@ resources:
         - port: {get_resource: master0-tenant-port}
           segmentation_id: 22
           segmentation_type: vlan
-        - port: {get_resource: master0-octavia-port}
+        - port: {get_resource: master0-storagemgmt-port}
           segmentation_id: 23
           segmentation_type: vlan
 
@@ -515,12 +501,12 @@ resources:
       port_security_enabled: false
       fixed_ips: [{ip_address: 172.19.0.6}]
 
-  master1-octavia-port:
+  master1-storagemgmt-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: octavia-net}
+      network: {get_resource: storagemgmt-net}
       port_security_enabled: false
-      fixed_ips: [{ip_address: 172.23.0.6}]
+      fixed_ips: [{ip_address: 172.20.0.6}]
 
   master1-trunk0:
     type: OS::Neutron::Trunk
@@ -536,7 +522,7 @@ resources:
         - port: {get_resource: master1-tenant-port}
           segmentation_id: 22
           segmentation_type: vlan
-        - port: {get_resource: master1-octavia-port}
+        - port: {get_resource: master1-storagemgmt-port}
           segmentation_id: 23
           segmentation_type: vlan
 
@@ -597,12 +583,12 @@ resources:
       port_security_enabled: false
       fixed_ips: [{ip_address: 172.19.0.7}]
 
-  master2-octavia-port:
+  master2-storagemgmt-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: octavia-net}
+      network: {get_resource: storagemgmt-net}
       port_security_enabled: false
-      fixed_ips: [{ip_address: 172.23.0.7}]
+      fixed_ips: [{ip_address: 172.20.0.7}]
 
   master2-trunk0:
     type: OS::Neutron::Trunk
@@ -618,7 +604,7 @@ resources:
         - port: {get_resource: master2-tenant-port}
           segmentation_id: 22
           segmentation_type: vlan
-        - port: {get_resource: master2-octavia-port}
+        - port: {get_resource: master2-storagemgmt-port}
           segmentation_id: 23
           segmentation_type: vlan
 
@@ -1117,6 +1103,19 @@ outputs:
     description: Ansible inventory
     value:
       all:
+        vars:
+          net_vlans:
+            internal_api: 20
+            storage: 21
+            tenant: 22
+            storage_mgmt: 23
+          net_cidrs:
+            machine: 192.168.32.0/20
+            ctlplane: 192.168.122.0/24
+            internal_api: 172.17.0.0/24
+            storage: 172.18.0.0/24
+            tenant: 172.19.0.0/24
+            storage_mgmt: 172.20.0.0/24
         children:
           controllers:
             vars:
