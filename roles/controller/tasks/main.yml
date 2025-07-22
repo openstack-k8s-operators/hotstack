@@ -23,6 +23,16 @@
 - name: Add controller-0 to the Ansible inventory
   ansible.builtin.add_host: "{{ controller_ansible_host }}"
 
+- name: Read Dataplane SSH private key content
+  ansible.builtin.slurp:
+    src: "{{ dataplane_ssh_private_key_file }}"
+  register: _dataplane_ssh_private_key_content
+
+- name: Read Nova migration SSH private key content
+  ansible.builtin.slurp:
+    src: "{{ nova_migration_ssh_private_key_file }}"
+  register: _nova_migration_ssh_private_key_content
+
 - name: Block delegated to controller-0
   delegate_to: "{{ controller_ansible_host.name }}"
   block:
@@ -86,7 +96,7 @@
 
     - name: Copy Dataplane ssh private key to controller
       ansible.builtin.copy:
-        src: "{{ dataplane_ssh_private_key_file }}"
+        content: "{{ _dataplane_ssh_private_key_content.content | b64decode }}"
         dest: >-
           {{
             [ssh_key_dir, 'id_rsa']
@@ -106,7 +116,7 @@
 
     - name: Copy Nova migrate ssh private key to controller
       ansible.builtin.copy:
-        src: "{{ nova_migration_ssh_private_key_file }}"
+        content: "{{ _nova_migration_ssh_private_key_content.content | b64decode }}"
         dest: >-
           {{
             [ssh_key_dir, 'id_nova_migrate']
