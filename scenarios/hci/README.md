@@ -4,8 +4,8 @@
 
 A Hyperconverged Infrastructure (HCI) scenario that sets up the foundation
 for combining compute and storage services on the same nodes. Deploys a
-3-master OpenShift cluster with 3 HCI-ready compute nodes and GitOps operator
-for future OpenStack deployment.
+3-master OpenShift cluster with 3 HCI-ready compute nodes and GitOps
+operator for future OpenStack deployment.
 
 ## Architecture
 
@@ -18,26 +18,33 @@ for future OpenStack deployment.
 
 - **machine-net**: 192.168.32.0/20 (OpenShift cluster)
 - **ctlplane-net**: 192.168.122.0/24 (Control plane)
-- **internal-api-net**: 172.17.0.0/24 (OpenStack internal)
-- **storage-net**: 172.18.0.0/24 (Storage backend)
-- **storagemgmt-net**: 172.20.0.0/24 (Ceph cluster)
-- **tenant-net**: 172.19.0.0/24 (Tenant traffic)
-- **octavia-net**: 172.23.0.0/24 (Load balancing)
+- **internal-api-net**: 172.17.0.0/24 (OpenStack internal, VLAN 20)
+- **storage-net**: 172.18.0.0/24 (Storage backend, VLAN 21)
+- **tenant-net**: 172.19.0.0/24 (Tenant traffic, VLAN 22)
+- **storagemgmt-net**: 172.20.0.0/24 (Storage management, VLAN 23)
+
+**Configuration:** Trunk ports with static MACs, storage management network
+shared by both masters and computes for HCI architecture.
 
 ## HCI-Ready Configuration
 
-Three compute nodes (edpm-compute-0/1/2) with:
+**Masters (master-0/1/2):**
 
-- **IPs**: 192.168.122.100-102
-- **Storage**: 3x 30GB Cinder volumes per node (ready for Ceph OSDs)
-- **Networks**: Multi-VLAN trunk configuration for OpenStack services
+- **Machine Net**: 192.168.34.10-12
+- **Control Plane**: 192.168.122.10-12
+- **Internal API**: 172.17.0.5-7 (VLAN 20)
+- **Storage**: 172.18.0.5-7 (VLAN 21)
+- **Tenant**: 172.19.0.5-7 (VLAN 22)
+- **Storage Mgmt**: 172.20.0.5-7 (VLAN 23)
 
-## Network Configuration
+**Compute Nodes (edpm-compute-0/1/2):**
 
-- **VLANs**: 20 (Internal API), 21 (Storage), 22 (Tenant),
-  23 (Storage Mgmt/Octavia)
-- **Trunk Ports**: Pre-configured for OpenStack service networks
-- **Static MACs**: Set on compute trunk ports for consistency
+- **Control Plane**: 192.168.122.100-102
+- **Internal API**: 172.17.0.100-102 (VLAN 20)
+- **Storage**: 172.18.0.100-102 (VLAN 21)
+- **Tenant**: 172.19.0.100-102 (VLAN 22)
+- **Storage Mgmt**: 172.20.0.100-102 (VLAN 23)
+- **Additional**: 3x 30GB Cinder volumes per node (ready for Ceph OSDs)
 
 ## Usage
 
