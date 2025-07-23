@@ -32,8 +32,26 @@
     state: directory
     mode: '0755'
 
-- name: "Stage: {{ item.name }} :: Copy kustomize directory"
-  when: not _kustomize_is_url
+- name: "Stage: {{ item.name }} :: Extract kustomize directory (delegated)"
+  when:
+    - not _kustomize_is_url
+    - ansible_delegated_host is defined or source_host != 'localhost'
+  ansible.builtin.unarchive:
+    src: data:application/gzip;base64,{{ _hotloop_file_contents['kustomize_' + item.kustomize.directory] }}
+    dest: "{{ manifests_dir }}"
+    remote_src: true
+    creates: >-
+      {{
+        [
+          manifests_dir,
+          _kustomize_dir_name
+        ] | ansible.builtin.path_join
+      }}
+
+- name: "Stage: {{ item.name }} :: Copy kustomize directory (local)"
+  when:
+    - not _kustomize_is_url
+    - ansible_delegated_host is not defined and source_host == 'localhost'
   ansible.builtin.copy:
     src: >-
       {{

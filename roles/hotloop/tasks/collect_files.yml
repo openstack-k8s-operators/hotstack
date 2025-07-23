@@ -1,0 +1,248 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Initialize file collection variables
+  ansible.builtin.set_fact:
+    _hotloop_static_files: []
+    _hotloop_template_files: []
+    _hotloop_kustomize_dirs: []
+    _hotloop_file_contents: {}
+
+- name: Check for static manifest files in work_dir
+  when: item.manifest is defined
+  delegate_to: "{{ source_host }}"
+  ansible.builtin.stat:
+    path: "{{ [work_dir, item.manifest] | ansible.builtin.path_join }}"
+  register: _work_dir_file_check
+  loop: "{{ __loaded_stages.outputs.stages }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Collect static manifest files
+  when: item.manifest is defined
+  delegate_to: "{{ source_host }}"
+  ansible.builtin.set_fact:
+    _hotloop_static_files: >-
+      {{
+        _hotloop_static_files + [
+          {
+            'stage_name': item.name,
+            'file_path': _file_path,
+            'manifest_key': item.manifest
+          }
+        ]
+      }}
+  vars:
+    _work_dir_result: "{{ _work_dir_file_check.results[ansible_loop.index0] }}"
+    _file_path: >-
+      {{
+        _work_dir_result.stat.path if _work_dir_result.stat.exists
+        else lookup('ansible.builtin.first_found', [item.manifest])
+      }}
+  loop: "{{ __loaded_stages.outputs.stages }}"
+  loop_control:
+    label: "{{ item.name }}"
+    extended: true
+
+- name: Check for template manifest files in work_dir
+  when: item.j2_manifest is defined
+  delegate_to: "{{ source_host }}"
+  ansible.builtin.stat:
+    path: "{{ [work_dir, item.j2_manifest] | ansible.builtin.path_join }}"
+  register: _work_dir_template_check
+  loop: "{{ __loaded_stages.outputs.stages }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Collect template manifest files
+  when: item.j2_manifest is defined
+  delegate_to: "{{ source_host }}"
+  ansible.builtin.set_fact:
+    _hotloop_template_files: >-
+      {{
+        _hotloop_template_files + [
+          {
+            'stage_name': item.name,
+            'file_path': _template_file_path,
+            'manifest_key': item.j2_manifest
+          }
+        ]
+      }}
+  vars:
+    _work_dir_template_result: "{{ _work_dir_template_check.results[ansible_loop.index0] }}"
+    _template_file_path: >-
+      {{
+        _work_dir_template_result.stat.path if _work_dir_template_result.stat.exists
+        else lookup('ansible.builtin.first_found', [item.j2_manifest])
+      }}
+  loop: "{{ __loaded_stages.outputs.stages }}"
+  loop_control:
+    label: "{{ item.name }}"
+    extended: true
+
+- name: Check for kustomize directories in work_dir
+  when:
+    - item.kustomize is defined
+    - item.kustomize.directory is defined
+    - not item.kustomize.directory.startswith(('http://', 'https://'))
+  delegate_to: "{{ source_host }}"
+  ansible.builtin.stat:
+    path: "{{ [work_dir, item.kustomize.directory] | ansible.builtin.path_join }}"
+  register: _work_dir_kustomize_check
+  loop: "{{ __loaded_stages.outputs.stages }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Collect kustomize directories
+  when:
+    - item.kustomize is defined
+    - item.kustomize.directory is defined
+    - not item.kustomize.directory.startswith(('http://', 'https://'))
+  delegate_to: "{{ source_host }}"
+  ansible.builtin.set_fact:
+    _hotloop_kustomize_dirs: >-
+      {{
+        _hotloop_kustomize_dirs + [
+          {
+            'stage_name': item.name,
+            'dir_path': _kustomize_dir_path,
+            'kustomize_key': item.kustomize.directory
+          }
+        ]
+      }}
+  vars:
+    _work_dir_kustomize_result: "{{ _work_dir_kustomize_check.results[ansible_loop.index0] }}"
+    _kustomize_dir_path: >-
+      {{
+        _work_dir_kustomize_result.stat.path if _work_dir_kustomize_result.stat.exists
+        else lookup('ansible.builtin.first_found', [item.kustomize.directory])
+      }}
+  loop: "{{ __loaded_stages.outputs.stages }}"
+  loop_control:
+    label: "{{ item.name }}"
+    extended: true
+
+- name: Read static manifest files
+  when: _hotloop_static_files | length > 0
+  delegate_to: "{{ source_host }}"
+  ansible.builtin.slurp:
+    src: "{{ item.file_path }}"
+  register: _static_file_contents
+  loop: "{{ _hotloop_static_files }}"
+  loop_control:
+    label: "{{ item.stage_name }}: {{ item.manifest_key }}"
+
+- name: Store static file contents
+  when: _hotloop_static_files | length > 0
+  ansible.builtin.set_fact:
+    _hotloop_file_contents: >-
+      {{
+        _hotloop_file_contents | combine({
+          item.item.manifest_key: item.content | b64decode
+        })
+      }}
+  loop: "{{ _static_file_contents.results }}"
+  loop_control:
+    label: "{{ item.item.stage_name }}: {{ item.item.manifest_key }}"
+
+- name: Template manifest files on source host
+  when: _hotloop_template_files | length > 0
+  delegate_to: "{{ source_host }}"
+  ansible.builtin.template:
+    src: "{{ item.file_path }}"
+    dest: "/tmp/hotloop_{{ item.stage_name | regex_replace('[^a-zA-Z0-9_-]', '_') }}_{{ item.manifest_key | basename | splitext | first }}.yaml"
+  register: _template_file_results
+  loop: "{{ _hotloop_template_files }}"
+  loop_control:
+    label: "{{ item.stage_name }}: {{ item.manifest_key }}"
+
+- name: Read templated manifest files
+  when: _hotloop_template_files | length > 0
+  delegate_to: "{{ source_host }}"
+  ansible.builtin.slurp:
+    src: "{{ item.dest }}"
+  register: _template_file_contents
+  loop: "{{ _template_file_results.results }}"
+  loop_control:
+    label: "{{ item.item.stage_name }}: {{ item.item.manifest_key }}"
+
+- name: Store template file contents
+  when: _hotloop_template_files | length > 0
+  ansible.builtin.set_fact:
+    _hotloop_file_contents: >-
+      {{
+        _hotloop_file_contents | combine({
+          item.item.item.manifest_key: item.content | b64decode
+        })
+      }}
+  loop: "{{ _template_file_contents.results }}"
+  loop_control:
+    label: "{{ item.item.item.stage_name }}: {{ item.item.item.manifest_key }}"
+
+- name: Clean up temporary template files
+  when: _hotloop_template_files | length > 0
+  delegate_to: "{{ source_host }}"
+  ansible.builtin.file:
+    path: "{{ item.dest }}"
+    state: absent
+  loop: "{{ _template_file_results.results }}"
+  loop_control:
+    label: "{{ item.item.stage_name }}: {{ item.item.manifest_key }}"
+
+- name: Archive kustomize directories
+  when: _hotloop_kustomize_dirs | length > 0
+  delegate_to: "{{ source_host }}"
+  community.general.archive:
+    path: "{{ item.dir_path }}"
+    dest: "/tmp/hotloop_kustomize_{{ item.stage_name | regex_replace('[^a-zA-Z0-9_-]', '_') }}.tar.gz"
+    format: gz
+  register: _kustomize_archives
+  loop: "{{ _hotloop_kustomize_dirs }}"
+  loop_control:
+    label: "{{ item.stage_name }}: {{ item.kustomize_key }}"
+
+- name: Read kustomize archives
+  when: _hotloop_kustomize_dirs | length > 0
+  delegate_to: "{{ source_host }}"
+  ansible.builtin.slurp:
+    src: "{{ item.dest }}"
+  register: _kustomize_archive_contents
+  loop: "{{ _kustomize_archives.results }}"
+  loop_control:
+    label: "{{ item.item.stage_name }}: {{ item.item.kustomize_key }}"
+
+- name: Store kustomize archive contents
+  when: _hotloop_kustomize_dirs | length > 0
+  ansible.builtin.set_fact:
+    _hotloop_file_contents: >-
+      {{
+        _hotloop_file_contents | combine({
+          ('kustomize_' + item.item.item.kustomize_key): item.content
+        })
+      }}
+  loop: "{{ _kustomize_archive_contents.results }}"
+  loop_control:
+    label: "{{ item.item.item.stage_name }}: {{ item.item.item.kustomize_key }}"
+
+- name: Clean up temporary kustomize archives
+  when: _hotloop_kustomize_dirs | length > 0
+  delegate_to: "{{ source_host }}"
+  ansible.builtin.file:
+    path: "{{ item.dest }}"
+    state: absent
+  loop: "{{ _kustomize_archives.results }}"
+  loop_control:
+    label: "{{ item.item.stage_name }}: {{ item.item.kustomize_key }}"

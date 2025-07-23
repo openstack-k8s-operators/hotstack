@@ -17,6 +17,8 @@
 wait_condition_retry_delay: 5
 wait_condition_retries: 50
 manifests_dir: /home/zuul/manifests
+source_host: localhost
+_hotloop_file_contents: {}
 automation:
   stages: []
 

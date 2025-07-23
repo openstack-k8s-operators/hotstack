@@ -29,12 +29,10 @@
 - name: "Stage: {{ item.name }} :: Copy manifest"
   ansible.builtin.copy:
     backup: true
-    src: >-
+    content: >-
       {{
-        [
-          work_dir,
-          item.manifest
-        ] | ansible.builtin.path_join
+        _hotloop_file_contents[item.manifest] if (ansible_delegated_host is defined or source_host != 'localhost')
+        else lookup('ansible.builtin.file', [work_dir, item.manifest] | ansible.builtin.path_join)
       }}
     dest: >-
       {{

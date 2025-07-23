@@ -227,6 +227,21 @@ stages:
       timeout: 180
 ```
 
+## Delegation Support
+
+The hotloop role supports delegation to remote hosts. When using
+`delegate_to`, the role automatically:
+
+1. Pre-fetches all required manifest files and kustomize directories
+   from the source host
+2. Templates Jinja2 manifests on the source host before transferring
+3. Uses the pre-fetched content during execution on the delegated host
+
+### Variables for Delegation
+
+* `source_host`: (string) The host to fetch files from when using
+  delegation. Defaults to `localhost`.
+
 ## Example playbook
 
 ```yaml
@@ -257,4 +272,5 @@ stages:
       delegate_to: controller-0
       vars:
         work_dir: "{{ scenario_dir }}/{{ scenario }}"
+        source_host: localhost  # Optional, defaults to localhost
 ```

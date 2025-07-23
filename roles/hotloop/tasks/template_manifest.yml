@@ -27,13 +27,11 @@
     mode: '0755'
 
 - name: "Stage: {{ item.name }} :: Template manifest"
-  ansible.builtin.template:
-    src: >-
+  ansible.builtin.copy:
+    content: >-
       {{
-        [
-          work_dir,
-          item.j2_manifest
-        ] | ansible.builtin.path_join
+        _hotloop_file_contents[item.j2_manifest] if (ansible_delegated_host is defined or source_host != 'localhost')
+        else lookup('ansible.builtin.template', [work_dir, item.j2_manifest] | ansible.builtin.path_join)
       }}
     dest: >-
       {{

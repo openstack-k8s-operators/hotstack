@@ -38,6 +38,11 @@
     stages: "{{ automation.stages }}"
   register: __loaded_stages
 
+- name: Collect and pre-fetch files when delegating
+  when: ansible_delegated_host is defined or source_host != 'localhost'
+  ansible.builtin.include_tasks:
+    file: collect_files.yml
+
 - name: Execute automation stages
   ansible.builtin.include_tasks:
     file: execute_stage.yml
