@@ -8,6 +8,7 @@ representing a distinct phase in the deployment or configuration process.
 ## Table of Contents
 
 - [Stages](#stages)
+- [Path Resolution](#path-resolution)
 - [Stage Types](#stage-types)
   - [1. `command` Stage](#1-command-stage)
   - [2. `shell` Stage](#2-shell-stage)
@@ -148,6 +149,21 @@ Here's a breakdown of the common attributes within a stage:
     run_conditions:
       - "{{ extra_stages is defined and extra_stages }}"
   ```
+
+## Path Resolution
+
+When specifying file paths in stage attributes (`manifest`, `j2_manifest`,
+`kustomize.directory`), the hotloop role handles them differently based on
+whether they are relative or absolute paths:
+
+- **Relative paths**: Automatically resolved within the synced work directory
+  that contains your scenario files. This is the recommended approach for
+  scenario-specific manifests and templates.
+
+- **Absolute paths** (starting with `/`): Must exist on the Ansible controller
+  host where the hotloop role is executed. These are typically used for
+  role-provided files (e.g., `{{ role_path }}/files/common/manifests/...`) or
+  system-wide resources.
 
 ## Stage Types
 

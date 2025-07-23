@@ -227,6 +227,20 @@ stages:
       timeout: 180
 ```
 
+## Work Directory Isolation
+
+The hotloop role always creates an isolated work copy at
+`manifests_dir/hotloop_work/` before executing stages. This ensures:
+
+* Consistent behavior whether delegated or not
+* Safe operations that don't modify source files
+* Clean work environment for patches and modifications
+* Role files still found through Ansible's standard mechanisms
+
+**Important**: Any absolute paths (starting with `/`) specified in stage manifests
+must exist on the Ansible controller host where the hotloop role is executed.
+Relative paths are automatically resolved within the synced work directory.
+
 ## Example playbook
 
 ```yaml

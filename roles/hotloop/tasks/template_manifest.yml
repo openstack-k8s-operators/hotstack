@@ -26,14 +26,24 @@
     state: directory
     mode: '0755'
 
+- name: "Stage: {{ item.name }} :: Check if j2_manifest exists in synced work directory"
+  when: not item.j2_manifest.startswith('/')
+  ansible.builtin.stat:
+    path: >-
+      {{
+        [_work_dir, item.j2_manifest] |
+        ansible.builtin.path_join
+      }}
+  register: _synced_j2_manifest_stat
+
 - name: "Stage: {{ item.name }} :: Template manifest"
   ansible.builtin.template:
+    remote_src: "{{ _synced_j2_manifest_stat.stat.exists | default(false) }}"
     src: >-
       {{
-        [
-          work_dir,
-          item.j2_manifest
-        ] | ansible.builtin.path_join
+        [_work_dir, item.j2_manifest] | ansible.builtin.path_join
+        if _synced_j2_manifest_stat.stat.exists | default(false)
+        else item.j2_manifest
       }}
     dest: >-
       {{

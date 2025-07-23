@@ -32,15 +32,25 @@
     state: directory
     mode: '0755'
 
+- name: "Stage: {{ item.name }} :: Check if kustomize directory exists in synced work directory"
+  when: not _kustomize_is_url and not item.kustomize.directory.startswith('/')
+  ansible.builtin.stat:
+    path: >-
+      {{
+        [_work_dir, item.kustomize.directory] |
+        ansible.builtin.path_join
+      }}
+  register: _synced_kustomize_stat
+
 - name: "Stage: {{ item.name }} :: Copy kustomize directory"
   when: not _kustomize_is_url
   ansible.builtin.copy:
+    remote_src: "{{ _synced_kustomize_stat.stat.exists | default(false) }}"
     src: >-
       {{
-        [
-          work_dir,
-          item.kustomize.directory
-        ] | ansible.builtin.path_join
+        [_work_dir, item.kustomize.directory] | ansible.builtin.path_join
+        if _synced_kustomize_stat.stat.exists | default(false)
+        else item.kustomize.directory
       }}/
     dest: >-
       {{
