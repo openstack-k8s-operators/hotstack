@@ -111,12 +111,14 @@ pip install ansible
 
 HotStack depends on specific Ansible collections that provide modules for
 interacting with OpenStack and performing cryptographic operations. Install
-`community.general`, `community.crypto` and `openstack.cloud` collections.
+`community.general`, `ansible.posix`, `community.crypto` and `openstack.cloud`
+collections.
 
 ```bash
 ansible-galaxy collection install community.general
 ansible-galaxy collection install community.crypto
 ansible-galaxy collection install openstack.cloud
+ansible-galaxy collection install ansible.posix
 ```
 
 ##### OpenStack and Heat Client

@@ -26,15 +26,25 @@
     state: directory
     mode: '0755'
 
+- name: "Stage: {{ item.name }} :: Check if manifest exists in synced work directory"
+  when: not item.manifest.startswith('/')
+  ansible.builtin.stat:
+    path: >-
+      {{
+        [_work_dir, item.manifest] |
+        ansible.builtin.path_join
+      }}
+  register: _synced_manifest_stat
+
 - name: "Stage: {{ item.name }} :: Copy manifest"
   ansible.builtin.copy:
     backup: true
+    remote_src: "{{ _synced_manifest_stat.stat.exists | default(false) }}"
     src: >-
       {{
-        [
-          work_dir,
-          item.manifest
-        ] | ansible.builtin.path_join
+        [_work_dir, item.manifest] | ansible.builtin.path_join
+        if _synced_manifest_stat.stat.exists | default(false)
+        else item.manifest
       }}
     dest: >-
       {{

@@ -25,6 +25,11 @@
       - manifests_dir is defined
       - manifests_dir | length > 0
 
+- name: Load stages
+  hotloop_stage_loader:
+    stages: "{{ automation.stages }}"
+  register: __loaded_stages
+
 - name: Ensure directory exists
   ansible.builtin.file:
     path: "{{ item }}"
@@ -33,12 +38,63 @@
   loop:
     - "{{ manifests_dir }}"
 
-- name: Load stages
-  hotloop_stage_loader:
-    stages: "{{ automation.stages }}"
-  register: __loaded_stages
+- name: Create work directory
+  ansible.builtin.file:
+    path: >-
+      {{
+        [manifests_dir, 'hotloop_work'] |
+        ansible.builtin.path_join
+      }}
+    state: directory
+    mode: '0755'
+
+- name: Sync work files to work directory
+  vars:
+    _source_host: >-
+      {{
+        hostvars[inventory_hostname]['ansible_host'] |
+        default(inventory_hostname)
+      }}
+    _source_path: "{{ [work_dir, ''] | ansible.builtin.path_join }}"
+    _target_path: >-
+      {{
+        [manifests_dir, 'hotloop_work', ''] |
+        ansible.builtin.path_join
+      }}
+    _is_local: >-
+      {{
+        hostvars[inventory_hostname]['ansible_connection'] |
+        default('') == 'local'
+      }}
+  block:
+    - name: Remove target directory for clean sync (local connection)
+      when: _is_local
+      ansible.builtin.file:
+        path: "{{ _target_path }}"
+        state: absent
+
+    - name: Copy work files (local connection)
+      when: _is_local
+      ansible.builtin.copy:
+        src: "{{ _source_path }}"
+        dest: "{{ _target_path }}"
+        mode: preserve
+
+    - name: Sync work files (remote connection)
+      when: not _is_local
+      ansible.posix.synchronize:
+        src: "{{ _source_host }}:{{ _source_path }}"
+        dest: "{{ _target_path }}"
+        delete: true
+        mode: pull
 
 - name: Execute automation stages
+  vars:
+    _work_dir: >-
+      {{
+        [manifests_dir, 'hotloop_work'] |
+        ansible.builtin.path_join
+      }}
   ansible.builtin.include_tasks:
     file: execute_stage.yml
   loop: "{{ __loaded_stages.outputs.stages }}"
