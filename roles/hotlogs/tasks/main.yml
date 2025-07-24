@@ -20,14 +20,24 @@
     state: directory
     mode: "0750"
 
-# TODO: Use ansible.posix.synchronize module instead
 - name: Collect hotstack data
-  ansible.builtin.command:
-    cmd: >-
-      rsync -avh
-        zuul@{{ controller_floating_ip }}:{{ item }}
-          {{ hotlog_dir }}/{{ item | ansible.builtin.basename | ansible.builtin.regex_replace('^[.]', '') }}
+  delegate_to: "{{ inventory_hostname }}"
+  ansible.posix.synchronize:
+    src: "zuul@{{ controller_floating_ip }}:{{ item }}"
+    dest: >-
+      {{
+        [
+          hotlog_dir,
+          item | ansible.builtin.basename
+          | ansible.builtin.regex_replace('^[.]', '')
+        ] | ansible.builtin.path_join
+      }}
+    rsync_timeout: 300
+    mode: pull
+    archive: false
+    recursive: true
+    times: true
+    copy_links: true
+    dirs: true
   loop: "{{ hotlog_collect_paths }}"
-  register: _rsync_results
-  failed_when: _rsync_results.rc not in [0, 23]
-  ignore_errors: true
+  ignore_errors: true  # noqa: ignore-errors
