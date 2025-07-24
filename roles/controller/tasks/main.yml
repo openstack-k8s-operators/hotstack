@@ -134,13 +134,6 @@
           }}
         mode: '0644'
 
-    - name: Add controller public key to inventory host authorized_keys
-      ansible.posix.authorized_key:
-        user: "{{ ansible_user_id }}"
-        key: "{{ dataplane_ssh_public_key }}"
-        comment: "controller-0 hotloop sync access"
-      delegate_to: "{{ inventory_hostname }}"
-
     - name: Copy dataplane authorized keys to controller
       ansible.builtin.copy:
         content: |

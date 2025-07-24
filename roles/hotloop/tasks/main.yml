@@ -50,11 +50,6 @@
 
 - name: Sync work files to work directory
   vars:
-    _source_host: >-
-      {{
-        hostvars[inventory_hostname]['ansible_host'] |
-        default(inventory_hostname)
-      }}
     _source_path: "{{ [work_dir, ''] | ansible.builtin.path_join }}"
     _target_path: >-
       {{
@@ -66,6 +61,9 @@
         hostvars[inventory_hostname]['ansible_connection'] |
         default('') == 'local'
       }}
+    _dest_user: "{{ hostvars['controller-0']['ansible_user'] | default('zuul') }}"
+    _dest_host: "{{ hostvars['controller-0']['ansible_host'] | default('controller-0') }}"
+    _dest_target_path: "{{ _dest_user }}@{{ _dest_host }}:{{ _target_path }}"
   block:
     - name: Remove target directory for clean sync (local connection)
       when: _is_local
@@ -80,13 +78,16 @@
         dest: "{{ _target_path }}"
         mode: preserve
 
-    - name: Sync work files (remote connection)
+    - name: Sync work files (remote connection) - using synchronize push
       when: not _is_local
+      delegate_to: "{{ inventory_hostname }}"
       ansible.posix.synchronize:
-        src: "{{ _source_host }}:{{ _source_path }}"
-        dest: "{{ _target_path }}"
+        src: "{{ _source_path }}"
+        dest: "{{ _dest_target_path }}"
+        mode: push
+        archive: true
         delete: true
-        mode: pull
+        rsync_timeout: 300
 
 - name: Execute automation stages
   vars:
