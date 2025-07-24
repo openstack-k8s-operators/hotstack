@@ -3,3 +3,5 @@ all:
   hosts:
     localhost:
       ansible_connection: local
+  vars:
+    controller_ssh_pub_key: "{{ lookup('ansible.builtin.file', '~/.ssh/id_rsa.pub') }}"
