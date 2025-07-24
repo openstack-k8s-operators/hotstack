@@ -253,6 +253,14 @@ command or configuration file.
 export OS_CLOUD=my_openstack_cloud_1
 ```
 
+### Inventory Configuration
+
+The `inventory.yml` file contains global configuration settings that apply to
+all scenarios. Key settings include:
+
+- `controller_ssh_pub_key`: SSH public key for the controller node. This is
+  centrally configured here and automatically available to all scenarios.
+
 ### Customizing bootstrap_vars.yml
 
 Each deployment scenario within the `scenarios/` directory (e.g.,
