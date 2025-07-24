@@ -15,6 +15,7 @@
 # under the License.
 
 - name: Extract ingress CA cert
+  no_log: true
   register: _ingress_cert
   ansible.builtin.shell: |
     POD_NAME=$({{ bin_dir }}/oc get pods -n openshift-authentication -o jsonpath='{.items[0].metadata.name}')
