@@ -24,3 +24,9 @@ hotlog_collect_paths:
   - "{{ base_dir }}/cluster-custom-config"
   - "{{ base_dir }}/data"
   - "{{ base_dir }}/manifests"
+  - "{{ base_dir }}/must-gather.tar.gz"
+
+hotlogs_must_gather_enabled: true
+hotlogs_must_gather_additional_namespaces: sushy-emulator
+hotlogs_must_gather_image_stream: "openshift/must-gather"
+hotlogs_must_gather_image: "quay.io/openstack-k8s-operators/openstack-must-gather"
