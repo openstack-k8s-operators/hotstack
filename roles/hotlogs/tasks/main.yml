@@ -93,3 +93,17 @@
     dirs: true
   loop: "{{ hotlog_collect_paths }}"
   ignore_errors: true  # noqa: ignore-errors
+
+- name: Untar must-gather
+  delegate_to: "{{ inventory_hostname }}"
+  ansible.builtin.shell: >-
+    tar -xzf {{ hotlog_dir }}/must-gather.tar.gz
+    -C {{ hotlog_dir }}
+  ignore_errors: true  # noqa: ignore-errors
+
+- name: Remove must-gather tar.gz
+  delegate_to: "{{ inventory_hostname }}"
+  ansible.builtin.file:
+    path: "{{ hotlog_dir }}/must-gather.tar.gz"
+    state: absent
+  ignore_errors: true  # noqa: ignore-errors
