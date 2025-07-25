@@ -7,4 +7,6 @@
         - vexxhost-hotstack-ipxe-image
         - vexxhost-hotstack-blank-image
         - vexxhost-hotstack-controller-image
+    github-experimental-trigger:
+      jobs:
         - vexxhost-hotstack-sno-2-bm
