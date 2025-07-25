@@ -17,7 +17,6 @@
 hotlog_dir: "{{ playbook_dir }}/logs"
 
 base_dir: /home/zuul
- "{{ base_dir }}/ocp-cluster"
 
 hotlog_collect_paths:
   - "{{ base_dir }}/ocp-cluster/.openshift_install.log"
