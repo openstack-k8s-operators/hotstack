@@ -38,23 +38,18 @@
   loop:
     - "{{ manifests_dir }}"
 
-- name: Create work directory
-  ansible.builtin.file:
-    path: >-
-      {{
-        [manifests_dir, 'hotloop_work'] |
-        ansible.builtin.path_join
-      }}
+- name: Create temporary hotloop work directory
+  ansible.builtin.tempfile:
     state: directory
-    mode: '0755'
+    suffix: hotloop_work_temp
+  register: _work_temp
 
 - name: Sync work files to work directory
   vars:
     _source_path: "{{ [work_dir, ''] | ansible.builtin.path_join }}"
     _target_path: >-
       {{
-        [manifests_dir, 'hotloop_work', ''] |
-        ansible.builtin.path_join
+        [_work_temp.path, ''] | ansible.builtin.path_join
       }}
     _is_local: >-
       {{
@@ -91,11 +86,12 @@
 
 - name: Execute automation stages
   vars:
-    _work_dir: >-
-      {{
-        [manifests_dir, 'hotloop_work'] |
-        ansible.builtin.path_join
-      }}
+    _work_dir: "{{ _work_temp.path }}"
   ansible.builtin.include_tasks:
     file: execute_stage.yml
   loop: "{{ __loaded_stages.outputs.stages }}"
+
+- name: Remove temporary hotloop work directory
+  ansible.builtin.file:
+    path: "{{ _work_temp.path }}"
+    state: absent
