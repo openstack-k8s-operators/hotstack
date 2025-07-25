@@ -17,13 +17,13 @@
 hotlog_dir: "{{ playbook_dir }}/logs"
 
 base_dir: /home/zuul
-ocp_agent_installer_cluster_dir: "{{ base_dir }}/ocp-cluster"
+ "{{ base_dir }}/ocp-cluster"
 
 hotlog_collect_paths:
-  - "{{ ocp_agent_installer_cluster_dir }}/.openshift_install.log"
-  - "{{ base_dir }}/cluster-custom-config"
-  - "{{ base_dir }}/data"
-  - "{{ base_dir }}/manifests"
+  - "{{ base_dir }}/ocp-cluster/.openshift_install.log"
+  - "{{ base_dir }}/cluster-custom-config/"
+  - "{{ base_dir }}/data/"
+  - "{{ base_dir }}/manifests/"
   - "{{ base_dir }}/must-gather.tar.gz"
 
 hotlogs_must_gather_enabled: true

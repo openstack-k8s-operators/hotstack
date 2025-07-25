@@ -24,6 +24,7 @@
   when: hotlogs_must_gather_enabled | bool
   block:
     - name: Run must-gather to collect diagnostic information
+      no_log: true
       delegate_to: controller-0
       ansible.builtin.shell: >-
         oc adm must-gather
@@ -46,6 +47,7 @@
           }}
 
     - name: Compress must-gather
+      no_log: true
       delegate_to: controller-0
       ansible.builtin.shell: >-
         tar -czf {{ base_dir }}/must-gather.tar.gz
@@ -77,7 +79,9 @@
       {{
         [
           hotlog_dir,
-          item | ansible.builtin.regex_replace('^[.]', '')
+          item
+          | ansible.builtin.basename
+          | ansible.builtin.regex_replace('^[.]', '')
         ] | ansible.builtin.path_join
       }}
     rsync_timeout: 300
