@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+__test: __test
 hotlog_dir: "{{ playbook_dir }}/logs"
 
 base_dir: /home/zuul
