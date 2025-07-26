@@ -25,6 +25,13 @@
     state: directory
     mode: "0750"
 
+- name: Create hotlogs sub dirs
+  ansible.builtin.file:
+    path: "{{ hotlog_dir }}/{{ item.dest_dir }}"
+    state: directory
+    mode: "0750"
+  loop: "{{ hotlog_collect_paths }}"
+
 - name: Must-gather operations
   when: hotlogs_must_gather_enabled | bool
   block:
@@ -60,12 +67,13 @@
 - name: Collect hotstack data
   delegate_to: "{{ inventory_hostname }}"
   ansible.posix.synchronize:
-    src: "zuul@{{ controller_floating_ip }}:{{ item }}"
+    src: "zuul@{{ controller_floating_ip }}:{{ item.src }}"
     dest: >-
       {{
         [
           hotlog_dir,
-          item
+          item.dest_dir,
+          item.src
           | ansible.builtin.basename
           | ansible.builtin.regex_replace('^[.]', '')
         ] | ansible.builtin.path_join
