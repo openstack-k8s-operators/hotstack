@@ -24,7 +24,7 @@ hotlog_collect_paths:
   - src: "{{ base_dir }}/cluster-custom-config/"
     dest_dir: ocp_cluster
   - src: "{{ base_dir }}/data/"
-    dest_dir: ocp_cluster
+    dest_dir: data
   - src: "{{ base_dir }}/manifests/"
     dest_dir: manifests
   - src: "{{ base_dir }}/must-gather.tar.gz"
