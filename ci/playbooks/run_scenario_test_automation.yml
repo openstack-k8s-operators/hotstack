@@ -1,0 +1,37 @@
+---
+- name: Create hotstack scenario
+  hosts: hotstack
+  vars:
+    hotstack_work_dir: "{{ ansible_user_dir }}/hotstack"
+  tasks:
+
+    - name: Fetch bootstrap vars from remote to zuul executor
+      ansible.builtin.fetch:
+        src: "{{ scenario_dir }}/{{ scenario }}/bootstrap_vars.yml"
+        dest: "{{ zuul.executor.work_root }}/bootstrap_vars.yml"
+        flat: true
+
+    - name: Load bootstrap vars with template resolution
+      ansible.builtin.include_vars:
+        file: "{{ zuul.executor.work_root }}/bootstrap_vars.yml"
+        name: bootstrap_vars
+
+    - name: Fetch test operator automation vars from remote to zuul executor
+      ansible.builtin.fetch:
+        src: "{{ bootstrap_vars.test_operator_automation_vars_file }}"
+        dest: "{{ zuul.executor.work_root }}/{{ bootstrap_vars.test_operator_automation_vars_file | basename }}"
+        flat: true
+
+    - name: Load test operator automation vars with template resolution
+      ansible.builtin.include_vars:
+        file: "{{ zuul.executor.work_root }}/{{ bootstrap_vars.test_operator_automation_vars_file | basename }}"
+        name: test_operator_automation_vars
+
+    - name: Run scenario test automation
+      vars:
+        work_dir: "{{ scenario_dir }}/{{ scenario }}"
+        automation: "{{ test_operator_automation_vars }}"
+      ansible.builtin.include_role:
+        name: hotloop
+        apply:
+          delegate_to: controller-0
