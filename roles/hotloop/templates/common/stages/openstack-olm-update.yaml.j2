@@ -1,4 +1,6 @@
 - name: Approve openstack-operator update Install plan
+  documentation: |
+    Approve the OpenStack operator update install plan.
   command: hotstack-approve-install-plan --update
   wait_conditions:
     - >-
@@ -6,6 +8,8 @@
       --for jsonpath='{.status.phase}'=Succeeded --timeout=60s
 
 - name: Apply Openstack init resource if starting ClusterServiceVersion >= v1.0.0 and < v1.0.7
+  documentation: |
+    Apply OpenStack initialization resource for specific operator versions.
   manifest: "{{ role_path }}/files/common/manifests/openstack.yaml"
   wait_conditions:
     - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=180s"
