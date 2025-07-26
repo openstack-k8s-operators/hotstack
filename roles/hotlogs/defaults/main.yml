@@ -19,11 +19,16 @@ hotlog_dir: "{{ playbook_dir }}/logs"
 base_dir: /home/zuul
 
 hotlog_collect_paths:
-  - "{{ base_dir }}/ocp-cluster/.openshift_install.log"
-  - "{{ base_dir }}/cluster-custom-config/"
-  - "{{ base_dir }}/data/"
-  - "{{ base_dir }}/manifests/"
-  - "{{ base_dir }}/must-gather.tar.gz"
+  - src: "{{ base_dir }}/ocp-cluster/.openshift_install.log"
+    dest_dir: ocp_cluster
+  - src: "{{ base_dir }}/cluster-custom-config/"
+    dest_dir: ocp_cluster
+  - src: "{{ base_dir }}/data/"
+    dest_dir: ocp_cluster
+  - src: "{{ base_dir }}/manifests/"
+    dest_dir: manifests
+  - src: "{{ base_dir }}/must-gather.tar.gz"
+    dest_dir: .
 
 hotlogs_must_gather_enabled: true
 hotlogs_must_gather_additional_namespaces: sushy-emulator
