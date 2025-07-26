@@ -22,18 +22,16 @@ must-gather operations to create comprehensive diagnostic archives.
   (defaults to: `"{{ playbook_dir }}/logs"`)
 - `base_dir`: Base directory on the remote controller where files are located
   (defaults to: `/home/zuul`)
-- `ocp_agent_installer_cluster_dir`: Directory containing OpenShift
-  installation files (defaults to: `"{{ base_dir }}/ocp-cluster"`)
 
 ### Collection Paths
 
 - `hotlog_collect_paths`: List of files and directories to collect from the
   remote controller
   - Default paths include:
-    - OpenShift installation log: `{{ ocp_agent_installer_cluster_dir }}/.openshift_install.log`
-    - Cluster custom config: `{{ base_dir }}/cluster-custom-config`
-    - Data directory: `{{ base_dir }}/data`
-    - Manifests directory: `{{ base_dir }}/manifests`
+    - OpenShift installation log: `{{ base_dir }}/ocp-cluster/.openshift_install.log`
+    - Cluster custom config: `{{ base_dir }}/cluster-custom-config/`
+    - Data directory: `{{ base_dir }}/data/`
+    - Manifests directory: `{{ base_dir }}/manifests/`
     - Must-gather archive: `{{ base_dir }}/must-gather.tar.gz`
 
 ### Must-Gather Configuration
@@ -46,6 +44,12 @@ must-gather operations to create comprehensive diagnostic archives.
   (defaults to: `"openshift/must-gather"`)
 - `hotlogs_must_gather_image`: Specific must-gather image to use
   (defaults to: `"quay.io/openstack-k8s-operators/openstack-must-gather"`)
+- `hotlogs_must_gather_timeout`: Timeout for must-gather operation
+  (defaults to: `10m`)
+- `hotlogs_must_gather_decompress`: SOS decompress setting
+  (defaults to: `0`)
+- `hotlogs_must_gather_sos_edpm`: SOS EDPM collection setting
+  (defaults to: `all`)
 
 ## Example Playbook
 
@@ -78,6 +82,7 @@ must-gather operations to create comprehensive diagnostic archives.
         hotlog_dir: "/tmp/deployment-logs"
         hotlogs_must_gather_enabled: true
         hotlogs_must_gather_additional_namespaces: "custom-namespace,another-namespace"
+        hotlogs_must_gather_timeout: 10m
         hotlog_collect_paths:
           - "/home/zuul/custom-logs"
           - "/home/zuul/additional-config"
@@ -93,7 +98,7 @@ logs/
 ├── cluster-custom-config/       # Custom cluster configuration
 ├── data/                        # Deployment data files
 ├── manifests/                   # Kubernetes manifests
-└── must-gather.tar.gz           # Compressed must-gather diagnostics
+└── must-gather/                 # Must-gather diagnostic data
 ```
 
 ## Error Handling

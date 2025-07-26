@@ -1,0 +1,67 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Must-gather operations
+  block:
+    - name: Run must-gather to collect diagnostic information
+      no_log: true
+      delegate_to: controller-0
+      ansible.builtin.shell: >-
+        oc adm must-gather
+        --timeout={{ hotlogs_must_gather_timeout }}
+        --image-stream={{ hotlogs_must_gather_image_stream }}
+        --image={{ hotlogs_must_gather_image }}
+        --dest-dir="{{ base_dir }}/must-gather"
+        --
+        ADDITIONAL_NAMESPACES={{ hotlogs_must_gather_additional_namespaces }}
+        SOS_EDPM={{ hotlogs_must_gather_sos_edpm }}
+        SOS_DECOMPRESS={{ hotlogs_must_gather_decompress }}
+        gather
+      register: must_gather_result
+
+    - name: Display must-gather result
+      ansible.builtin.debug:
+        msg: >-
+          {{
+            'Must-gather completed successfully'
+            if must_gather_result.rc == 0
+            else 'Must-gather failed'
+          }}
+
+    - name: Compress must-gather
+      no_log: true
+      delegate_to: controller-0
+      ansible.builtin.shell: >-
+        tar -czf {{ base_dir }}/must-gather.tar.gz
+        --ignore-failed-read
+        -C {{ base_dir }} must-gather
+      register: _compress_result
+
+    - name: Debug compress result
+      ansible.builtin.debug:
+        msg: >-
+          {{
+            'Must-gather compression completed successfully'
+            if _compress_result.rc == 0
+            else 'Must-gather compression failed'
+          }}
+
+  rescue:
+    - name: Debug must-gather failure
+      ansible.builtin.debug:
+        msg: >-
+          Must-gather operations failed:
+          {{ ansible_failed_result.msg | default('Unknown error') }}
