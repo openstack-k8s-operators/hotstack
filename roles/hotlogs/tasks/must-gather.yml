@@ -19,12 +19,12 @@
     - name: Run must-gather to collect diagnostic information
       no_log: true
       delegate_to: controller-0
-      ansible.builtin.shell: >-
+      ansible.builtin.command: >-
         oc adm must-gather
-        --timeout={{ hotlogs_must_gather_timeout }}
         --image-stream={{ hotlogs_must_gather_image_stream }}
         --image={{ hotlogs_must_gather_image }}
         --dest-dir="{{ base_dir }}/must-gather"
+        --timeout={{ hotlogs_must_gather_timeout }}
         --
         ADDITIONAL_NAMESPACES={{ hotlogs_must_gather_additional_namespaces }}
         SOS_EDPM={{ hotlogs_must_gather_sos_edpm }}
@@ -44,7 +44,7 @@
     - name: Compress must-gather
       no_log: true
       delegate_to: controller-0
-      ansible.builtin.shell: >-
+      ansible.builtin.command: >-
         tar -czf {{ base_dir }}/must-gather.tar.gz
         --ignore-failed-read
         -C {{ base_dir }} must-gather
