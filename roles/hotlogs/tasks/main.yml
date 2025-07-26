@@ -14,6 +14,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+- name: Initialize failure tracking
+  ansible.builtin.set_fact:
+    hotlogs_collection_failed: false
+    hotlogs_failures: []
+
 - name: Ensure logs directory
   ansible.builtin.file:
     path: "{{ hotlog_dir }}"
@@ -47,6 +52,11 @@
           Must-gather operations failed:
           {{ ansible_failed_result.msg | default('Unknown error') }}
 
+    - name: Track must-gather failure
+      ansible.builtin.set_fact:
+        hotlogs_collection_failed: true
+        hotlogs_failures: "{{ hotlogs_failures + ['Must-gather operations failed'] }}"
+
 - name: Collect hotstack data
   delegate_to: "{{ inventory_hostname }}"
   ansible.posix.synchronize:
@@ -68,7 +78,15 @@
     copy_links: true
     dirs: true
   loop: "{{ hotlog_collect_paths }}"
+  register: hotstack_sync_results
   ignore_errors: true  # noqa: ignore-errors
+
+- name: Check hotstack data collection failures
+  ansible.builtin.set_fact:
+    hotlogs_collection_failed: true
+    hotlogs_failures: "{{ hotlogs_failures + ['Failed to collect: ' + item.item] }}"
+  loop: "{{ hotstack_sync_results.results }}"
+  when: item.failed | default(false)
 
 - name: Must-gather post operations
   when: hotlogs_must_gather_enabled | bool
@@ -92,3 +110,25 @@
         msg: >-
           Must-gather post operations failed:
           {{ ansible_failed_result.msg | default('Unknown error') }}
+
+    - name: Track must-gather post operations failure
+      ansible.builtin.set_fact:
+        hotlogs_collection_failed: true
+        hotlogs_failures: "{{ hotlogs_failures + ['Must-gather post operations failed'] }}"
+
+- name: Report collection summary
+  ansible.builtin.debug:
+    msg: >-
+      Log collection completed.
+      {% if hotlogs_collection_failed %}
+      Some operations failed: {{ hotlogs_failures | join(', ') }}
+      {% else %}
+      All operations completed successfully.
+      {% endif %}
+
+- name: Fail if any collection operations failed
+  ansible.builtin.fail:
+    msg: >-
+      Log collection completed with failures: {{ hotlogs_failures | join(', ') }}.
+      Collected data may be incomplete.
+  when: hotlogs_collection_failed
