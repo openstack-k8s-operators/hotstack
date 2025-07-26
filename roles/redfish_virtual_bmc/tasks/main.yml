@@ -26,7 +26,9 @@
       ansible.builtin.dnf:
         name: httpd-tools
         state: present
+
     - name: Generate htpasswd
+      no_log: true
       register: _htpasswd
       ansible.builtin.command:
         cmd: "htpasswd -nbB {{ redfish_username | quote }} {{ redfish_password | quote }}"
