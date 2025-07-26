@@ -20,56 +20,9 @@
     state: directory
     mode: "0750"
 
-- name: Must-gather operations
+- name: Include must-gather tasks
   when: hotlogs_must_gather_enabled | bool
-  block:
-    - name: Run must-gather to collect diagnostic information
-      no_log: true
-      delegate_to: controller-0
-      ansible.builtin.shell: >-
-        oc adm must-gather
-        --image-stream={{ hotlogs_must_gather_image_stream }}
-        --image={{ hotlogs_must_gather_image }}
-        --dest-dir="{{ base_dir }}/must-gather"
-        --
-        ADDITIONAL_NAMESPACES={{ hotlogs_must_gather_additional_namespaces }}
-        SOS_EDPM=all
-        gather
-      register: must_gather_result
-
-    - name: Display must-gather result
-      ansible.builtin.debug:
-        msg: >-
-          {{
-            'Must-gather completed successfully'
-            if must_gather_result.rc == 0
-            else 'Must-gather failed'
-          }}
-
-    - name: Compress must-gather
-      no_log: true
-      delegate_to: controller-0
-      ansible.builtin.shell: >-
-        tar -czf {{ base_dir }}/must-gather.tar.gz
-        --ignore-failed-read
-        -C {{ base_dir }} must-gather
-      register: _compress_result
-
-    - name: Debug compress result
-      ansible.builtin.debug:
-        msg: >-
-          {{
-            'Must-gather compression completed successfully'
-            if _compress_result.rc == 0
-            else 'Must-gather compression failed'
-          }}
-
-  rescue:
-    - name: Debug must-gather failure
-      ansible.builtin.debug:
-        msg: >-
-          Must-gather operations failed:
-          {{ ansible_failed_result.msg | default('Unknown error') }}
+  ansible.builtin.include_tasks: must-gather.yml
 
 - name: Collect hotstack data
   delegate_to: "{{ inventory_hostname }}"

@@ -29,3 +29,6 @@ hotlogs_must_gather_enabled: true
 hotlogs_must_gather_additional_namespaces: sushy-emulator
 hotlogs_must_gather_image_stream: "openshift/must-gather"
 hotlogs_must_gather_image: "quay.io/openstack-k8s-operators/openstack-must-gather"
+hotlogs_must_gather_decompress: 0
+hotlogs_must_gather_sos_edpm: all
+hotlogs_must_gather_timeout: 10m
