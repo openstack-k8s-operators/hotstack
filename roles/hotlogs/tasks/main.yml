@@ -20,9 +20,32 @@
     state: directory
     mode: "0750"
 
-- name: Include must-gather tasks
+- name: Must-gather operations
   when: hotlogs_must_gather_enabled | bool
-  ansible.builtin.include_tasks: must-gather.yml
+  block:
+    - name: Run must-gather operations
+      delegate_to: controller-0
+      hotlogs_must_gather:
+        dest_dir: "{{ base_dir }}/must-gather"
+        image_stream: "{{ hotlogs_must_gather_image_stream }}"
+        image: "{{ hotlogs_must_gather_image }}"
+        timeout: "{{ hotlogs_must_gather_timeout }}"
+        additional_namespaces: "{{ hotlogs_must_gather_additional_namespaces }}"
+        sos_edpm: "{{ hotlogs_must_gather_sos_edpm }}"
+        sos_decompress: "{{ hotlogs_must_gather_decompress }}"
+        compress: true
+      register: must_gather_result
+
+    - name: Display must-gather result
+      ansible.builtin.debug:
+        msg: "{{ must_gather_result.msg }}"
+
+  rescue:
+    - name: Display must-gather failure
+      ansible.builtin.debug:
+        msg: >-
+          Must-gather operations failed:
+          {{ ansible_failed_result.msg | default('Unknown error') }}
 
 - name: Collect hotstack data
   delegate_to: "{{ inventory_hostname }}"
@@ -47,16 +70,25 @@
   loop: "{{ hotlog_collect_paths }}"
   ignore_errors: true  # noqa: ignore-errors
 
-- name: Untar must-gather
-  delegate_to: "{{ inventory_hostname }}"
-  ansible.builtin.shell: >-
-    tar -xzf {{ hotlog_dir }}/must-gather.tar.gz
-    -C {{ hotlog_dir }}
-  ignore_errors: true  # noqa: ignore-errors
+- name: Must-gather post operations
+  when: hotlogs_must_gather_enabled | bool
+  block:
+    - name: Untar must-gather
+      delegate_to: "{{ inventory_hostname }}"
+      ansible.builtin.unarchive:
+        src: "{{ hotlog_dir }}/must-gather.tar.gz"
+        dest: "{{ hotlog_dir }}"
+        remote_src: true
 
-- name: Remove must-gather tar.gz
-  delegate_to: "{{ inventory_hostname }}"
-  ansible.builtin.file:
-    path: "{{ hotlog_dir }}/must-gather.tar.gz"
-    state: absent
-  ignore_errors: true  # noqa: ignore-errors
+    - name: Remove must-gather tar.gz
+      delegate_to: "{{ inventory_hostname }}"
+      ansible.builtin.file:
+        path: "{{ hotlog_dir }}/must-gather.tar.gz"
+        state: absent
+
+  rescue:
+    - name: Display must-gather post failure
+      ansible.builtin.debug:
+        msg: >-
+          Must-gather post operations failed:
+          {{ ansible_failed_result.msg | default('Unknown error') }}
