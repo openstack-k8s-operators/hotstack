@@ -14,6 +14,9 @@
       --for jsonpath='{.status.installPlanRef.name}' --timeout=300s
 
 - name: Approve openstack-operator Install plan
+  documentation: |
+    Approve the OpenStack operator install plan created by the subscription.
+    Waits for the ClusterServiceVersion to reach 'Succeeded' phase.
   command: hotstack-approve-install-plan
   wait_conditions:
     - >-
@@ -21,6 +24,13 @@
       --for jsonpath='{.status.phase}'=Succeeded --timeout=300s
 
 - name: Patch openstack-operators leader election tuneables
+  documentation: |
+    Apply performance tuning patches to OpenStack operator leader election settings.
+
+    This stage runs the hotstack-leader-election-tune command to optimize leader
+    election behavior for better stability. The tuning is conditionally applied based
+    on the OpenStack operators version, skipping versions v1.0.0-v1.0.11 where different
+    tuning parameters are needed.
   command: hotstack-leader-election-tune
   run_conditions:
     - >-
@@ -31,6 +41,9 @@
       }}
 
 - name: Openstack operator initialization resource
+  documentation: |
+    Create the primary OpenStack custom resource to initialize all operator components.
+    Waits for the OpenStack resource and all associated deployments to become ready.
   manifest: "{{ role_path }}/files/common/manifests/olm/openstack-init.yaml"
   wait_conditions:
     - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=300s"

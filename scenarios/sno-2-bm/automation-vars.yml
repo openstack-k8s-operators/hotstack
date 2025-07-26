@@ -36,6 +36,9 @@ stages:
       }}
 
   - name: NodeNetworkConfigurationPolicy (nncp)
+    documentation: |
+      Apply node network configuration policies to configure host networking.
+      Waits for all policies to be successfully configured.
     manifest: manifests/control-plane/networking/nncp.yaml
     wait_conditions:
       - >-
@@ -44,15 +47,21 @@ stages:
         --timeout=180s
 
   - name: NetworkAttchmentDefinition (NAD)
+    documentation: |
+      Create network attachment definitions for OpenStack services.
+      Defines additional network interfaces for pods.
     manifest: manifests/control-plane/networking/nad.yaml
 
   - name: MetalLB - L2Advertisement and IPAddressPool
+    documentation: |
+      Configure MetalLB load balancer with IP address pools and L2 advertisements.
+      Enables external access to OpenStack services.
     manifest: manifests/control-plane/networking/metallb.yaml
 
-  - name: Netconfig
-    manifest: manifests/control-plane/networking/netconfig.yaml
-
   - name: OpenstackControlPlane
+    documentation: |
+      Deploy the OpenStack control plane with all core services.
+      Waits for the control plane to be fully ready before proceeding.
     manifest: manifests/control-plane/control-plane.yaml
     wait_conditions:
       - >-
@@ -73,6 +82,9 @@ stages:
         }}
 
   - name: Wait for condition MinorUpdateAvailable True
+    documentation: |
+      Wait for OpenStack version to indicate a minor update is available.
+      Required before proceeding with version updates.
     wait_conditions:
       - >-
         oc -n openstack wait openstackversions.core.openstack.org controlplane
