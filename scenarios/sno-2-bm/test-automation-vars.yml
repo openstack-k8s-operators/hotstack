@@ -5,7 +5,7 @@ stages:
       Creates a Multus NetworkAttachmentDefinition that allows pods to attach to the ironic
       provisioning network. This is required for sushy-emulator to communicate with baremetal
       nodes during provisioning operations via the dedicated provisioning network.
-    manifest: manifests/nad.yaml
+    manifest: test-operator/manifests/nad.yaml
     wait_conditions:
       - >-
         oc wait -n sushy-emulator network-attachment-definitions.k8s.cni.cncf.io ironic
@@ -358,7 +358,7 @@ stages:
       between OpenStack services in the baremetal environment. Includes both the
       test execution phase (workflowStep=0) and log collection phase (workflowStep=1)
       to ensure complete validation results are captured for analysis.
-    manifest: tempest-tests.yml
+    manifest: test-operator/tempest-tests.yml
     wait_conditions:
       - >-
         oc wait -n openstack tempests.test.openstack.org tempest-tests

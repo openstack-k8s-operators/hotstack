@@ -54,6 +54,7 @@
     vars:
       cloud_name: vexxhost
       scenario: sno-2-bm
+      hotstack_run_test_automation: true
     files:
       - ^scenarios/sno-2-bm/.*
       - ^roles/.*

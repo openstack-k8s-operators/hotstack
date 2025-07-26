@@ -56,3 +56,5 @@ hotstack_default_nodeset_patches:
     where:
       - path: spec.nodeTemplate.ansible.ansibleVars.edpm_podman_registries
         value: null
+
+hotstack_run_test_automation: false

@@ -118,3 +118,12 @@ stages:
         --for=condition=Ready --timeout=10m
     run_conditions:
       - "{{ openstack_update is defined and openstack_update | bool }}"
+
+  - name: Run scenario test automation
+    stages: >-
+      {{
+        lookup("ansible.builtin.file",
+               "{{ scenario_dir }}/{{ scenario }}/test-automation-vars.yml")
+      }}
+    run_conditions:
+      - "{{ hotstack_run_test_automation is defined and hotstack_run_test_automation | bool }}"
