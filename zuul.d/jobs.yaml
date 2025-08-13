@@ -54,6 +54,7 @@
     vars:
       cloud_name: vexxhost
       scenario: sno-2-bm
+    post-run: ci/playbooks/run_scenario_test_automation.yml
     files:
       - ^scenarios/sno-2-bm/.*
       - ^roles/.*
