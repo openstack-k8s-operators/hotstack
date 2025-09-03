@@ -1,6 +1,6 @@
 ---
 stages:
-  - name: TopoLVM Dependencies
+  - name: TopoLVM the Dependencies
     stages: >-
       {{
         lookup("ansible.builtin.template",
