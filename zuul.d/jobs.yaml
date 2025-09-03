@@ -116,12 +116,12 @@
             # vpu: 2 ram 4GB disk: 40GB
             flavor: ci.m1.medium
           bmh_params:
-            image: sushy-tools-blank-image
+            image: cs9stream-genericcloud
             cd_image: sushy-tools-blank-image
             # vpu: 2 ram 4GB disk: 40GB
             flavor: ci.m1.medium
           ironic_params:
-            image: sushy-tools-blank-image
+            image: cs9stream-genericcloud
             cd_image: sushy-tools-blank-image
             # vpu: 1 ram 2GB disk: 20GB
             flavor: ci.m1.small
