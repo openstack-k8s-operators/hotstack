@@ -18,7 +18,7 @@
 
     - name: Fetch automation vars from remote to zuul executor
       ansible.builtin.fetch:
-        src: "{{ bootstrap_vars.test_operator_automation_vars_file }}"
+        src: "{{ bootstrap_vars.automation_vars_file }}"
         dest: "{{ zuul.executor.work_root }}/{{ bootstrap_vars.automation_vars_file | basename }}"
         flat: true
 
