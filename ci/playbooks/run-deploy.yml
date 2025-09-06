@@ -53,7 +53,7 @@
 
     - name: Run scenario RHOSO deploy automation
       vars:
-        work_dir: "{{ scenario_dir }}/{{ scenario }}/test-operator"
+        work_dir: "{{ scenario_dir }}/{{ scenario }}"
         automation: "{{ deploy_automation_vars }}"
       ansible.builtin.include_role:
         name: hotloop
