@@ -10,3 +10,4 @@
     github-experimental-trigger:
       jobs:
         - vexxhost-hotstack-sno-2-bm
+        - vexxhost-hotstack-3-nodes

@@ -1,6 +1,10 @@
 ---
 stages:
   - name: Set a multiattach volume type and create it if needed
+    documentation: >-
+      Creates and configures a multiattach volume type in OpenStack that allows
+      volumes to be attached to multiple instances simultaneously. This is essential
+      for shared storage scenarios and high-availability configurations.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -11,6 +15,10 @@ stages:
       oc rsh openstackclient openstack volume type set --property multiattach="<is> True" multiattach
 
   - name: Create public network if needed
+    documentation: >-
+      Creates an external public network that provides connectivity to the outside world.
+      This network uses a flat provider network type mapped to the 'datacentre' physical
+      network and serves as the gateway for floating IP assignments.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -24,6 +32,10 @@ stages:
           --provider-physical-network datacentre
 
   - name: Create subnet on public network if needed
+    documentation: >-
+      Creates a subnet on the public network with a specific IP range (192.168.122.0/24)
+      and allocation pool. This subnet provides DHCP services and defines the gateway
+      for external connectivity. The allocation pool reserves IPs 171-250 for floating IPs.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -37,6 +49,10 @@ stages:
           --dhcp
 
   - name: Create private network if needed
+    documentation: >-
+      Creates a shared private network for internal communication between OpenStack instances.
+      This network is shared across tenants and provides isolated internal connectivity
+      separate from the external public network.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -45,6 +61,10 @@ stages:
         oc rsh openstackclient openstack network create private --share
 
   - name: Create subnet on private network if needed
+    documentation: >-
+      Creates a subnet on the private network with IP range 10.2.0.0/24 for internal
+      instance communication. This subnet includes DHCP services and allocates IPs
+      from 10.2.0.10 to 10.2.0.250 for instance assignments.
     shell: |
       set -xe -o pipefail
       oc project openstack
@@ -58,4 +78,16 @@ stages:
           --dhcp
 
   - name: Run tempest
+    documentation: >-
+      Executes comprehensive OpenStack validation tests using the Tempest framework.
     manifest: tempest-tests.yml
+    wait_conditions:
+      - >-
+        oc wait -n openstack tempests.test.openstack.org tempest-tests
+        --for condition=ServiceConfigReady --timeout=120s
+      - >-
+        oc wait -n openstack pod
+        -l operator=test-operator
+        -l service=tempest
+        -l workflowStep=0
+        --for jsonpath='{.status.phase}'=Succeeded --timeout=60m
