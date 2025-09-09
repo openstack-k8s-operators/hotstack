@@ -205,7 +205,9 @@ def main():
 
         if must_gather_result["rc"] != 0:
             module.fail_json(
-                msg="Must-gather failed: {}".format(must_gather_result["stderr"]),
+                msg="Must-gather failed: {} (Command: {})".format(
+                    must_gather_result["stderr"], must_gather_result["cmd"]
+                ),
                 **must_gather_result
             )
 
