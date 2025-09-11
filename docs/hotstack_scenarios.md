@@ -86,6 +86,11 @@ Role.
       command-line tool) to execute.  These commands poll the cluster until
       a specific condition is met, ensuring that resources are ready before
       the pipeline proceeds.
+    - `wait_pod_completion`:  A list of pod completion wait configurations
+      that efficiently wait for pods to reach terminal states (Succeeded or
+      Failed). This provides faster failure detection compared to traditional
+      `oc wait` commands with long timeouts, particularly useful for test
+      execution pods that may fail early.
 
 ### `manifests/` (Directory)
 
