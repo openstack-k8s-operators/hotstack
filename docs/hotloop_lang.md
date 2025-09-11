@@ -92,6 +92,16 @@ Here's a breakdown of the common attributes within a stage:
   are typically `oc wait` commands in the context of OpenShift, ensuring that
   resources are created, become ready, or reach a desired state before the
   pipeline proceeds. Each item in the list is a command-line string.
+- **`wait_pod_completion`**: (Optional) A list of pod completion wait configurations
+  that efficiently wait for a single pod to reach terminal states (Succeeded or Failed).
+  This provides faster failure detection compared to traditional `oc wait` commands
+  with long timeouts. Each item must define:
+  - **`namespace`**: The Kubernetes namespace to search for pods.
+  - **`labels`**: Label selectors to identify the pod to wait for. Must match
+    exactly one pod.
+  - **`timeout`**: (Optional) Maximum time to wait in seconds. Defaults to 3600.
+  - **`poll_interval`**: (Optional) Interval between status checks in seconds.
+    Defaults to 10.
 - **`run_conditions`**: (Optional) A list of conditions that must be met for a
   stage to execute. Strings `False`, `FALSE` and `false` will be evaluated as
   `False`, otherwise the python boolean equivalent of the value.
@@ -235,6 +245,14 @@ customize the manifest content dynamically.
     - >-
       oc wait -n metallb-system pod -l component=speaker --for condition=Ready
       --timeout=300s"
+  wait_pod_completion:
+    - namespace: openstack
+      labels:
+        operator: test-operator
+        service: tempest
+        workflowStep: "0"
+      timeout: 3600
+      poll_interval: 15
 ```
 
 Here, the `manifest` stage applies the YAML file located at

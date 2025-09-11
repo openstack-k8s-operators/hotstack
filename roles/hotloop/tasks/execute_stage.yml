@@ -45,3 +45,14 @@
   loop: "{{ item.wait_conditions }}"
   loop_control:
     loop_var: wait_cmd
+
+- name: "Stage: {{ item.name }} :: Wait for pod completion"
+  when: item.wait_pod_completion is defined
+  hotloop_wait_pod_completion:
+    namespace: "{{ pod_wait.namespace }}"
+    labels: "{{ pod_wait.labels }}"
+    timeout: "{{ pod_wait.timeout | default(3600) }}"
+    poll_interval: "{{ pod_wait.poll_interval | default(10) }}"
+  loop: "{{ item.wait_pod_completion }}"
+  loop_control:
+    loop_var: pod_wait

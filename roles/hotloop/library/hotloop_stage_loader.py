@@ -101,6 +101,7 @@ ALLOWED_STAGE_KEYS = {
     "shell",
     "stages",
     "wait_conditions",
+    "wait_pod_completion",
 }
 
 ALLOWED_KUSTOMIZE_KEYS = {
@@ -159,6 +160,72 @@ def _validate_run_conditions(conditions):
                 conditions=type(conditions)
             )
         )
+
+
+def _validate_wait_pod_completion(wait_pod_completion_list):
+    """Validates the 'wait_pod_completion' parameter.
+
+    This function checks if the 'wait_pod_completion' parameter is a list
+    of properly structured pod completion wait configurations.
+
+    :param wait_pod_completion_list: The 'wait_pod_completion' parameter to validate.
+    """
+    if not isinstance(wait_pod_completion_list, list):
+        raise TypeError(
+            "'wait_pod_completion' must be a list, got {wait_type}".format(
+                wait_type=type(wait_pod_completion_list)
+            )
+        )
+
+    for i, wait_config in enumerate(wait_pod_completion_list):
+        if not isinstance(wait_config, dict):
+            raise TypeError(
+                "wait_pod_completion[{index}] must be a dict, got {config_type}".format(
+                    index=i, config_type=type(wait_config)
+                )
+            )
+
+        # Check required fields
+        required_fields = {"namespace", "labels"}
+        missing_fields = required_fields - wait_config.keys()
+        if missing_fields:
+            raise ValueError(
+                "wait_pod_completion[{index}] missing required fields: {missing}".format(
+                    index=i, missing=missing_fields
+                )
+            )
+
+        # Validate field types
+        if not isinstance(wait_config["namespace"], str):
+            raise TypeError(
+                "wait_pod_completion[{index}].namespace must be a string, got {ns_type}".format(
+                    index=i, ns_type=type(wait_config["namespace"])
+                )
+            )
+
+        if not isinstance(wait_config["labels"], dict):
+            raise TypeError(
+                "wait_pod_completion[{index}].labels must be a dict, got {labels_type}".format(
+                    index=i, labels_type=type(wait_config["labels"])
+                )
+            )
+
+        # Validate optional fields
+        if "timeout" in wait_config and not isinstance(wait_config["timeout"], int):
+            raise TypeError(
+                "wait_pod_completion[{index}].timeout must be an integer, got {timeout_type}".format(
+                    index=i, timeout_type=type(wait_config["timeout"])
+                )
+            )
+
+        if "poll_interval" in wait_config and not isinstance(
+            wait_config["poll_interval"], int
+        ):
+            raise TypeError(
+                "wait_pod_completion[{index}].poll_interval must be an integer, got {poll_type}".format(
+                    index=i, poll_type=type(wait_config["poll_interval"])
+                )
+            )
 
 
 def _validate_kustomize(kustomize_config):
@@ -226,6 +293,11 @@ def _validate_stage(stage, nested=False):
     if not isinstance(stage.get("wait_conditions", []), list):
         raise ValueError("Wait conditions must be a list, {stage}".format(stage=stage))
 
+    if not isinstance(stage.get("wait_pod_completion", []), list):
+        raise ValueError(
+            "Wait pod completion must be a list, {stage}".format(stage=stage)
+        )
+
     if nested and "stages" in stage:
         raise ValueError("Nested stages cannot be nested, {stage}".format(stage=stage))
 
@@ -234,6 +306,9 @@ def _validate_stage(stage, nested=False):
 
     if "kustomize" in stage:
         _validate_kustomize(stage["kustomize"])
+
+    if "wait_pod_completion" in stage:
+        _validate_wait_pod_completion(stage["wait_pod_completion"])
 
 
 def _load_nested(stages):

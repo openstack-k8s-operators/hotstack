@@ -72,6 +72,15 @@ Schema for a stage item is:
 
 * `wait_conditions` (list) A list of commands to run after applying the
   manifest, i.e `oc wait --for <condition>`
+* `wait_pod_completion` (list) A list of pod completion wait configurations
+  that efficiently wait for a single pod to reach terminal states (Succeeded or Failed).
+  Each item must define:
+  * `namespace`: (string) The Kubernetes namespace to search for pods.
+  * `labels`: (dict) Label selectors to identify the pod to wait for. Must match
+    exactly one pod.
+  * `timeout`: (int, optional) Maximum time to wait in seconds. Defaults to 3600.
+  * `poll_interval`: (int, optional) Interval between status checks in seconds.
+    Defaults to 10.
 * `run_conditions` (list) A list of conditions that must be met for a stage
   to execute. Strings `False`, `FALSE` and `false` will be evaluated as
   `False`, otherwise the python boolean equivalent of the value.
@@ -116,7 +125,7 @@ Schema for a stage item is:
 
 > **_NOTE_**: Stage items are applied the actions in the following order:
 > `command` -> `shell` -> `manifest` -> `j2_manifest` -> `kustomize` ->
-> `wait_conditions` -> `stages`.
+> `wait_conditions` -> `wait_pod_completion` -> `stages`.
 
 Example:
 
@@ -161,6 +170,25 @@ stages:
       - "oc wait -n openstack-operators -l openstack.org/operator-name deployment --for condition=Available --timeout=300s"
       - "oc wait -n openstack-operators -l app.kubernetes.io/name=rabbitmq-cluster-operator deployment --for condition=Available --timeout=300s"
       - "oc wait -n openstack-operators -l app.kubernetes.io/instance=webhook-service service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
+
+  - name: Run tempest tests
+    documentation: |
+      Execute comprehensive OpenStack validation tests using the Tempest framework.
+      Wait for pod completion efficiently without long timeouts on failure.
+      The label selectors must uniquely identify a single pod.
+    manifest: tempest-tests.yml
+    wait_conditions:
+      - >-
+        oc wait -n openstack tempests.test.openstack.org tempest-tests
+        --for condition=ServiceConfigReady --timeout=120s
+    wait_pod_completion:
+      - namespace: openstack
+        labels:
+          operator: test-operator
+          service: tempest
+          workflowStep: "0"
+        timeout: 3600
+        poll_interval: 15
 
   - name: Common MetalLB
     manifest: ../common/metallb.yaml
