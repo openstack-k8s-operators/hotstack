@@ -1,0 +1,9 @@
+---
+- name: Create hotstack scenario
+  hosts: hotstack
+  vars:
+    hotstack_work_dir: "{{ ansible_user_dir }}/hotstack"
+  tasks:
+    - name: Noop
+      ansible.builtin.debug:
+        msg: "Noop - this job does not deploy RHOSO"
