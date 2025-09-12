@@ -85,9 +85,11 @@ stages:
       - >-
         oc wait -n openstack tempests.test.openstack.org tempest-tests
         --for condition=ServiceConfigReady --timeout=120s
-      - >-
-        oc wait -n openstack pod
-        -l operator=test-operator
-        -l service=tempest
-        -l workflowStep=0
-        --for jsonpath='{.status.phase}'=Succeeded --timeout=60m
+    wait_pod_completion:
+      - namespace: openstack
+        labels:
+          operator: test-operator
+          service: tempest
+          workflowStep: "0"
+        timeout: 3600
+        poll_interval: 15
