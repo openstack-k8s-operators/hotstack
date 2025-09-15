@@ -101,26 +101,26 @@ stages:
 
   - name: Wait for deployments (Networker and EDPM)
     wait_conditions:
-      - oc wait -n openstack jobs.batch bootstrap-dataplane-networkers --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch bootstrap-networker-deploy-networkers --for condition=Complete --timeout=10m
       - oc wait -n openstack jobs.batch bootstrap-dataplane-edpm --for condition=Complete --timeout=10m
-      - oc wait -n openstack jobs.batch configure-network-dataplane-networkers --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch configure-network-networker-deploy-networkers --for condition=Complete --timeout=5m
       - oc wait -n openstack jobs.batch configure-network-dataplane-edpm --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch validate-network-dataplane-networkers --for condition=Complete --timeout=1m
+      - oc wait -n openstack jobs.batch validate-network-networker-deploy-networkers --for condition=Complete --timeout=1m
       - oc wait -n openstack jobs.batch validate-network-dataplane-edpm --for condition=Complete --timeout=1m
-      - oc wait -n openstack jobs.batch install-os-dataplane-networkers --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch install-os-networker-deploy-networkers --for condition=Complete --timeout=5m
       - oc wait -n openstack jobs.batch install-os-dataplane-edpm --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch configure-os-dataplane-networkers --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch configure-os-networker-deploy-networkers --for condition=Complete --timeout=3m
       - oc wait -n openstack jobs.batch configure-os-dataplane-edpm --for condition=Complete --timeout=3m
       - oc wait -n openstack jobs.batch ssh-known-hosts-dataplane --for condition=Complete --timeout=1m
-      - oc wait -n openstack jobs.batch run-os-dataplane-networkers --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch run-os-networker-deploy-networkers --for condition=Complete --timeout=3m
       - oc wait -n openstack jobs.batch run-os-dataplane-edpm --for condition=Complete --timeout=3m
-      - oc wait -n openstack jobs.batch reboot-os-dataplane-networkers --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch reboot-os-networker-deploy-networkers --for condition=Complete --timeout=5m
       - oc wait -n openstack jobs.batch reboot-os-dataplane-edpm --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch install-certs-dataplane-networkers --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch install-certs-networker-deploy-networkers --for condition=Complete --timeout=5m
       - oc wait -n openstack jobs.batch install-certs-dataplane-edpm --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch ovn-dataplane-networkers --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch ovn-networker-deploy-networkers --for condition=Complete --timeout=5m
       - oc wait -n openstack jobs.batch ovn-dataplane-edpm --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch neutron-metadata-dataplane-networkers --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch neutron-metadata-networker-deploy-networkers --for condition=Complete --timeout=10m
       - oc wait -n openstack openstackdataplanedeployment networker-deploy --for condition=Ready --timeout=10m
       - oc wait -n openstack jobs.batch neutron-metadata-dataplane-edpm --for condition=Complete --timeout=10m
       - oc wait -n openstack jobs.batch libvirt-dataplane-edpm --for condition=Complete --timeout=20m
