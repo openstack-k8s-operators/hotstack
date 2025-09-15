@@ -127,7 +127,7 @@ stages:
       - oc wait -n openstack jobs.batch nova-dataplane-edpm --for condition=Complete --timeout=20m
       - oc wait -n openstack jobs.batch telemetry-dataplane-edpm --for condition=Complete --timeout=10m
       - oc -n openstack wait openstackdataplanedeployment dataplane --for condition=Ready --timeout=10m
-      - timeout --foreground 15m hotstack-nova-discover-hosts --namespace openstack --num-computes 3
+      - timeout --foreground 15m hotstack-nova-discover-hosts --namespace openstack --num-computes 2
 
   - name: "Minor update :: openstack-operators OLM"
     stages: >-
