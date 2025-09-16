@@ -72,6 +72,16 @@ options:
         required: false
         default: "0"
         type: str
+    openstack_databases:
+        description: Comma separated list of OpenStack databases to dump, or 'ALL' for all databases. Unset by default (skips database dump)
+        required: false
+        default: ""
+        type: str
+    host_network:
+        description: Whether to use host network for must-gather
+        required: false
+        default: false
+        type: bool
     compress:
         description: Whether to compress the output
         required: false
@@ -87,6 +97,21 @@ EXAMPLES = """
     dest_dir: "/tmp/must-gather"
     additional_namespaces: "sushy-emulator,custom-namespace"
     timeout: "15m"
+
+- name: Run must-gather with specific OpenStack databases
+  hotlogs_must_gather:
+    dest_dir: "/tmp/must-gather"
+    additional_namespaces: "sushy-emulator"
+    openstack_databases: "keystone,nova,neutron"
+    host_network: true
+    timeout: "20m"
+
+- name: Run must-gather with all OpenStack databases
+  hotlogs_must_gather:
+    dest_dir: "/tmp/must-gather"
+    additional_namespaces: "sushy-emulator"
+    openstack_databases: "ALL"
+    timeout: "25m"
 """
 
 RETURN = """
@@ -121,12 +146,21 @@ def run_must_gather(module):
         "--image={}".format(module.params["image"]),
         "--dest-dir={}".format(module.params["dest_dir"]),
         "--timeout={}".format(module.params["timeout"]),
+        "--host-network={}".format(str(module.params["host_network"]).lower()),
         "--",
-        "ADDITIONAL_NAMESPACES={}".format(module.params["additional_namespaces"]),
-        "SOS_EDPM={}".format(module.params["sos_edpm"]),
-        "SOS_DECOMPRESS={}".format(module.params["sos_decompress"]),
-        "gather",
     ]
+
+    # Add environment variables
+    cmd.append(
+        "ADDITIONAL_NAMESPACES={}".format(module.params["additional_namespaces"])
+    )
+    if module.params["openstack_databases"]:
+        cmd.append(
+            "OPENSTACK_DATABASES={}".format(module.params["openstack_databases"])
+        )
+    cmd.append("SOS_EDPM={}".format(module.params["sos_edpm"]))
+    cmd.append("SOS_DECOMPRESS={}".format(module.params["sos_decompress"]))
+    cmd.append("gather")
 
     try:
         result = subprocess.run(
