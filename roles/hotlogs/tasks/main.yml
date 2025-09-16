@@ -45,6 +45,7 @@
         additional_namespaces: "{{ hotlogs_must_gather_additional_namespaces }}"
         sos_edpm: "{{ hotlogs_must_gather_sos_edpm }}"
         sos_decompress: "{{ hotlogs_must_gather_decompress }}"
+        openstack_databases: "{{ hotlogs_must_gather_openstack_databases }}"
         compress: true
       register: must_gather_result
 

@@ -37,3 +37,4 @@ hotlogs_must_gather_image: "quay.io/openstack-k8s-operators/openstack-must-gathe
 hotlogs_must_gather_decompress: 0
 hotlogs_must_gather_sos_edpm: all
 hotlogs_must_gather_timeout: 10m
+hotlogs_must_gather_openstack_databases: "ALL"
