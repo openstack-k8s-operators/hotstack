@@ -210,7 +210,7 @@ def run_module():
             result["success"] = True
             result["changed"] = True
         else:
-            result["error"] = f"Error while applying Kustomize directory {directory}"
+            result["msg"] = f"Error while applying Kustomize directory {directory}"
             module.fail_json(**result)
 
         module.exit_json(**result)
