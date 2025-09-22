@@ -48,7 +48,8 @@ repos:
       language: python
       additional_dependencies:
         - pyyaml
-      files: nncp.(yaml|yml)$
+      files: 'nncp\.(yaml|yml)$'
+      exclude: '^shared_nncp\.(yaml|yml)$'
       types: [file, yaml]
     - id: poap-md5sum-management
       name: Format POAP script with md5sum management
