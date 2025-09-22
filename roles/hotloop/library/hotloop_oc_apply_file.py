@@ -197,7 +197,7 @@ def run_module():
             result["success"] = True
             result["changed"] = True
         else:
-            result["error"] = "Error while applying manifest file {file}".format(
+            result["msg"] = "Error while applying manifest file {file}".format(
                 file=file
             )
             module.fail_json(**result)
