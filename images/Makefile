@@ -14,7 +14,7 @@ controller_downlaod:
 	curl -L -o $(CONTROLLER_IMAGE_NAME) $(CONTROLLER_IMAGE_URL)
 
 controller_customize:
-	virt-customize -a $(CONTROLLER_IMAGE_NAME) --install $(CONTROLLER_INSTALL_PACKAGES) --selinux-relabel
+	virt-customize -a $(CONTROLLER_IMAGE_NAME) --install $(CONTROLLER_INSTALL_PACKAGES) --timezone UTC --selinux-relabel
 
 controller_clean:
 	rm -f $(CONTROLLER_IMAGE_NAME)
