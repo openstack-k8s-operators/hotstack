@@ -44,6 +44,13 @@
     suffix: hotloop_work_temp
   register: _work_temp
 
+- name: Create temporary directory for templates
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: hotloop_templates
+  register: _templates_temp
+  delegate_to: localhost
+
 - name: Sync work files to work directory
   vars:
     _source_path: "{{ [work_dir, ''] | ansible.builtin.path_join }}"
@@ -87,6 +94,7 @@
 - name: Execute automation stages
   vars:
     _work_dir: "{{ _work_temp.path }}"
+    _templates_temp_dir: "{{ _templates_temp.path }}"
   ansible.builtin.include_tasks:
     file: execute_stage.yml
   loop: "{{ __loaded_stages.outputs.stages }}"
@@ -95,3 +103,9 @@
   ansible.builtin.file:
     path: "{{ _work_temp.path }}"
     state: absent
+
+- name: Remove temporary templates directory
+  ansible.builtin.file:
+    path: "{{ _templates_temp.path }}"
+    state: absent
+  delegate_to: localhost
