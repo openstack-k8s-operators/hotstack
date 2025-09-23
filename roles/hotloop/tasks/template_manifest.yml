@@ -36,13 +36,19 @@
       }}
   register: _synced_j2_manifest_stat
 
+- name: "Stage: {{ item.name }} :: Fetch template from remote when needed"
+  when: _synced_j2_manifest_stat is defined and _synced_j2_manifest_stat.stat.exists | default(false)
+  ansible.builtin.fetch:
+    src: "{{ [_work_dir, item.j2_manifest] | ansible.builtin.path_join }}"
+    dest: "{{ _templates_temp_dir }}/{{ item.j2_manifest | ansible.builtin.basename }}"
+    flat: true
+
 - name: "Stage: {{ item.name }} :: Template manifest"
   ansible.builtin.template:
-    remote_src: "{{ _synced_j2_manifest_stat.stat.exists | default(false) }}"
     src: >-
       {{
-        [_work_dir, item.j2_manifest] | ansible.builtin.path_join
-        if _synced_j2_manifest_stat.stat.exists | default(false)
+        _templates_temp_dir + "/" + (item.j2_manifest | ansible.builtin.basename)
+        if _synced_j2_manifest_stat is defined and _synced_j2_manifest_stat.stat.exists | default(false)
         else item.j2_manifest
       }}
     dest: >-
@@ -62,7 +68,7 @@
         [
           manifests_dir,
           item.j2_manifest | dirname | ansible.builtin.basename,
-          item.j2_manifest | ansible.builtin.basename
+          item.j2_manifest | ansible.builtin.basename | ansible.builtin.splitext | first
         ] | ansible.builtin.path_join
       }}
     path: "{{ __patch.path }}"
