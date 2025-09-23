@@ -125,6 +125,19 @@
         hotlogs_collection_failed: true
         hotlogs_failures: "{{ hotlogs_failures + ['Must-gather post operations failed'] }}"
 
+- name: Compress all files in hotlog directory
+  delegate_to: "{{ inventory_hostname }}"
+  ansible.builtin.shell: |
+    find "{{ hotlog_dir }}" -type f ! -name "*.gz" -exec gzip {} \;
+  register: gzip_result
+  ignore_errors: true
+
+- name: Track gzip operation failure
+  ansible.builtin.set_fact:
+    hotlogs_collection_failed: true
+    hotlogs_failures: "{{ hotlogs_failures + ['Failed to compress log files'] }}"
+  when: gzip_result.failed | default(false)
+
 - name: Report collection summary
   ansible.builtin.debug:
     msg: >-
