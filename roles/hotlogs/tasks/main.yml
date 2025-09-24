@@ -128,7 +128,7 @@
 - name: Compress all files in hotlog directory
   delegate_to: "{{ inventory_hostname }}"
   ansible.builtin.shell: |
-    find "{{ hotlog_dir }}" -type f ! -name "*.gz" -exec gzip {} \;
+    find "{{ hotlog_dir }}" -type f ! -name "*.gz" ! -name "*.xz" -exec gzip {} \;
   register: gzip_result
   ignore_errors: true
 
