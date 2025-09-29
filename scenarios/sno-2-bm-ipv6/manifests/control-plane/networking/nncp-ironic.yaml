@@ -1,0 +1,52 @@
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp/nncm-config-type: ironic
+  name: master-0-ironic
+  namespace: openstack
+spec:
+  desiredState:
+    interfaces:
+    - name: ironic
+      type: linux-bridge
+      description: Ironic bridge
+      bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: eth2
+      ipv4:
+        enabled: false
+      ipv6:
+        address:
+        - ip: 2620:cf:cf:ffff::10
+          prefix-length: 64
+        enabled: true
+      mtu: 1442
+    - name: ironicvrf
+      description: Ironic VRF
+      state: up
+      type: vrf
+      vrf:
+        port:
+        - ironic
+        route-table-id: 10
+    route-rules:
+      config: []
+    routes:
+      config:
+      - destination: "::/0"
+        metric: 150
+        next-hop-address: 2620:cf:cf:ffff::1
+        next-hop-interface: ironic
+        table-id: 10
+      - destination: "2620:cf:cf:ffff::/64"
+        metric: 150
+        next-hop-address: 2620:cf:cf:aaaa::1
+        next-hop-interface: ospbr
+  nodeSelector:
+    kubernetes.io/hostname: master-0
+    node-role.kubernetes.io/worker: ""
