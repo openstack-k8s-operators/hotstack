@@ -1,0 +1,134 @@
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  labels:
+    osp/net: ctlplane
+    osp/net-attach-def-type: standard
+  name: ctlplane
+  namespace: openstack
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "ctlplane",
+      "type": "macvlan",
+      "master": "ospbr",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "2620:cf:cf:aaaa::/64",
+        "range_start": "2620:cf:cf:aaaa::30",
+        "range_end": "2620:cf:cf:aaaa::70"
+      }
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  labels:
+    osp/net: ironic
+    osp/net-attach-def-type: standard
+  name: ironic
+  namespace: openstack
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "ironic",
+      "type": "bridge",
+      "bridge": "ironic",
+      "mtu": 1442,
+      "ipam": {
+        "type": "whereabouts",
+        "range": "2620:cf:cf:ffff::/64",
+        "range_start": "2620:cf:cf:ffff::30",
+        "range_end": "2620:cf:cf:ffff::70"
+      }
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  labels:
+    osp/net: datacentre
+    osp/net-attach-def-type: standard
+  name: datacentre
+  namespace: openstack
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "datacentre",
+      "type": "bridge",
+      "bridge": "ospbr",
+      "ipam": {}
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  labels:
+    osp/net: internalapi
+    osp/net-attach-def-type: standard
+  name: internalapi
+  namespace: openstack
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "internalapi",
+      "type": "macvlan",
+      "master": "internalapi",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "2620:cf:cf:bbbb::/64",
+        "range_start": "2620:cf:cf:bbbb::30",
+        "range_end": "2620:cf:cf:bbbb::70"
+      }
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  labels:
+    osp/net: storage
+    osp/net-attach-def-type: standard
+  name: storage
+  namespace: openstack
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "storage",
+      "type": "macvlan",
+      "master": "storage",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "2620:cf:cf:cccc::/64",
+        "range_start": "2620:cf:cf:cccc::30",
+        "range_end": "2620:cf:cf:cccc::70"
+      }
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  labels:
+    osp/net: tenant
+    osp/net-attach-def-type: standard
+  name: tenant
+  namespace: openstack
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "tenant",
+      "type": "macvlan",
+      "master": "tenant",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "2620:cf:cf:eeee::/64",
+        "range_start": "2620:cf:cf:eeee::30",
+        "range_end": "2620:cf:cf:eeee::70"
+      }
+    }
