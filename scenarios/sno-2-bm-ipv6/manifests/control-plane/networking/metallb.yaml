@@ -1,0 +1,88 @@
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  labels:
+    osp/lb-addresses-type: standard
+  name: ctlplane
+  namespace: metallb-system
+spec:
+  addresses:
+  - 2620:cf:cf:aaaa::f100-2620:cf:cf:aaaa::f110
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  labels:
+    osp/lb-addresses-type: standard
+  name: internalapi
+  namespace: metallb-system
+spec:
+  addresses:
+  - 2620:cf:cf:bbbb::f100-2620:cf:cf:bbbb::f110
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  labels:
+    osp/lb-addresses-type: standard
+  name: storage
+  namespace: metallb-system
+spec:
+  addresses:
+  - 2620:cf:cf:cccc::f100-2620:cf:cf:cccc::f110
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  labels:
+    osp/lb-addresses-type: standard
+  name: tenant
+  namespace: metallb-system
+spec:
+  addresses:
+  - 2620:cf:cf:eeee::f100-2620:cf:cf:eeee::f110
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: ctlplane
+  namespace: metallb-system
+spec:
+  interfaces:
+  - ospbr
+  ipAddressPools:
+  - ctlplane
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: internalapi
+  namespace: metallb-system
+spec:
+  interfaces:
+  - internalapi
+  ipAddressPools:
+  - internalapi
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: storage
+  namespace: metallb-system
+spec:
+  interfaces:
+  - storage
+  ipAddressPools:
+  - storage
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: tenant
+  namespace: metallb-system
+spec:
+  interfaces:
+  - tenant
+  ipAddressPools:
+  - tenant
