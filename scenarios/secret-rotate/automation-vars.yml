@@ -1,0 +1,156 @@
+---
+stages:
+  - name: TopoLVM Dependencies
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/topolvm-deps-stages.yaml.j2")
+      }}
+
+  - name: Dependencies
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/deps-stages.yaml.j2")
+      }}
+
+  - name: Cinder LVM
+    stages: >-
+      {{
+        lookup("ansible.builtin.file",
+               "common/stages/cinder-lvm-label-stages.yaml")
+      }}
+
+  - name: TopoLVM
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/topolvm-stages.yaml.j2")
+      }}
+
+  - name: OLM Openstack
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/olm-openstack-stages.yaml.j2")
+      }}
+
+  - name: NodeNetworkConfigurationPolicy (nncp)
+    manifest: manifests/control-plane/nncp/nncp.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack nncp -l osp/nncm-config-type=standard
+        --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
+        --timeout=180s
+
+  - name: OpenstackControlPlane
+    manifest: manifests/control-plane/control-plane.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack openstackcontrolplane controlplane
+        --for condition=Ready --timeout=30m
+
+  - name: Dataplane SSH key secret
+    shell: >-
+      oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret
+      --save-config --dry-run=client
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_rsa
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_rsa.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >-
+        oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
+        --for jsonpath='{.metadata.name}'=dataplane-ansible-ssh-private-key-secret
+        --timeout=30s
+
+  - name: Nova migration SSH key secret
+    shell: >-
+      oc create -n openstack secret generic nova-migration-ssh-key
+      --save-config --dry-run=client
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_nova_migrate.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >-
+        oc wait -n openstack secret nova-migration-ssh-key
+        --for jsonpath='{.metadata.name}'=nova-migration-ssh-key
+        --timeout=30s
+
+  - name: Networker nodeset
+    manifest: manifests/networker/nodeset/nodeset.yaml
+    patches: "{{ hotstack_default_nodeset_patches }}"
+
+  - name: EDPM nodeset
+    manifest: manifests/edpm/edpm.yaml
+    patches: "{{ hotstack_default_nodeset_patches }}"
+
+  - name: Wait for nodesets (Networker and EDPM)
+    wait_conditions:
+      - >-
+        oc wait -n openstack openstackdataplanenodeset networkers
+        --for condition=SetupReady --timeout=10m
+      - >-
+        oc -n openstack wait openstackdataplanenodeset edpm
+        --for condition=SetupReady --timeout=10m
+
+  - name: Networker deployment
+    manifest: manifests/networker/networker.yaml
+
+  - name: EDPM deployment
+    manifest: manifests/dataplane.yaml
+
+  - name: Wait for deployments (Networker and EDPM)
+    wait_conditions:
+      - oc wait -n openstack jobs.batch bootstrap-networker-deploy-networkers --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch bootstrap-dataplane-edpm --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch configure-network-networker-deploy-networkers --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch configure-network-dataplane-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch validate-network-networker-deploy-networkers --for condition=Complete --timeout=1m
+      - oc wait -n openstack jobs.batch validate-network-dataplane-edpm --for condition=Complete --timeout=1m
+      - oc wait -n openstack jobs.batch install-os-networker-deploy-networkers --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch install-os-dataplane-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch configure-os-networker-deploy-networkers --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch configure-os-dataplane-edpm --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch ssh-known-hosts-dataplane --for condition=Complete --timeout=1m
+      - oc wait -n openstack jobs.batch run-os-networker-deploy-networkers --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch run-os-dataplane-edpm --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch reboot-os-networker-deploy-networkers --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch reboot-os-dataplane-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch install-certs-networker-deploy-networkers --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch install-certs-dataplane-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch ovn-networker-deploy-networkers --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch ovn-dataplane-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch neutron-metadata-networker-deploy-networkers --for condition=Complete --timeout=10m
+      - oc wait -n openstack openstackdataplanedeployment networker-deploy --for condition=Ready --timeout=10m
+      - oc wait -n openstack jobs.batch neutron-metadata-dataplane-edpm --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch libvirt-dataplane-edpm --for condition=Complete --timeout=20m
+      - oc wait -n openstack jobs.batch nova-dataplane-edpm --for condition=Complete --timeout=20m
+      - oc wait -n openstack jobs.batch telemetry-dataplane-edpm --for condition=Complete --timeout=10m
+      - oc -n openstack wait openstackdataplanedeployment dataplane --for condition=Ready --timeout=10m
+      - timeout --foreground 15m hotstack-nova-discover-hosts --namespace openstack --num-computes 2
+
+  - name: "Minor update :: openstack-operators OLM"
+    stages: >-
+      {{
+        lookup('ansible.builtin.template',
+               'common/stages/openstack-olm-update.yaml.j2')
+      }}
+    run_conditions:
+      - >-
+        {{
+          openstack_operators_update is defined and
+          openstack_operators_update | bool
+        }}
+
+  - name: "Minor update :: controlplane and dataplane"
+    stages: >-
+      {{
+        lookup('ansible.builtin.template',
+               'common/stages/openstack-update.yaml.j2')
+      }}
+    run_conditions:
+      - >-
+        {{
+          openstack_update is defined and
+          openstack_update | bool
+        }}

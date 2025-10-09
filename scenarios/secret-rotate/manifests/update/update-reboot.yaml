@@ -1,0 +1,15 @@
+---
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneDeployment
+metadata:
+  name: dataplane-update-reboot
+  namespace: openstack
+spec:
+  nodeSets:
+    - edpm
+    - networkers
+  servicesOverride:
+    - reboot-os
+  ansibleExtraVars:
+    edpm_reboot_strategy: force
+#   ansibleLimit: <node_hostname>,...,<node_hostname>
