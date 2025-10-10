@@ -21,6 +21,13 @@ Schema for a stage item is:
 * `shell`: (string) A shell script to run for the stage.
   * If commands or shell commands must run after applying manifests, use a
     separate stage or place the commands in `wait_conditions`.
+* `script`: (string) Path to an executable script file to run for the stage.
+  * Useful for running complex scripts stored as separate files, providing
+    better organization and reusability compared to inline shell commands.
+  * The script file must be executable and will be run with appropriate
+    permissions on the pipeline runner.
+  * Supports both relative paths (resolved within the synced work directory)
+    and absolute paths (must exist on the Ansible controller host).
 * `manifest`: (string) Path to a static manfiest file to apply with
   `oc apply -f <manifest.yaml>`
 * `j2_manifest`: (string) Path to a dynamic manifest, Jinja2 template, to
@@ -124,8 +131,8 @@ Schema for a stage item is:
   ```
 
 > **_NOTE_**: Stage items are applied the actions in the following order:
-> `command` -> `shell` -> `manifest` -> `j2_manifest` -> `kustomize` ->
-> `wait_conditions` -> `wait_pod_completion` -> `stages`.
+> `command` -> `shell` -> `script` -> `manifest` -> `j2_manifest` ->
+> `kustomize` -> `wait_conditions` -> `wait_pod_completion` -> `stages`.
 
 Example:
 
@@ -253,6 +260,12 @@ stages:
     kustomize:
       directory: "https://github.com/example/repo/config/overlays/production?ref=v1.2.3"
       timeout: 180
+
+  - name: Setup environment with external script
+    documentation: |
+      Execute a complex setup script stored as a separate file.
+      This provides better organization and reusability for complex operations.
+    script: "scripts/setup-environment.sh"
 ```
 
 ## Work Directory Isolation

@@ -1,0 +1,39 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: "Stage: {{ item.name }} :: Check if script exists in synced work directory"
+  when: not item.script.startswith('/')
+  ansible.builtin.stat:
+    path: >-
+      {{
+        [_work_dir, item.script] |
+        ansible.builtin.path_join
+      }}
+  register: _synced_script_stat
+
+- name: "Stage: {{ item.name }} :: Run script from synced work directory"
+  when: not item.script.startswith('/') and _synced_script_stat.stat.exists | default(false)
+  ansible.builtin.command:
+    cmd: >-
+      {{
+        [_work_dir, item.script] |
+        ansible.builtin.path_join
+      }}
+
+- name: "Stage: {{ item.name }} :: Run script from absolute path"
+  when: item.script.startswith('/') or (not item.script.startswith('/') and not (_synced_script_stat.stat.exists | default(false)))
+  ansible.builtin.command:
+    cmd: "{{ item.script }}"
