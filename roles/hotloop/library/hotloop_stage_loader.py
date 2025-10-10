@@ -76,6 +76,8 @@ EXAMPLES = r"""
       - name: Stage 2
         shell: |
           echo "Hello Saturne!"
+      - name: Script stage example
+        script: "scripts/setup-environment.sh"
       - name: Nested stages from file
         shell: |
           echo "Hello Jupiter!"
@@ -98,6 +100,7 @@ ALLOWED_STAGE_KEYS = {
     "manifest",
     "patches",
     "run_conditions",
+    "script",
     "shell",
     "stages",
     "wait_conditions",

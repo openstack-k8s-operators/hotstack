@@ -12,9 +12,10 @@ representing a distinct phase in the deployment or configuration process.
 - [Stage Types](#stage-types)
   - [1. `command` Stage](#1-command-stage)
   - [2. `shell` Stage](#2-shell-stage)
-  - [3. `manifest` Stage](#3-manifest-stage)
-  - [4. `j2_manifest` Stage](#4-j2_manifest-stage)
-  - [5. `kustomize` Stage](#5-kustomize-stage)
+  - [3. `script` Stage](#3-script-stage)
+  - [4. `manifest` Stage](#4-manifest-stage)
+  - [5. `j2_manifest` Stage](#5-j2_manifest-stage)
+  - [6. `kustomize` Stage](#6-kustomize-stage)
 
 ## Stages
 
@@ -87,6 +88,12 @@ Here's a breakdown of the common attributes within a stage:
 - **`shell`**: (Optional) Defines a shell script that will be executed on the
   pipeline runner. This is useful for more complex logic or sequences of
   commands.
+- **`script`**: (Optional) Specifies the path to an executable script file that
+  will be executed on the pipeline runner. This is useful for running complex
+  scripts that are stored as separate files, providing better organization and
+  reusability compared to inline shell commands. Supports both relative paths
+  (resolved within the synced work directory) and absolute paths (must exist
+  on the Ansible controller host).
 - **`wait_conditions`**: (Optional) A list of commands that are executed to
   wait for a specific condition to be met in the target environment. These
   are typically `oc wait` commands in the context of OpenShift, ensuring that
@@ -219,7 +226,36 @@ shell attribute would specify a multiline string.
       openstack volume type set --property multiattach="<is> True" multiattach
 ```
 
-### 3. `manifest` Stage
+### 3. `script` Stage
+
+The `script` stage type executes an external script file. This is useful for
+running complex scripts that are stored as separate files, providing better
+organization and reusability compared to inline shell commands. The script
+attribute specifies the path to the executable script file.
+
+**Example:**
+
+```yaml
+- name: Setup environment with external script
+  script: "scripts/setup-environment.sh"
+```
+
+In this example, the script stage executes the `setup-environment.sh` script
+located in the `scripts/` directory relative to the synced work directory. The
+script file must be executable and will be run with the appropriate permissions
+on the pipeline runner.
+
+**Example with absolute path:**
+
+```yaml
+- name: Setup environment with role script
+  script: "{{ role_path }}/files/scripts/setup-environment.sh"
+```
+
+This example uses an absolute path to reference a script in the role's files
+directory, which must exist on the Ansible controller host.
+
+### 4. `manifest` Stage
 
 The `manifest` stage type applies a YAML manifest file to the target
 environment. This is the primary way to deploy and configure Kubernetes or
@@ -259,7 +295,7 @@ Here, the `manifest` stage applies the YAML file located at
 `openstack_controlplane.yaml`. The `wait_conditions` then ensure that the
 MetalLB speaker pods become ready before the pipeline moves to the next stage.
 
-### 4. `j2_manifest` Stage
+### 5. `j2_manifest` Stage
 
 The `j2_manifest` stage type renders a Jinja2 template file into a YAML
 manifest and then applies the resulting YAML to the target environment. This
@@ -300,7 +336,7 @@ resulting YAML is applied. The `wait_conditions` then verify the successful
 creation and readiness of the involved kubernetes resources like namespaces,
 operator groups, catalog sources, subscriptions etc.
 
-### 5. `kustomize` Stage
+### 6. `kustomize` Stage
 
 The `kustomize` stage type applies a Kustomize directory to the target
 environment using `oc apply -k`. This stage type is designed to work with
