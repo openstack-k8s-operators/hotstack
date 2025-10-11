@@ -25,6 +25,7 @@ spec:
           network.shared_physical_network true
           service_available.ironic_inspector false
           service_available.ironic true
+          service_available.murano false
           validation.connect_method fixed
           validation.network_for_ssh provisioning
       tempestRun:
@@ -43,6 +44,7 @@ spec:
           baremetal.max_microversion 1.82
           service_available.ironic_inspector true
           service_available.ironic true
+          service_available.murano false
       tempestRun:
         concurrency: 8
         includeList: |

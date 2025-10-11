@@ -75,6 +75,7 @@ spec:
           neutron_plugin_options.ipv6_metadata false
           neutron_plugin_options.is_igmp_snooping_enabled true
           service_available.ceilometer true
+          service_available.murano false
           service_available.sg_core true
           telemetry.ceilometer_polling_interval 120
           telemetry.prometheus_scrape_interval 30
@@ -237,6 +238,7 @@ spec:
           neutron_plugin_options.ipv6_metadata false
           neutron_plugin_options.is_igmp_snooping_enabled true
           service_available.ceilometer true
+          service_available.murano false
           service_available.sg_core true
           telemetry.ceilometer_polling_interval 120
           telemetry.prometheus_scrape_interval 30
@@ -285,6 +287,7 @@ spec:
           network.shared_physical_network true
           service_available.ironic_inspector true
           service_available.ironic true
+          service_available.murano false
           validation.connect_method fixed
           validation.network_for_ssh provisioning
       tempestRun:
@@ -309,6 +312,7 @@ spec:
           baremetal.max_microversion 1.82
           service_available.ironic_inspector true
           service_available.ironic true
+          service_available.murano false
       tempestRun:
         concurrency: 8
         includeList: |
