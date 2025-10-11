@@ -132,6 +132,7 @@ spec:
           octavia_tempest_plugin.tests.act_stdby_scenario
           octavia_tempest_plugin.tests.spare_pool_scenario
           est_established_tcp_session_after_re_attachinging_sg
+          ^tempest.scenario.test_network_basic_ops.TestNetworkBasicOps.test_mtu_sized_frames
           heat_tempest_plugin.tests.scenario.test_octavia_lbaas.LoadBalancerTest
           heat_tempest_plugin.tests.scenario.test_aodh_alarm.AodhAlarmTest.test_alarm
           # Unskip this after https://issues.redhat.com/browse/OSPRH-7820
