@@ -77,7 +77,7 @@ to install OCP.
 
 ## TODO
 
-- IPv6
+- Add TODO's here ...
 
 ## Pre-requisites
 
