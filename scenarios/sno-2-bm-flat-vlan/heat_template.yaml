@@ -33,6 +33,11 @@ parameters:
     default:
       image: hotstack-controller
       flavor: hotstack.small
+  nat64_appliance_params:
+    type: json
+    default:
+      image: nat64-appliance
+      flavor: hotstack.small
   ocp_master_params:
     type: json
     default:
