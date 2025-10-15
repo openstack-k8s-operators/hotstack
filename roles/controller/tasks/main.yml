@@ -167,6 +167,19 @@
         owner: zuul
         group: zuul
 
+    - name: Write CA certificate to file
+      no_log: true
+      ansible.builtin.copy:
+        content: "{{ hotstack_cloud_secrets.cacert | default('') }}"
+        dest: >-
+          {{
+            [cloud_config_dir, 'cacert.pem']
+            | ansible.builtin.path_join
+          }}
+        mode: '0640'
+        owner: zuul
+        group: zuul
+
     - name: Write Ironic nodes YAML
       when:
         - stack_outputs.ironic_nodes is defined

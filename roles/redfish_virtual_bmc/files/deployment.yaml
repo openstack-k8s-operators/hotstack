@@ -39,8 +39,10 @@ spec:
           secretName: os-client-config
           defaultMode: 0644  # u=rw,g=r,o=r
           items:
-          - key: openstack-clouds-yaml
-            path: clouds.yaml
+            - key: openstack-clouds-yaml
+              path: clouds.yaml
+            - key: certificate-pem
+              path: cacert.pem
       containers:
       - name: sushy-emulator
         image: quay.io/rhn_gps_hjensas/sushy-tools:dev-1743879555

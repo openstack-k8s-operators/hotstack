@@ -3,8 +3,8 @@ clouds:
   default:
     identity_api_version: {{ hotstack_cloud_secrets.identity_api_version }}
     region_name: {{ hotstack_cloud_secrets.region_name }}
-{% if hotstack_cloud_secrets.ca_cert_path is defined %}
-    cacert: {{ hotstack_cloud_secrets.ca_cert_path }}
+{% if hotstack_cloud_secrets.cacert is defined %}
+    cacert: /etc/openstack/cacert.pem
 {% endif %}
     auth_type: v3applicationcredential
     auth:

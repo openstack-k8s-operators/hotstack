@@ -110,12 +110,13 @@ bootstrap variable files.
 > variable in the bootstrap variable files in scenarios.
 
 ```bash
-openstack flavor create hotstack.small   --public --vcpus  1 --ram  2048 --disk  20
-openstack flavor create hotstack.medium  --public --vcpus  2 --ram  4096 --disk  40
-openstack flavor create hotstack.mlarge  --public --vcpus  2 --ram  6144 --disk  40
-openstack flavor create hotstack.large   --public --vcpus  4 --ram  8192 --disk  80
-openstack flavor create hotstack.xlarge  --public --vcpus  8 --ram 16384 --disk 160
-openstack flavor create hotstack.xxlarge --public --vcpus 12 --ram 32768 --disk 160
+openstack flavor create hotstack.small    --public --vcpus  1 --ram  2048 --disk  20
+openstack flavor create hotstack.medium   --public --vcpus  2 --ram  4096 --disk  40
+openstack flavor create hotstack.mlarge   --public --vcpus  2 --ram  6144 --disk  40
+openstack flavor create hotstack.large    --public --vcpus  4 --ram  8192 --disk  80
+openstack flavor create hotstack.xlarge   --public --vcpus  8 --ram 16384 --disk 160
+openstack flavor create hotstack.xxlarge  --public --vcpus 12 --ram 32768 --disk 160
+openstack flavor create hotstack.xxxlarge --public --vcpus 12 --ram 49152 --disk 160
 ```
 
 ### Cloud secret
@@ -140,6 +141,12 @@ hotstack_cloud_secrets:
   interface: public
   identity_api_version: 3
   auth_type: v3applicationcredential
+  # Optional: Include CA certificate inline for self-signed certificates
+  # cacert: |
+  #   -----BEGIN CERTIFICATE-----
+  #   MIIDXTCCAkWgAwIBAgIJAKZ6...
+  #   ... (certificate content) ...
+  #   -----END CERTIFICATE-----
 ```
 
 ### Ansible collections (Dependencies)

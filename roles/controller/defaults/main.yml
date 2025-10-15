@@ -14,4 +14,7 @@ hotstack_cloud_secrets:
   interface: public
   identity_api_version: 3
   auth_type: v3applicationcredential
-  ca_cert_path:
+  # cacert: |
+  #   -----BEGIN CERTIFICATE-----
+  #   <certificate content here>
+  #   -----END CERTIFICATE-----
