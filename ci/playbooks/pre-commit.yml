@@ -11,6 +11,7 @@
           - python3
           - python3-pip
           - nmstate
+          - libatomic
         state: present
     - name: Pip install
       ansible.builtin.pip:

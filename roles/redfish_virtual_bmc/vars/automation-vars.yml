@@ -10,6 +10,7 @@ stages:
       oc create -n sushy-emulator secret generic os-client-config
       --save-config --dry-run=client
       --from-file=openstack-clouds-yaml={{ cloud_config_dir }}/clouds.yaml
+      --from-file=certificate-pem={{ cloud_config_dir }}/cacert.pem
       --type=Opaque -o yaml | oc apply -f -
 
   - name: "Sushy Emulator : Config Map"

@@ -234,11 +234,17 @@ a `cloud-secrets.yaml` file. For example:
 hotstack_cloud_secrets:
   auth_url: http://<keystone_ip>:5000            # Replace with your Keystone endpoint
   application_credential_id: <APP_CREDENTIAL_ID> # Replace with ID of application credential
-  application_credential_secret: <SECRET>        # Replace sith Secret of application credential
+  application_credential_secret: <SECRET>        # Replace with Secret of application credential
   region_name: RegionOne                         # Adjust if your region name differs
   interface: public                              # Or internal/admin as appropriate for your setup
   identity_api_version: 3
   auth_type: v3applicationcredential
+  # Optional: Include CA certificate inline for self-signed certificates
+  # cacert: |
+  #   -----BEGIN CERTIFICATE-----
+  #   MIIDXTCCAkWgAwIBAgIJAKZ6...
+  #   ... (certificate content) ...
+  #   -----END CERTIFICATE-----
 ```
 
 ### Exporting OS_CLOUD
