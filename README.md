@@ -127,7 +127,7 @@ user of application credential can be used.
 To create an application credential:
 
 ```bash
-openstack application credential create --unrestricted hotstack-app-credential
+openstack application credential create hotstack-app-credential --unrestricted
 ```
 
 Example cloud-secrets variable file:
