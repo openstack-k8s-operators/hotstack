@@ -76,9 +76,17 @@ cd /opt/openstack-ansible
 
 ## Checkout the desired release
 
+It's recommended to deploy from a stable release tag. List available tags:
+
 ```bash
-# For example: stable/2025.1
-git checkout stable/2025.1
+git fetch --tags
+git tag -l
+```
+
+Checkout the desired release tag:
+
+```bash
+git checkout <tag>
 ```
 
 ## Configure Volume Groups (optional)
