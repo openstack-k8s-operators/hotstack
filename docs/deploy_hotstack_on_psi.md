@@ -62,7 +62,7 @@ deployment:
   and bootstraps the controller node.
 - [`03-install_ocp.yml`](../03-install_ocp.yml): Installs the OpenShift
   Container Platform cluster.
-- [`04_redfish_virtual_bmc.yml`](../04_redfish_virtual_bmc.yml): Deploys the
+- [`04-redfish_virtual_bmc.yml`](../04-redfish_virtual_bmc.yml): Deploys the
    sushy-emulator (RedFish Virtual BMC).
 - [`05_deploy_rhoso.yml`](../05_deploy_rhoso.yml): Deploys the Red Hat
   OpenStack overcloud (RHOSO).
@@ -410,10 +410,10 @@ Alternatively you can run the playbooks individually:
 - Deploy the RedFish virtual BMC
 
   ```bash
-  ansible-playbook -i inventory.yml 04_redfish_virtual_bmc.yml \
+  ansible-playbook -i inventory.yml 04-redfish_virtual_bmc.yml \
     -e @scenarios/3-nodes/bootstrap_vars.yml \
-    -e @~/bootstrap_vars_overides.yml \
-    -e @~/cloud-secrets.yaml
+    -e @~/bootstrap_vars_overides.yml \
+    -e @~/cloud-secrets.yaml
   ```
 
 - Deploy RHOSO
