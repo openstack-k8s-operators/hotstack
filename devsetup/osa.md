@@ -8,7 +8,7 @@ OpenStack cloud on a single node.
 
 ### System Requirements
 
-- CentOS Stream 10 or RHEL 10
+- CentOS Stream 10
 - Minimum 64GB RAM (128GB or more recommended)
 - Minimum 500GB disk space (1TB+ recommended for multiple scenarios)
 - Nested virtualization support if running in a VM
@@ -145,10 +145,17 @@ scripts/bootstrap-ansible.sh
 
 ## Run the openstack-ansible AIO bootstrap
 
-Set the scenario (using metal deployment with Heat):
+Set the scenario. Choose between metal deployment (services run directly on the
+host) or LXC deployment (services run in containers):
 
 ```bash
+# For metal deployment (services on host)
 export SCENARIO="aio_metal_heat"
+```
+
+```bash
+# For LXC deployment (services in containers)
+export SCENARIO="aio_heat"
 ```
 
 Configure bootstrap options. Start with the common settings (using shell
@@ -161,22 +168,15 @@ export BOOTSTRAP_OPTS="${BOOTSTRAP_OPTS} bootstrap_host_public_address=\
 $(hostname -f)"
 ```
 
-Then add storage options based on your volume group setup:
+Then add storage options based on your volume group setup.
 
-**If using physical disks for both Nova and Cinder (recommended):**
-
-```bash
-export BOOTSTRAP_OPTS="${BOOTSTRAP_OPTS} bootstrap_host_loopback_cinder=false"
-export BOOTSTRAP_OPTS="${BOOTSTRAP_OPTS} bootstrap_host_loopback_nova=false"
-```
-
-**If using physical disks for Cinder only:**
+If you created the `cinder-volumes` volume group with physical disks:
 
 ```bash
 export BOOTSTRAP_OPTS="${BOOTSTRAP_OPTS} bootstrap_host_loopback_cinder=false"
 ```
 
-**If using physical disks for Nova only:**
+If you created the `nova-volumes` volume group with physical disks:
 
 ```bash
 export BOOTSTRAP_OPTS="${BOOTSTRAP_OPTS} bootstrap_host_loopback_nova=false"
@@ -323,7 +323,7 @@ for HotStack.
 
 ### Check service status
 
-Since this is a metal deployment, services run directly on the host:
+For **metal deployment**, services run directly on the host:
 
 ```bash
 # Check OpenStack service status
@@ -337,9 +337,30 @@ systemctl list-units | \
   grep -E '(nova|neutron|cinder|heat|glance|keystone)'
 ```
 
+For **LXC deployment**, services run in containers:
+
+```bash
+# List all LXC containers
+lxc-ls -f
+
+# Check status of a specific container
+lxc-info -n aio1_nova_api_container-*
+
+# Check service status inside a container
+lxc-attach -n aio1_nova_api_container-* -- systemctl status nova-api
+lxc-attach -n aio1_nova_compute_container-* -- systemctl status nova-compute
+lxc-attach -n aio1_neutron_server_container-* -- systemctl status \
+  neutron-server
+lxc-attach -n aio1_cinder_api_container-* -- systemctl status cinder-api
+lxc-attach -n aio1_heat_api_container-* -- systemctl status heat-api
+
+# Enter a container interactively
+lxc-attach -n aio1_nova_api_container-*
+```
+
 ### Logs
 
-View service logs using journalctl:
+For **metal deployment**, view service logs using journalctl:
 
 ```bash
 # View logs for specific services
@@ -354,6 +375,20 @@ journalctl -u nova-compute -f
 
 # View logs from all OpenStack services
 journalctl -u 'nova-*' -u 'neutron-*' -u 'cinder-*' -u 'heat-*'
+```
+
+For **LXC deployment**, view logs inside containers:
+
+```bash
+# View logs from a service in a container
+lxc-attach -n aio1_nova_api_container-* -- journalctl -u nova-api
+lxc-attach -n aio1_nova_compute_container-* -- journalctl -u nova-compute
+
+# Follow logs in real-time from a container
+lxc-attach -n aio1_nova_compute_container-* -- journalctl -u nova-compute -f
+
+# View logs from the container itself (host perspective)
+journalctl -u lxc@aio1_nova_api_container-*
 ```
 
 ## References
