@@ -8,7 +8,7 @@ OpenStack cloud on a single node.
 
 ### System Requirements
 
-- CentOS Stream 10
+- CentOS Stream 9 (10 for flamingo and later ...)
 - Minimum 64GB RAM (128GB or more recommended)
 - Minimum 500GB disk space (1TB+ recommended for multiple scenarios)
 - Nested virtualization support if running in a VM
@@ -44,7 +44,7 @@ reboot
 After reboot, install the required packages:
 
 ```bash
-dnf install -y git-core
+dnf install -y git-core unbound python-unbound
 ```
 
 ### Configure Network Time Protocol (NTP)
@@ -65,28 +65,6 @@ service:
 ```bash
 systemctl stop firewalld
 systemctl mask firewalld
-```
-
-## Clone OpenStack-Ansible
-
-```bash
-git clone https://opendev.org/openstack/openstack-ansible /opt/openstack-ansible
-cd /opt/openstack-ansible
-```
-
-## Checkout the desired release
-
-It's recommended to deploy from a stable release tag. List available tags:
-
-```bash
-git fetch --tags
-git tag -l
-```
-
-Checkout the desired release tag:
-
-```bash
-git checkout <tag>
 ```
 
 ## Configure Volume Groups (optional)
@@ -144,6 +122,42 @@ pvcreate /dev/sdb2
 vgcreate nova-volumes /dev/sdb2
 ```
 
+## Clone OpenStack-Ansible
+
+```bash
+git clone https://opendev.org/openstack/openstack-ansible /opt/openstack-ansible
+cd /opt/openstack-ansible
+```
+
+## Checkout the desired release
+
+It's recommended to deploy from a stable release tag. List available tags:
+
+```bash
+git fetch --tags
+git tag -l
+```
+
+Checkout the desired release tag:
+
+```bash
+git checkout <tag>
+```
+
+### Adjust MTU configuration (if needed)
+
+OpenStack-Ansible AIO has hardcoded MTU values of 9000 in the
+`prepare_networking` role. If your network doesn't support jumbo frames, you
+should change this to a standard MTU of 1500 before running the bootstrap:
+
+```bash
+cd /opt/openstack-ansible
+git checkout -b mtu
+sed -i 's/mtu: 9000/mtu: 1500/g' tests/roles/bootstrap-host/tasks/prepare_networking.yml
+git add tests/roles/bootstrap-host/tasks/prepare_networking.yml
+git commit -m "Set MTU top 1500, instead of 9000"
+```
+
 ## Run the openstack-ansible bootstrap-ansible
 
 ```bash
@@ -158,12 +172,12 @@ host) or LXC deployment (services run in containers):
 
 ```bash
 # For metal deployment (services on host)
-export SCENARIO="aio_metal_heat"
+export SCENARIO="aio_heat_kvm_metal"
 ```
 
 ```bash
 # For LXC deployment (services in containers)
-export SCENARIO="aio_heat"
+export SCENARIO="aio_heat_kvm"
 ```
 
 Configure bootstrap options. Start with the common settings (using shell
@@ -173,7 +187,7 @@ substitution to auto-detect):
 export BOOTSTRAP_OPTS="${BOOTSTRAP_OPTS} bootstrap_host_public_interface=\
 $(ip route show default | awk '{print $5}' | head -n1)"
 export BOOTSTRAP_OPTS="${BOOTSTRAP_OPTS} bootstrap_host_public_address=\
-$(hostname -f)"
+$(ip route get 1 | awk '{print $7}' | head -n1)"
 ```
 
 Then add storage options based on your volume group setup.
@@ -190,10 +204,26 @@ If you created the `nova-volumes` volume group with physical disks:
 export BOOTSTRAP_OPTS="${BOOTSTRAP_OPTS} bootstrap_host_loopback_nova=false"
 ```
 
+Save the hostname before running the bootstrap script (the script will change it):
+
+```bash
+ORIGINAL_HOSTNAME=$(hostname -f)
+```
+
 Run the bootstrap script:
 
 ```bash
 scripts/bootstrap-aio.sh
+```
+
+### Use FQDN for external_lb_vip_address (optional)
+
+If you want to use a hostname FQDN instead of an IP address for
+`external_lb_vip_address`, update the generated configuration:
+
+```bash
+sed -i "s/external_lb_vip_address: .*/external_lb_vip_address: ${ORIGINAL_HOSTNAME}/" \
+  /etc/openstack_deploy/openstack_user_config.yml
 ```
 
 ## Configure the deployment
@@ -237,6 +267,23 @@ nova_nova_conf_overrides:
 volume group and set `bootstrap_host_loopback_nova=false`. If using loopback
 devices, this configuration is not necessary.
 
+### Configure HAProxy buffer tuning
+
+Configure HAProxy buffer tuning parameters to prevent "PH--" 500 errors when
+handling large responses from Horizon and other services:
+
+```yaml
+# Configure HAProxy buffer overrides for PH-- 500 errors
+# This list is used to add 'tune' directives to the global section of haproxy.cfg.
+haproxy_tuning_params:
+  # Sets the buffer size (default is usually 16384 or 32768, depending on HAProxy version).
+  # We are setting a higher value to reliably handle large static files from Horizon.
+  tune.bufsize: 32768
+  # Sets the maximum size for the header/rewrite buffer (default is often 1024).
+  # Increasing this helps prevent "PH--" errors during response parsing.
+  tune.maxrewrite: 2048
+```
+
 ### Complete example configuration
 
 Here's a complete example of `/etc/openstack_deploy/user_variables.yml`:
@@ -255,6 +302,16 @@ nova_nova_conf_overrides:
     images_volume_group: nova-volumes
     volume_clear: zero
     disk_cachemodes: none
+
+# --- HAProxy Buffer Overrides for PH-- 500 Errors ---
+# This list is used to add 'tune' directives to the global section of haproxy.cfg.
+haproxy_tuning_params:
+  # Sets the buffer size (default is usually 16384 or 32768, depending on HAProxy version).
+  # We are setting a higher value to reliably handle large static files from Horizon.
+  tune.bufsize: 32768
+  # Sets the maximum size for the header/rewrite buffer (default is often 1024).
+  # Increasing this helps prevent "PH--" errors during response parsing.
+  tune.maxrewrite: 2048
 
 # Add any additional customizations below as needed
 ```

@@ -176,7 +176,7 @@ OCP cluster install etc.
   ansible.builtin.import_playbook: 03-install_ocp.yml
 
 - name: Deploy RedFish Virtual BMC
-  ansible.builtin.import_playbook: 04_redfish_virtual_bmc.yml
+  ansible.builtin.import_playbook: 04-redfish_virtual_bmc.yml
 
 - name: Deploy RHOSO
   ansible.builtin.import_playbook: 05_deploy_rhoso.yml
