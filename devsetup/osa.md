@@ -196,32 +196,6 @@ Run the bootstrap script:
 scripts/bootstrap-aio.sh
 ```
 
-## Configure systemd-networkd
-
-The bootstrap-aio.sh script installs systemd-networkd and disables
-NetworkManager. However, it does not create a network configuration for the
-default route interface. You must create this configuration before proceeding:
-
-```bash
-# Get the default route interface
-DEFAULT_INTERFACE=$(ip route show default | awk '{print $5}' | head -n1)
-
-# Create networkd configuration for the interface
-tee /etc/systemd/network/10-${DEFAULT_INTERFACE}.network > /dev/null <<EOF
-[Match]
-Name=${DEFAULT_INTERFACE}
-
-[Network]
-DHCP=yes
-
-[Link]
-RequiredForOnline=yes
-EOF
-
-# Restart systemd-networkd to apply the configuration
-systemctl restart systemd-networkd
-```
-
 ## Configure the deployment
 
 Edit `/etc/openstack_deploy/user_variables.yml` to configure your deployment.
@@ -293,6 +267,32 @@ cd /opt/openstack-ansible
 openstack-ansible openstack.osa.setup_hosts
 openstack-ansible openstack.osa.setup_infrastructure
 openstack-ansible openstack.osa.setup_openstack
+```
+
+## Configure systemd-networkd
+
+The OpenStack-Ansible installer installs systemd-networkd and disables
+NetworkManager. However, it does not create a network configuration for the
+default route interface. You must create this configuration before proceeding:
+
+```bash
+# Get the default route interface
+DEFAULT_INTERFACE=$(ip route show default | awk '{print $5}' | head -n1)
+
+# Create networkd configuration for the interface
+tee /etc/systemd/network/10-${DEFAULT_INTERFACE}.network > /dev/null <<EOF
+[Match]
+Name=${DEFAULT_INTERFACE}
+
+[Network]
+DHCP=yes
+
+[Link]
+RequiredForOnline=yes
+EOF
+
+# Restart systemd-networkd to apply the configuration
+systemctl restart systemd-networkd
 ```
 
 ## Access the cloud
