@@ -1,0 +1,393 @@
+---
+stages:
+  - name: Set a multiattach volume type and create it if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack volume type show multiattach &>/dev/null || \
+          oc rsh openstackclient openstack volume type create multiattach
+
+      oc rsh openstackclient openstack volume type set --property multiattach="<is> True" multiattach
+
+  - name: Create public network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack network show public &>/dev/null || \
+        oc rsh openstackclient openstack network create public \
+          --external \
+          --no-share \
+          --default \
+          --provider-network-type flat \
+          --provider-physical-network datacentre
+
+  - name: Create subnet on public network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack subnet show public_subnet &>/dev/null || \
+        oc rsh openstackclient openstack subnet create public_subnet \
+          --network public \
+          --subnet-range 192.168.122.0/24 \
+          --allocation-pool start=192.168.122.171,end=192.168.122.250 \
+          --gateway 192.168.122.1 \
+          --dhcp
+
+  - name: Create private network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack network show private &>/dev/null || \
+        oc rsh openstackclient openstack network create private --share
+
+  - name: Create subnet on private network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack subnet show private_subnet &>/dev/null || \
+        oc rsh openstackclient openstack subnet create private_subnet \
+          --network private \
+          --subnet-range 10.2.0.0/24 \
+          --allocation-pool start=10.2.0.10,end=10.2.0.250 \
+          --gateway 10.2.0.1 \
+          --dhcp
+
+  - name: Create network for ironic provisioning if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack network show provisioning &>/dev/null || \
+        oc rsh openstackclient \
+          openstack network create provisioning \
+            --share \
+            --provider-physical-network ironic \
+            --availability-zone-hint zone-1 \
+            --provider-network-type flat
+
+  - name: Create subnet for ironic provisioning if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack subnet show provisioning-subnet &>/dev/null || \
+        oc rsh openstackclient \
+          openstack subnet create provisioning-subnet \
+            --network provisioning \
+            --subnet-range 172.20.1.0/24 \
+            --gateway 172.20.1.1 \
+            --dns-nameserver 192.168.122.80 \
+            --allocation-pool start=172.20.1.100,end=172.20.1.200
+
+  - name: Create baremetal flavor if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack flavor show baremetal &>/dev/null || \
+        oc rsh openstackclient \
+          openstack flavor create baremetal \
+            --id 123456789-1234-1234-1234-000000000001 \
+            --ram 1024 \
+            --vcpus 1 \
+            --disk 15 \
+            --property resources:VCPU=0 \
+            --property resources:MEMORY_MB=0 \
+            --property resources:DISK_GB=0 \
+            --property resources:CUSTOM_BAREMETAL=1 \
+            --property capabilities:boot_mode=uefi
+
+  - name: Get CA cert and add to chain
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc get secret rootca-public -n openstack -o json | jq -r '.data."ca.crt"' | base64 -d > rhoso-ca.crt
+      sudo cp rhoso-ca.crt /etc/pki/ca-trust/source/anchors/
+      sudo update-ca-trust
+
+  - name: Set up clouds.yaml on hotstack controller
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      mkdir -p /home/zuul/.config/openstack
+      oc cp openstack/openstackclient:.config/openstack/clouds.yaml /home/zuul/.config/openstack/clouds.yaml
+      oc cp openstack/openstackclient:.config/openstack/secure.yaml .config/openstack/secure.yaml
+
+  - name: Install openstack client on hotstack controller
+    shell: |
+      set -xe -o pipefail
+      sudo dnf config-manager --enable crb
+      sudo dnf install -y centos-release-openstack-antelope.noarch
+      sudo dnf install -y python-openstackclient
+
+  - name: Stop octavia pods
+    shell: |
+      set -xe -o pipefail
+      NAMESPACE="openstack"
+      OSCP="controlplane"
+
+      oc patch oscp ${OSCP} -n ${NAMESPACE} \
+        --type=merge \
+        --patch '
+      spec:
+        octavia:
+          template:
+            octaviaHealthManager:
+              nodeSelector:
+                amphoracontroller: "false"
+            octaviaHousekeeping:
+              nodeSelector:
+                amphoracontroller: "false"
+            octaviaWorker:
+              nodeSelector:
+                amphoracontroller: "false"
+      '
+
+  - name: Galera Database Passwords
+    shell: |
+      {% raw %}
+      set -xe -o pipefail
+      NAMESPACE="openstack"
+      OSCP="controlplane"
+      OLD_PASSWORD="12345678"
+      NEW_PASSWORD="DBPass123"
+
+      # Dynamically get Galera instance names from oscp
+      GALERA_INSTANCES=($(oc get oscp ${OSCP} -n ${NAMESPACE} -o json | jq -r '.spec.galera.templates | keys[]'))
+
+      # Build CURRENT_REPLICAS array by iterating over instances
+      CURRENT_REPLICAS=()
+      for GALERA_NAME in "${GALERA_INSTANCES[@]}"; do
+        REPLICAS=$(oc get oscp ${OSCP} -n ${NAMESPACE} -o jsonpath="{.spec.galera.templates.${GALERA_NAME}.replicas}")
+        CURRENT_REPLICAS+=("${REPLICAS}")
+      done
+
+      for GALERA_NAME in "${GALERA_INSTANCES[@]}"; do
+        POD_NAME="${GALERA_NAME}-galera-0"
+        echo "Scaling down ${POD_NAME}..."
+        oc patch oscp ${OSCP} -n ${NAMESPACE} --type=json \
+          -p "[{\"op\": \"replace\", \"path\": \"/spec/galera/templates/${GALERA_NAME}/replicas\", \"value\": 1}]"
+      done
+
+      # Wait for each Galera instance to scale down to 1 replica
+      for GALERA_NAME in "${GALERA_INSTANCES[@]}"; do
+        echo "Waiting for ${GALERA_NAME}-galera to have 1 ready replica..."
+        oc -n ${NAMESPACE} wait statefulsets.apps ${GALERA_NAME}-galera --for=jsonpath='{.status.readyReplicas}'=1 --timeout=5m
+      done
+
+      # Change the password in the database for each Galera instance
+      for GALERA_NAME in "${GALERA_INSTANCES[@]}"; do
+        POD_NAME="${GALERA_NAME}-galera-0"
+        oc exec -it ${POD_NAME} -n ${NAMESPACE} -c galera -- bash -c "
+        mysql -uroot -p'${OLD_PASSWORD}' <<'EOSQL'
+      ALTER USER 'root'@'localhost' IDENTIFIED BY '${NEW_PASSWORD}';
+      ALTER USER 'root'@'%' IDENTIFIED BY '${NEW_PASSWORD}';
+      FLUSH PRIVILEGES;
+      SELECT 'Password changed for ${POD_NAME}' AS Status;
+      EOSQL
+      "
+
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Failed to change password in ${POD_NAME}"
+          exit 1
+        fi
+        echo "Password changed in MySQL for ${POD_NAME}"
+
+        echo ""
+        echo "Verify new password works for ${POD_NAME}"
+        oc exec ${POD_NAME} -n ${NAMESPACE} -c galera -- \
+          mysql -uroot -p"${NEW_PASSWORD}" -e "SELECT 'Verified ${POD_NAME}' AS Status;"
+
+        if [ $? -ne 0 ]; then
+          echo "ERROR: New password verification failed for ${POD_NAME}"
+          exit 1
+        fi
+        echo "New password verified for ${POD_NAME}"
+      done
+
+      # Update osp-secret with the new password
+      NEW_PASSWORD_B64=$(echo -n "${NEW_PASSWORD}" | base64 -w 0)
+      oc patch secret osp-secret -n openstack --type='json' \
+        -p="[{\"op\": \"replace\", \"path\": \"/data/DbRootPassword\", \"value\": \"${NEW_PASSWORD_B64}\"}]"
+
+      # Restart the Galera Pods
+      for GALERA_NAME in "${GALERA_INSTANCES[@]}"; do
+        POD_NAME="${GALERA_NAME}-galera-0"
+        oc delete pod ${POD_NAME} -n ${NAMESPACE}
+
+        echo "Waiting for ${POD_NAME} to be ready..."
+        oc wait --for=condition=ready pod/${POD_NAME} -n ${NAMESPACE} --timeout=300s
+
+        if [ $? -ne 0 ]; then
+          echo "ERROR: ${POD_NAME} failed to become ready"
+          exit 1
+        fi
+        echo "${POD_NAME} restarted successfully"
+        echo ""
+      done
+
+      # Verify the new password with the new pods
+      for GALERA_NAME in "${GALERA_INSTANCES[@]}"; do
+        POD_NAME="${GALERA_NAME}-galera-0"
+        echo "Verifying ${POD_NAME}..."
+
+        # Test connection with new password
+        oc exec ${POD_NAME} -n ${NAMESPACE} -c galera -- \
+          mysql -uroot -p"${NEW_PASSWORD}" -e "SELECT 'Connection OK' AS Status;" >/dev/null 2>&1
+
+        if [ $? -eq 0 ]; then
+          echo "${POD_NAME} - Connection OK with new password"
+        else
+          echo "${POD_NAME} - Connection FAILED with new password"
+        fi
+
+        # Check cluster health
+        CLUSTER_SIZE=$(oc exec ${POD_NAME} -n ${NAMESPACE} -c galera -- \
+          mysql -uroot -p"${NEW_PASSWORD}" -sNe "SHOW STATUS LIKE 'wsrep_cluster_size';" 2>/dev/null | awk '{print $2}')
+        echo "  Cluster size: ${CLUSTER_SIZE}"
+
+        CLUSTER_STATUS=$(oc exec ${POD_NAME} -n ${NAMESPACE} -c galera -- \
+          mysql -uroot -p"${NEW_PASSWORD}" -sNe "SHOW STATUS LIKE 'wsrep_local_state_comment';" 2>/dev/null | awk '{print $2}')
+        echo "  Cluster status: ${CLUSTER_STATUS}"
+
+        if [ "${CLUSTER_STATUS}" != "Synced" ]; then
+          echo "  WARNING: Cluster is not synced"
+        fi
+        echo ""
+      done
+
+      # Rescale the pods back to their original sizes
+      for ((i=0; i<${#GALERA_INSTANCES[@]}; i++)); do
+        POD_NAME="${GALERA_INSTANCES[$i]}-galera-0"
+        echo "Scaling up ${POD_NAME} to ${CURRENT_REPLICAS[$i]} replicas..."
+        oc patch oscp ${OSCP} -n ${NAMESPACE} --type=json \
+         -p "[{\"op\": \"replace\", \"path\": \"/spec/galera/templates/${GALERA_INSTANCES[$i]}/replicas\", \"value\": ${CURRENT_REPLICAS[$i]}}]"
+      done
+
+      # Wait for each Galera instance to scale back up to original replica count
+      for ((i=0; i<${#GALERA_INSTANCES[@]}; i++)); do
+        echo "Waiting for ${GALERA_INSTANCES[$i]}-galera to have ${CURRENT_REPLICAS[$i]} ready replicas..."
+        oc -n ${NAMESPACE} wait statefulsets.apps ${GALERA_INSTANCES[$i]}-galera \
+          --for=jsonpath='{.status.readyReplicas}'=${CURRENT_REPLICAS[$i]} --timeout=5m
+      done
+      {% endraw %}
+
+  - name: RabbitMQ Password Rotation
+    shell: |
+      set -xe -o pipefail
+      NAMESPACE="openstack"
+      RABBITMQ_CLUSTERS=$(oc get rabbitmq.rabbitmq.openstack.org -n ${NAMESPACE} -o jsonpath='{.items[*].metadata.name}')
+
+      # Delete RabbitMQ clusters
+      for CLUSTER in ${RABBITMQ_CLUSTERS}; do
+        echo "Deleting RabbitMQ cluster: ${CLUSTER}"
+        oc delete rabbitmq.rabbitmq.openstack.org/${CLUSTER} -n ${NAMESPACE}
+      done
+
+      # Wait for clusters to be deleted and recreated
+      echo "Waiting 30 seconds for RabbitMQ clusters to be recreated..."
+      sleep 30
+
+      # Wait for each RabbitMQ cluster to come back and be ready
+      for CLUSTER in ${RABBITMQ_CLUSTERS}; do
+        echo "Waiting for RabbitMQ cluster ${CLUSTER} to be ready..."
+        oc wait rabbitmq.rabbitmq.openstack.org/${CLUSTER} -n ${NAMESPACE} \
+          --for=condition=Ready --timeout=10m
+      done
+
+  # - name: Run script to create new users
+  #   script: scripts/create-users.sh
+
+  # - name: Create new admin user
+  #   shell: |
+  #     set -xe -o pipefail
+  #     oc project openstack
+  #     oc rsh openstackclient openstack user create admin-new \
+  #       --domain default \
+  #       --password admin_Pass123
+  #     oc rsh openstackclient openstack role add admin\
+  #       --user admin-new \
+  #       --project default
+
+  # - name: Create new heat_stack_domain_admin user
+  #   shell: |
+  #     set -xe -o pipefail
+  #     oc project openstack
+  #     oc rsh openstackclient openstack user create heat_stack_domain_admin-new \
+  #       --domain heat_stack \
+  #       --password heat_stack_domain_admin_Pass123
+
+  #     oc rsh openstackclient openstack role add admin \
+  #       --user heat_stack_domain_admin-new \
+  #       --domain heat_stack
+
+  # - name: Create osp-secret-new with updated passwords
+  #   shell: |
+  #     set -xe -o pipefail
+  #     oc project openstack
+
+  #     # Create the new secret with updated passwords
+  #     oc create secret generic osp-secret-new \
+  #       --from-literal=AdminPassword=admin_Pass123 \
+  #       --from-literal=AodhPassword=aodh_Pass123 \
+  #       --from-literal=BarbicanPassword=barbican_Pass123 \
+  #       --from-literal=CeilometerPassword=ceilometer_Pass123 \
+  #       --from-literal=CinderPassword=cinder_Pass123 \
+  #       --from-literal=GlancePassword=glance_Pass123 \
+  #       --from-literal=HeatPassword=heat_Pass123 \
+  #       --from-literal=IronicPassword=ironic_Pass123 \
+  #       --from-literal=ManilaPassword=manila_Pass123 \
+  #       --from-literal=NeutronPassword=neutron_Pass123 \
+  #       --from-literal=NovaPassword=nova_Pass123 \
+  #       --from-literal=OctaviaPassword=octavia_Pass123 \
+  #       --from-literal=PlacementPassword=placement_Pass123 \
+  #       --from-literal=SwiftPassword=swift_Pass123
+  #       --from-literal=AodhDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=DbRootPassword=MTIzNDU2Nzg5 \
+  #       --from-literal=BarbicanDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=CinderDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=DesignateDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=DesignatePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=GlanceDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=HeatDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=IronicDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=IronicInspectorDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=IronicInspectorPassword=MTIzNDU2Nzg5 \
+  #       --from-literal=KeystoneDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=ManilaDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=MetadataSecret=MTIzNDU2Nzg0Mw== \
+  #       --from-literal=NeutronDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=NovaAPIDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=NovaCell0DatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=NovaCell1DatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=OctaviaDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=PlacementDatabasePassword=MTIzNDU2Nzg5 \
+  #       --from-literal=BarbicanSimpleCryptoKEK=r0wDZ1zrD5upafX9RDfYqvDkW2LENBWH7Gz9+Tr3NdM= \
+  #       --from-literal=HeatAuthEncryptionKey=NzY3YzNlZDA1NmNiYWEzYjlkZmVkYjhjNmY4MjViZjA= \
+  #       --from-literal=OctaviaHeartbeatKey=MTIzNDU2Nzg5 \
+  #       --type=Opaque \
+  #       --dry-run=client -o yaml | oc apply -f -
+
+  - name: Run tempest
+    documentation: >-
+      Executes comprehensive OpenStack validation tests using the Tempest framework.
+    manifest: tempest-tests.yml
+    wait_conditions:
+      - >-
+        oc wait -n openstack tempests.test.openstack.org tempest-tests
+        --for condition=ServiceConfigReady --timeout=120s
+    wait_pod_completion:
+      - namespace: openstack
+        labels:
+          operator: test-operator
+          service: tempest
+          workflowStep: "0"
+        timeout: 3600
+        poll_interval: 15
