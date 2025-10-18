@@ -88,18 +88,33 @@ vgcreate cinder-volumes /dev/sdb
 **Note:** If you pre-create the `cinder-volumes` volume group, you must set
 `bootstrap_host_loopback_cinder=false` in the bootstrap options below.
 
-### Configure nova-volumes
+### Configure nova-instances
 
-To use physical disks for Nova instance storage, pre-create the `nova-volumes`
-volume group before running the bootstrap:
+To use physical disks for Nova instance storage, create a volume group and mount
+it at `/var/lib/nova/instances`:
 
 ```bash
 # Example: Using a physical disk for Nova
 pvcreate /dev/sdc
-vgcreate nova-volumes /dev/sdc
+vgcreate nova-instances /dev/sdc
+
+# Create a logical volume using all available space
+lvcreate -l 100%FREE -n instances nova-instances
+
+# Format the logical volume with XFS
+mkfs.xfs /dev/nova-instances/instances
+
+# Create the mount point
+mkdir -p /var/lib/nova/instances
+
+# Add to /etc/fstab for persistent mounting
+echo '/dev/nova-instances/instances /var/lib/nova/instances xfs defaults 0 0' >> /etc/fstab
+
+# Mount the filesystem
+mount /var/lib/nova/instances
 ```
 
-**Note:** If you pre-create the `nova-volumes` volume group, you must set
+**Note:** If you pre-create the nova instance filesystem, you must set
 `bootstrap_host_loopback_nova=false` in the bootstrap options below.
 
 ### Example: Using a single disk with partitions
@@ -119,7 +134,22 @@ parted /dev/sdb --script set 2 lvm on
 pvcreate /dev/sdb1
 vgcreate cinder-volumes /dev/sdb1
 pvcreate /dev/sdb2
-vgcreate nova-volumes /dev/sdb2
+vgcreate nova-instances /dev/sdb2
+
+# Create logical volume for Nova instances
+lvcreate -l 100%FREE -n instances nova-instances
+
+# Format the logical volume with XFS
+mkfs.xfs /dev/nova-instances/instances
+
+# Create the mount point
+mkdir -p /var/lib/nova/instances
+
+# Add to /etc/fstab for persistent mounting
+echo '/dev/nova-instances/instances /var/lib/nova/instances xfs defaults 0 0' >> /etc/fstab
+
+# Mount the filesystem
+mount /var/lib/nova/instances
 ```
 
 ## Clone OpenStack-Ansible
@@ -198,7 +228,8 @@ If you created the `cinder-volumes` volume group with physical disks:
 export BOOTSTRAP_OPTS="${BOOTSTRAP_OPTS} bootstrap_host_loopback_cinder=false"
 ```
 
-If you created the `nova-volumes` volume group with physical disks:
+If you created the `nova-instances` filesystem and mounted it at
+`/var/lib/nova/instances`:
 
 ```bash
 export BOOTSTRAP_OPTS="${BOOTSTRAP_OPTS} bootstrap_host_loopback_nova=false"
@@ -243,30 +274,6 @@ neutron_plugin_base:
   - trunk
 ```
 
-### Configure Nova LVM storage (if using physical disks)
-
-If you created a `nova-volumes` volume group, configure Nova to use it for
-ephemeral instance storage:
-
-```yaml
-nova_nova_conf_overrides:
-  libvirt:
-    # Set the instance image type to 'lvm'
-    images_type: lvm
-    # Specify the name of the LVM Volume Group to use for ephemeral
-    # storage
-    images_volume_group: nova-volumes
-    # Optional: Method for clearing volumes when destroyed
-    # (e.g., 'zero', 'shred')
-    volume_clear: zero
-    # Optional: Disk cache mode
-    disk_cachemodes: none
-```
-
-**Note:** This configuration is only needed if you created the `nova-volumes`
-volume group and set `bootstrap_host_loopback_nova=false`. If using loopback
-devices, this configuration is not necessary.
-
 ### Configure HAProxy buffer tuning
 
 Configure HAProxy buffer tuning parameters to prevent "PH--" 500 errors when
@@ -295,15 +302,7 @@ neutron_plugin_base:
   - ovn-router
   - trunk
 
-# Configure Nova LVM storage (only if using physical nova-volumes VG)
-nova_nova_conf_overrides:
-  libvirt:
-    images_type: lvm
-    images_volume_group: nova-volumes
-    volume_clear: zero
-    disk_cachemodes: none
-
-# --- HAProxy Buffer Overrides for PH-- 500 Errors ---
+# Configure HAProxy buffer overrides for PH-- 500 errors
 # This list is used to add 'tune' directives to the global section of haproxy.cfg.
 haproxy_tuning_params:
   # Sets the buffer size (default is usually 16384 or 32768, depending on HAProxy version).

@@ -15,7 +15,6 @@ environment.
 **Recommended for:**
 
 - CentOS Stream 9 / RHEL-based systems
-- Quick testing and development
 - Users familiar with RDO/Packstack
 
 ### [OpenStack-Ansible AIO Setup](osa.md)
@@ -26,21 +25,15 @@ deployment in a single node.
 
 **Recommended for:**
 
-- CentOS Stream 10 / RHEL-based systems
-- More comprehensive OpenStack deployment
-- Testing production-like configurations
-- Users wanting a closer match to production deployments
+- CentOS Stream 9 or 10 / RHEL-based systems
+- Users familiar with Openstack-Ansible
 
 ## Choosing a Setup Method
 
 | Feature | Packstack | OpenStack-Ansible AIO |
 |---------|-----------|----------------------|
-| Base OS | CentOS Stream 9 | CentOS Stream 10 |
-| OpenStack Release | Dalmatian | Flamingo or later |
-| Install Time | ~30-45 minutes | ~1-2 hours |
-| Complexity | Simple | Moderate |
-| Production-like | No | Yes |
-| Customization | Limited | Extensive |
+| Base OS | CentOS Stream 9 | CentOS Stream 9 or 10 |
+| OpenStack Release | Dalmatian | Epoxy or later |
 
 ## Common Post-Installation Steps
 
