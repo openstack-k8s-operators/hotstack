@@ -58,9 +58,9 @@ ansible-playbook -i inventory.yml bootstrap.yml \
   -e hotstack_revive_snapshot=true
 ```
 
-**Note**: Snapset deployment requires snapset images to be available in your
-OpenStack cloud. See [Hotstack SnapSet documentation](../../docs/hotstack_snapset.md)
-for details.
+> **NOTE**: Snapset deployment requires snapset images to be available in your
+> OpenStack cloud. See [Hotstack SnapSet documentation](../../docs/hotstack_snapset.md)
+> for details.
 
 ## Deployment Process
 

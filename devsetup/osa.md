@@ -85,8 +85,8 @@ pvcreate /dev/sdb
 vgcreate cinder-volumes /dev/sdb
 ```
 
-**Note:** If you pre-create the `cinder-volumes` volume group, you must set
-`bootstrap_host_loopback_cinder=false` in the bootstrap options below.
+> **NOTE**: If you pre-create the `cinder-volumes` volume group, you must set
+> `bootstrap_host_loopback_cinder=false` in the bootstrap options below.
 
 ### Configure nova-instances
 
@@ -114,8 +114,8 @@ echo '/dev/nova-instances/instances /var/lib/nova/instances xfs defaults 0 0' >>
 mount /var/lib/nova/instances
 ```
 
-**Note:** If you pre-create the nova instance filesystem, you must set
-`bootstrap_host_loopback_nova=false` in the bootstrap options below.
+> **NOTE**: If you pre-create the nova instance filesystem, you must set
+> `bootstrap_host_loopback_nova=false` in the bootstrap options below.
 
 ### Example: Using a single disk with partitions
 

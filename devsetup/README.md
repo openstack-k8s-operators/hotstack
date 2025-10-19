@@ -74,9 +74,9 @@ openstack flavor create hotstack.xxxlarge --public --vcpus 12 --ram 49152 --disk
 
 Create a dedicated project and user for HotStack:
 
-**Note:** The project name "hotstack" used in these examples can be replaced with
-any name you prefer. Just ensure you use the same name consistently throughout
-all commands.
+> **NOTE**: The project name "hotstack" used in these examples can be replaced with
+> any name you prefer. Just ensure you use the same name consistently throughout
+> all commands.
 
 ```shell
 openstack project create hotstack \

@@ -274,7 +274,7 @@ Each deployment scenario within the `scenarios/` directory (e.g.,
 the primary mechanism for customizing the parameters of a specific scenario
 deployment, allowing overrides of default values.
 
-> ***Note**: It is recommended that we should create a copy of
+> **NOTE**: It is recommended that we should create a copy of
 > bootstrap_vars.yml into home folder of client machine and use that file for
 > custom overrides. For example a copy named `~/bootstrap_vars_overrides.yml`
 > and pass this using `-e @~/bootstrap_vars_overrides.yml` when running the
@@ -332,7 +332,7 @@ modification include:
   allows our stack to communicate to the external network, and for assigning a
   floating IP to the "controller" instance.
 - `ntp_servers`: (list) Define the NTP servers to use.
-- `dns_servers`: (list) Deifine the DNS server to use as forwarders.
+- `dns_servers`: (list) Define the DNS server to use as forwarders.
 - `stack_parameters`: (dict) Parameters for the heat stack. This is a dict with
   several fields. Typically `flavor` and `image` for the different instance types
   `controller`, `ocp_master`, `compute` etc must be customized.
