@@ -130,7 +130,7 @@ Schema for a stage item is:
       - "{{ extra_stages is defined and extra_stages }}"
   ```
 
-> **_NOTE_**: Stage items are applied the actions in the following order:
+> **NOTE**: Stage items are applied the actions in the following order:
 > `command` -> `shell` -> `script` -> `manifest` -> `j2_manifest` ->
 > `kustomize` -> `wait_conditions` -> `wait_pod_completion` -> `stages`.
 
