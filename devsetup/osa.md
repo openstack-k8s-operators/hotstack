@@ -291,28 +291,17 @@ haproxy_tuning_params:
   tune.maxrewrite: 2048
 ```
 
-### Complete example configuration
+### Configure Glance image format matching
 
-Here's a complete example of `/etc/openstack_deploy/user_variables.yml`:
+Configure Glance to allow images with different formats than their file extension
+suggests. This is useful when working with images that may have mismatched
+extensions:
 
 ```yaml
----
-# Configure Neutron service plugins
-neutron_plugin_base:
-  - ovn-router
-  - trunk
-
-# Configure HAProxy buffer overrides for PH-- 500 errors
-# This list is used to add 'tune' directives to the global section of haproxy.cfg.
-haproxy_tuning_params:
-  # Sets the buffer size (default is usually 16384 or 32768, depending on HAProxy version).
-  # We are setting a higher value to reliably handle large static files from Horizon.
-  tune.bufsize: 32768
-  # Sets the maximum size for the header/rewrite buffer (default is often 1024).
-  # Increasing this helps prevent "PH--" errors during response parsing.
-  tune.maxrewrite: 2048
-
-# Add any additional customizations below as needed
+# Configure Glance API to allow image format mismatches
+glance_glance_api_conf_overrides:
+  image_format:
+    require_image_format_match: False
 ```
 
 ## Run the playbooks
