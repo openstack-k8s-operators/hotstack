@@ -22,6 +22,7 @@ spec:
           compute.fixed_network_name provisioning
           compute.flavor_ref 123456789-1234-1234-1234-000000000001
           compute.hypervisor_type ironic
+          compute.build_timeout 900
           network.shared_physical_network true
           service_available.ironic_inspector false
           service_available.ironic true
