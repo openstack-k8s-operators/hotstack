@@ -5,10 +5,17 @@
 -->
 # Cloud images
 
-This Makefile automates the process of downloading and customizing a CentOS 9
-Stream controller image, as well as creating a blank image file. The tasks are
-executed using the `make` utility, and the default task is to perform both
-operations.
+This Makefile automates the process of building cloud images for hotstack
+deployments. The tasks are executed using the `make` utility.
+
+## Images
+
+- **controller**: A customized CentOS 9 Stream image with packages needed for
+  the hotstack controller node
+- **blank**: A minimal blank image used for virtual baremetal node disks with
+  Redfish virtual BMC
+- **nat64**: A NAT64 appliance image built using ci-framework for IPv6-only
+  environments
 
 ## Variables
 
