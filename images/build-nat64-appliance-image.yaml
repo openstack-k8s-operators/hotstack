@@ -1,0 +1,8 @@
+---
+- name: Build nat64-appliance
+  hosts: localhost
+  connection: local
+  vars:
+    cifmw_nat64_appliance_basedir: "{{ nat64_basedir }}"
+  roles:
+    - nat64_appliance  # noqa syntax-check[specific]
