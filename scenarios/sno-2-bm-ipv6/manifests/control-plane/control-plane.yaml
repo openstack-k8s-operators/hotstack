@@ -209,7 +209,7 @@ spec:
           [conductor]
           power_state_change_timeout = 120
 
-          [pxe]
+          [redfish]
           kernel_append_params = console=ttyS0
 
           [neutron]
