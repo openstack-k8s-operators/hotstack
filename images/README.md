@@ -19,11 +19,17 @@ operations.
   controller image.
 - `BLANK_IMAGE_NAME`: The name of the blank image file to be created.
 - `BLANK_IMAGE_SIZE`: The size of the blank image file in megabytes.
+- `NAT64_IMAGE_NAME`: The name of the NAT64 appliance image file.
+- `NAT64_CIFMW_DIR`: Directory where ci-framework will be cloned (default:
+  `.ci-framework`).
+- `NAT64_BASEDIR`: Build directory for NAT64 appliance artifacts (default:
+  `.nat64-build`).
 
 ## Targets
 
-- `all`: The default target that depends on both `controller` and `blank`.
-- `clean`: A target that removes both the controller and blank images.
+- `all`: The default target that depends on `controller`, `blank`, and `nat64`.
+- `clean`: A target that removes the controller, blank, and NAT64 images, as
+  well as build artifacts.
 - `controller`: A target that depends on `controller_download` and
   `controller_customize`.
   - `controller_download`: A target that downloads the controller image from
@@ -33,6 +39,13 @@ operations.
   - `controller_clean`: A target that removes the controller image file.
 - `blank`: A target that creates a blank image file of the specified size.
 - `blank_clean`: A target that removes the blank image file.
+- `nat64`: A target that depends on `nat64_setup` and `nat64_build`.
+  - `nat64_setup`: A target that clones ci-framework and sets up the molecule
+    environment with required dependencies.
+  - `nat64_build`: A target that builds the NAT64 appliance image using the
+    `build-nat64-appliance-image.yaml` playbook and the ci-framework
+    nat64_appliance role.
+  - `nat64_clean`: A target that removes the NAT64 image and build artifacts.
 
 ## Examples
 
@@ -53,7 +66,9 @@ make clean
 2. Upload the controller image to Glance:
 
    ```shell
-   openstack image create --disk-format qcow2 --file controller.qcow2 hotstack-controller
+   openstack image create hotstack-controller \
+     --disk-format qcow2 \
+     --file controller.qcow2
    ```
 
 ### Building and uploading the blank image to glance
@@ -67,8 +82,41 @@ make clean
 2. Upload the blank image to Glance:
 
    ```shell
-   openstack image create --disk-format qcow2 --file blank-image.qcow2 sushy-tools-blank-image \
+   openstack image create sushy-tools-blank-image \
+     --disk-format qcow2 \
+     --file blank-image.qcow2 \
      --property hw_firmware_type=uefi \
      --property hw_machine_type=q35 \
      --property os_shutdown_timeout=5
    ```
+
+### Building and uploading the NAT64 appliance image to glance
+
+1. Build the NAT64 appliance image:
+
+   ```shell
+   make nat64
+   ```
+
+   This will:
+   - Clone the ci-framework repository (if not already present)
+   - Setup the molecule environment with required dependencies
+   - Run the `build-nat64-appliance-image.yaml` playbook using the
+     nat64_appliance role
+   - Copy the resulting image to `nat64-appliance.qcow2`
+
+2. Upload the NAT64 appliance image to Glance:
+
+   ```shell
+   openstack image create nat64-appliance \
+     --disk-format qcow2 \
+     --file nat64-appliance.qcow2 \
+     --property hw_firmware_type=uefi \
+     --property hw_machine_type=q35
+   ```
+
+   **Note**: The NAT64 image build process requires the ci-framework and its
+   dependencies. The build artifacts are stored in `.nat64-build`, the
+   ci-framework clone is stored in `.ci-framework`, and a Python virtual
+   environment is created at `~/test-python`. All of these can be cleaned up
+   with `make nat64_clean`.
