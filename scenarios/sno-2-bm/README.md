@@ -9,6 +9,50 @@ provisioning, and comprehensive Tempest testing.
 
 ## Architecture
 
+<!-- markdownlint-disable MD013 -->
+```mermaid
+graph TD
+    Internet[("Internet")]
+    Router{{"Neutron<br/>Router"}}
+
+    MachineNet["Machine Network<br/>192.168.32.0/24"]
+    CtlPlane["CtlPlane Network<br/>192.168.122.0/24"]
+    VLANNets["VLAN Trunk Networks<br/>Internal API: 172.17.0.0/24<br/>Storage: 172.18.0.0/24<br/>Tenant: 172.19.0.0/24"]
+    IronicNet["Ironic Network<br/>172.20.1.0/24"]
+
+    Controller["Controller<br/>192.168.32.254<br/>DNS/HAProxy"]
+    Master["SNO Master<br/>192.168.32.10"]
+    IronicNodes["Ironic Nodes x2<br/>Virtual Baremetal"]
+
+    LVM["TopoLVM<br/>20GB"]
+    CinderVols["Cinder Volumes x3<br/>20GB each"]
+
+    Internet --- Router
+
+    Router --- MachineNet
+    Router --- CtlPlane
+    Router --- VLANNets
+    Router --- IronicNet
+
+    MachineNet --- Controller
+    MachineNet --- Master
+    CtlPlane --- Master
+    VLANNets --- Master
+    IronicNet --- Master
+    IronicNet --- IronicNodes
+
+    Master --- LVM
+    Master --- CinderVols
+
+    style Controller fill:#4A90E2,stroke:#2E5C8A,stroke-width:3px,color:#fff
+    style Master fill:#F5A623,stroke:#C87D0E,stroke-width:3px,color:#fff
+    style IronicNodes fill:#9B59B6,stroke:#6C3A82,stroke-width:2px,color:#fff
+    style Router fill:#27AE60,stroke:#1E8449,stroke-width:3px,color:#fff
+```
+<!-- markdownlint-enable MD013 -->
+
+### Component Details
+
 - **Controller**: Hotstack controller providing DNS, load balancing, and
   orchestration services
 - **SNO Master**: Single-node OpenShift cluster running the complete OpenStack
@@ -53,13 +97,6 @@ This scenario deploys a comprehensive OpenStack environment:
 - **Ironic Inspector**: Hardware inspection service
 - **Ironic Neutron Agent**: Network management for bare metal
 
-### Supporting Services
-
-- **Galera**: MySQL database clusters
-- **RabbitMQ**: Message queuing
-- **Memcached**: Caching service
-- **OVN**: Open Virtual Network for SDN
-
 ## Ironic Testing
 
 ### Node Configuration
@@ -70,7 +107,7 @@ This scenario deploys a comprehensive OpenStack environment:
 
 ### Test Scenarios
 
-The scenario includes comprehensive Tempest testing:
+The scenario includes Tempest testing:
 
 #### Scenario Tests
 
@@ -106,46 +143,6 @@ ansible-playbook -i inventory.yml 06-test-operator.yml \
   -e @scenarios/sno-2-bm/bootstrap_vars.yml \
   -e @~/cloud-secrets.yaml
 ```
-
-## Test Automation
-
-The scenario includes extensive test automation:
-
-### Pre-Test Setup
-
-- Ironic network attachment configuration
-- sushy-emulator deployment patching
-- OpenStack network and subnet creation
-- Baremetal flavor configuration
-- Node enrollment and management
-
-### Test Execution
-
-- **Scenario Testing**: Validates complete baremetal instance lifecycle
-- **API Testing**: Comprehensive Ironic API validation
-- **Concurrency**: Parallel test execution for efficiency
-- **Reporting**: Detailed test results and logs
-
-## Requirements
-
-- OpenStack cloud with nested virtualization support
-- Flavors: hotstack.small (controller), hotstack.xxlarge (SNO master),
-  hotstack.medium (Ironic nodes)
-- Images: hotstack-controller, ipxe-boot-usb, CentOS-Stream-GenericCloud-9,
-  sushy-tools-blank-image
-- Network connectivity for all defined subnets
-- Adequate storage for local volumes and databases
-
-## Notable Features
-
-- **Complete OpenStack**: Full service stack in SNO deployment
-- **Ironic Focus**: Specialized bare metal provisioning testing
-- **Virtual BMC**: RedFish emulation for realistic testing
-- **Comprehensive Testing**: Both scenario and API validation
-- **Network Isolation**: Dedicated networks for different traffic types
-- **Storage Management**: TopoLVM integration for dynamic provisioning
-- **Load Balancing**: MetalLB for service exposure
-- **Security**: Network policies and service isolation
 
 ## Configuration Files
 
