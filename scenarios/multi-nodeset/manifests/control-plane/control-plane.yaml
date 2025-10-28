@@ -75,7 +75,7 @@ spec:
               metallb.universe.tf/loadBalancerIPs: 192.168.122.80
           spec:
             type: LoadBalancer
-      replicas: 2
+      replicas: 1
   galera:
     enabled: true
     templates:
@@ -123,7 +123,7 @@ spec:
                     metallb.universe.tf/loadBalancerIPs: 172.17.0.80
                 spec:
                   type: LoadBalancer
-          replicas: 3
+          replicas: 1
       preserveJobs: false
       storage:
         storageClass: lvms-local-storage
@@ -151,7 +151,7 @@ spec:
             spec:
               type: LoadBalancer
       preserveJobs: false
-      replicas: 3
+      replicas: 1
       secret: osp-secret
   manila:
     enabled: false
