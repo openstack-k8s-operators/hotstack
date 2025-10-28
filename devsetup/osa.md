@@ -304,6 +304,17 @@ glance_glance_api_conf_overrides:
     require_image_format_match: False
 ```
 
+### Enable nested virtualization
+
+Configure Nova to enable nested virtualization support, which allows instances to
+run virtual machines inside them. This is useful for development and testing
+environments:
+
+```yaml
+# Enable nested virtualization in Nova
+nova_nested_virt_enabled: true
+```
+
 ## Run the playbooks
 
 ```bash
