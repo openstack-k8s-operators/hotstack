@@ -22,36 +22,51 @@ deployments. The tasks are executed using the `make` utility.
 - `CONTROLLER_IMAGE_URL`: The URL to download the CentOS 9 Stream controller
   image.
 - `CONTROLLER_IMAGE_NAME`: The name of the downloaded image file.
+- `CONTROLLER_IMAGE_FORMAT`: The desired format for the controller image
+  (default: `raw`). Set to `qcow2` to keep the original format.
 - `CONTROLLER_INSTALL_PACKAGES`: A list of packages to install on the
   controller image.
 - `BLANK_IMAGE_NAME`: The name of the blank image file to be created.
+- `BLANK_IMAGE_FORMAT`: The format for the blank image (default: `raw`). Can be
+  set to `qcow2` or any format supported by `qemu-img`.
 - `BLANK_IMAGE_SIZE`: The size of the blank image file in megabytes.
 - `NAT64_IMAGE_NAME`: The name of the NAT64 appliance image file.
+- `NAT64_IMAGE_FORMAT`: The desired format for the NAT64 image (default: `raw`).
+  Set to `qcow2` to keep the original format.
 - `NAT64_CIFMW_DIR`: Directory where ci-framework will be cloned (default:
   `.ci-framework`).
 - `NAT64_BASEDIR`: Build directory for NAT64 appliance artifacts (default:
   `.nat64-build`).
+
+**Note**: Raw format is required for cloud backends using Ceph, as Ceph cannot
+directly use qcow2 images for VM disks.
 
 ## Targets
 
 - `all`: The default target that depends on `controller`, `blank`, and `nat64`.
 - `clean`: A target that removes the controller, blank, and NAT64 images, as
   well as build artifacts.
-- `controller`: A target that depends on `controller_download` and
-  `controller_customize`.
+- `controller`: A target that depends on `controller_download`,
+  `controller_customize`, and `controller_convert`.
   - `controller_download`: A target that downloads the controller image from
     the specified URL.
   - `controller_customize`: A target that customizes the downloaded image by
     installing the specified packages and relabeling SELinux.
+  - `controller_convert`: A target that converts the image to the format
+    specified by `CONTROLLER_IMAGE_FORMAT` (in-place conversion if `raw`).
   - `controller_clean`: A target that removes the controller image file.
-- `blank`: A target that creates a blank image file of the specified size.
+- `blank`: A target that creates a blank image file of the specified size in the
+  format specified by `BLANK_IMAGE_FORMAT`.
 - `blank_clean`: A target that removes the blank image file.
-- `nat64`: A target that depends on `nat64_setup` and `nat64_build`.
+- `nat64`: A target that depends on `nat64_setup`, `nat64_build`, and
+  `nat64_convert`.
   - `nat64_setup`: A target that clones ci-framework and sets up the molecule
     environment with required dependencies.
   - `nat64_build`: A target that builds the NAT64 appliance image using the
     `build-nat64-appliance-image.yaml` playbook and the ci-framework
     nat64_appliance role.
+  - `nat64_convert`: A target that converts the image to the format specified by
+    `NAT64_IMAGE_FORMAT` (in-place conversion if `raw`).
   - `nat64_clean`: A target that removes the NAT64 image and build artifacts.
 
 ## Examples
@@ -74,9 +89,12 @@ make clean
 
    ```shell
    openstack image create hotstack-controller \
-     --disk-format qcow2 \
+     --disk-format raw \
      --file controller.qcow2
    ```
+
+   **Note**: By default, images are converted to raw format (while keeping the
+   `.qcow2` filename). Use `CONVERT_TO_RAW=false` to keep qcow2 format.
 
 ### Building and uploading the blank image to glance
 
@@ -90,7 +108,7 @@ make clean
 
    ```shell
    openstack image create sushy-tools-blank-image \
-     --disk-format qcow2 \
+     --disk-format raw \
      --file blank-image.qcow2 \
      --property hw_firmware_type=uefi \
      --property hw_machine_type=q35 \
@@ -116,7 +134,7 @@ make clean
 
    ```shell
    openstack image create nat64-appliance \
-     --disk-format qcow2 \
+     --disk-format raw \
      --file nat64-appliance.qcow2 \
      --property hw_firmware_type=uefi \
      --property hw_machine_type=q35
