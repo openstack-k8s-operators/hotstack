@@ -54,6 +54,7 @@ spec:
           neutron_plugin_options.ipv6_metadata false
           neutron_plugin_options.is_igmp_snooping_enabled true
           service_available.ceilometer true
+          service_available.murano false
           service_available.sg_core true
           telemetry.ceilometer_polling_interval 120
           telemetry.prometheus_scrape_interval 30
