@@ -93,9 +93,6 @@ make clean
      --file controller.qcow2
    ```
 
-   **Note**: By default, images are converted to raw format (while keeping the
-   `.qcow2` filename). Use `CONVERT_TO_RAW=false` to keep qcow2 format.
-
 ### Building and uploading the blank image to glance
 
 1. Create the blank image:
