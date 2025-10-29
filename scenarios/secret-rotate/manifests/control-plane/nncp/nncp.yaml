@@ -1,0 +1,441 @@
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp/nncm-config-type: standard
+  name: master-0
+  namespace: openstack
+spec:
+  desiredState:
+    dns-resolver:
+      config:
+        search: []
+        server:
+        - 192.168.32.3
+    interfaces:
+    - description: internalapi vlan interface
+      ipv4:
+        address:
+        - ip: 172.17.0.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: internalapi
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "20"
+    - description: storage vlan interface
+      ipv4:
+        address:
+        - ip: 172.18.0.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: storage
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "21"
+    - description: tenant vlan interface
+      ipv4:
+        address:
+        - ip: 172.19.0.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: tenant
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "22"
+    - description: ctlplane interface
+      mtu: 1442
+      name: eth1
+      state: up
+      type: ethernet
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: eth1
+          vlan: {}
+      description: linux-bridge over ctlplane interface
+      ipv4:
+        address:
+        - ip: 192.168.122.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: ospbr
+      state: up
+      type: linux-bridge
+    - description: Octavia vlan host interface
+      name: octavia
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "23"
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: octavia
+      description: Octavia bridge
+      mtu: 1442
+      name: octbr
+      type: linux-bridge
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: eth2
+      description: Ironic bridge
+      ipv4:
+        address:
+        - ip: 172.20.1.10
+          prefix-length: "24"
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: ironic
+      type: linux-bridge
+    - description: Ironic VRF
+      name: ironicvrf
+      state: up
+      type: vrf
+      vrf:
+        port:
+        - ironic
+        route-table-id: 10
+    route-rules:
+      config: []
+    routes:
+      config:
+      - destination: 0.0.0.0/0
+        metric: 150
+        next-hop-address: 172.20.1.1
+        next-hop-interface: ironic
+        table-id: 10
+      - destination: 172.20.1.0/24
+        metric: 150
+        next-hop-address: 192.168.122.1
+        next-hop-interface: ospbr
+  nodeSelector:
+    kubernetes.io/hostname: master-0
+    node-role.kubernetes.io/worker: ""
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp/nncm-config-type: standard
+  name: master-1
+  namespace: openstack
+spec:
+  desiredState:
+    dns-resolver:
+      config:
+        search: []
+        server:
+        - 192.168.32.3
+    interfaces:
+    - description: internalapi vlan interface
+      ipv4:
+        address:
+        - ip: 172.17.0.11
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: internalapi
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "20"
+    - description: storage vlan interface
+      ipv4:
+        address:
+        - ip: 172.18.0.11
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: storage
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "21"
+    - description: tenant vlan interface
+      ipv4:
+        address:
+        - ip: 172.19.0.11
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: tenant
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "22"
+    - description: ctlplane interface
+      mtu: 1442
+      name: eth1
+      state: up
+      type: ethernet
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: eth1
+          vlan: {}
+      description: linux-bridge over ctlplane interface
+      ipv4:
+        address:
+        - ip: 192.168.122.11
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: ospbr
+      state: up
+      type: linux-bridge
+    - description: Octavia vlan host interface
+      name: octavia
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "23"
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: octavia
+      description: Octavia bridge
+      mtu: 1442
+      name: octbr
+      type: linux-bridge
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: eth2
+      description: Ironic bridge
+      ipv4:
+        address:
+        - ip: 172.20.1.11
+          prefix-length: "24"
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: ironic
+      type: linux-bridge
+    - description: Ironic VRF
+      name: ironicvrf
+      state: up
+      type: vrf
+      vrf:
+        port:
+        - ironic
+        route-table-id: 10
+    route-rules:
+      config: []
+    routes:
+      config:
+      - destination: 0.0.0.0/0
+        metric: 150
+        next-hop-address: 172.20.1.1
+        next-hop-interface: ironic
+        table-id: 10
+      - destination: 172.20.1.0/24
+        metric: 150
+        next-hop-address: 192.168.122.1
+        next-hop-interface: ospbr
+  nodeSelector:
+    kubernetes.io/hostname: master-1
+    node-role.kubernetes.io/worker: ""
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp/nncm-config-type: standard
+  name: master-2
+  namespace: openstack
+spec:
+  desiredState:
+    dns-resolver:
+      config:
+        search: []
+        server:
+        - 192.168.32.3
+    interfaces:
+    - description: internalapi vlan interface
+      ipv4:
+        address:
+        - ip: 172.17.0.12
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: internalapi
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "20"
+    - description: storage vlan interface
+      ipv4:
+        address:
+        - ip: 172.18.0.12
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: storage
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "21"
+    - description: tenant vlan interface
+      ipv4:
+        address:
+        - ip: 172.19.0.12
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: tenant
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "22"
+    - description: ctlplane interface
+      mtu: 1442
+      name: eth1
+      state: up
+      type: ethernet
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: eth1
+          vlan: {}
+      description: linux-bridge over ctlplane interface
+      ipv4:
+        address:
+        - ip: 192.168.122.12
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: ospbr
+      state: up
+      type: linux-bridge
+    - description: Octavia vlan host interface
+      name: octavia
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "23"
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: octavia
+      description: Octavia bridge
+      mtu: 1442
+      name: octbr
+      type: linux-bridge
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: eth2
+      description: Ironic bridge
+      ipv4:
+        address:
+        - ip: 172.20.1.12
+          prefix-length: "24"
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: ironic
+      type: linux-bridge
+    - description: Ironic VRF
+      name: ironicvrf
+      state: up
+      type: vrf
+      vrf:
+        port:
+        - ironic
+        route-table-id: 10
+    route-rules:
+      config: []
+    routes:
+      config:
+      - destination: 0.0.0.0/0
+        metric: 150
+        next-hop-address: 172.20.1.1
+        next-hop-interface: ironic
+        table-id: 10
+      - destination: 172.20.1.0/24
+        metric: 150
+        next-hop-address: 192.168.122.1
+        next-hop-interface: ospbr
+  nodeSelector:
+    kubernetes.io/hostname: master-2
+    node-role.kubernetes.io/worker: ""
