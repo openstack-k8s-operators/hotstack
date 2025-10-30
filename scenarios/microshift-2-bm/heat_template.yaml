@@ -1,0 +1,701 @@
+---
+heat_template_version: rocky
+
+description: >
+  Heat template to set up 3-node infrastructure, 1x Controller, 1x MicroShift, 1x Compute
+
+parameters:
+  dns_servers:
+    type: comma_delimited_list
+    default:
+      - 8.8.8.8
+      - 8.8.4.4
+  ntp_servers:
+    type: comma_delimited_list
+    default: []
+  controller_ssh_pub_key:
+    type: string
+  dataplane_ssh_pub_key:
+    type: string
+  router_external_network:
+    type: string
+    default: public
+  floating_ip_network:
+    type: string
+    default: public
+  net_value_specs:
+    type: json
+    default: {}
+
+  controller_params:
+    type: json
+    default:
+      image: hotstack-controller
+      flavor: hotstack.small
+  nat64_appliance_params:
+    type: json
+    default:
+      image: nat64-appliance
+      flavor: hotstack.small
+  ocp_master_params:
+    type: json
+    default:
+      image: ipxe-boot-usb
+      flavor: hotstack.xxlarge
+  microshift_params:
+    type: json
+    default:
+      image: rhel-9.6-x86_64-kvm
+      flavor: hotstack.xxlarge
+  ocp_worker_params:
+    type: json
+    default:
+      image: ipxe-boot-usb
+      flavor: hotstack.xxlarge
+  compute_params:
+    type: json
+    default:
+      image: CentOS-Stream-GenericCloud-9
+      flavor: hotstack.large
+  networker_params:
+    type: json
+    default:
+      image: CentOS-Stream-GenericCloud-9
+      flavor: hotstack.small
+  bmh_params:
+    type: json
+    default:
+      image: CentOS-Stream-GenericCloud-9
+      cd_image: sushy-tools-blank-image
+      flavor: hotstack.medium
+  ironic_params:
+    type: json
+    default:
+      image: CentOS-Stream-GenericCloud-9
+      cd_image: sushy-tools-blank-image
+      flavor: hotstack.medium
+
+resources:
+  #
+  # Networks
+  #
+  machine-net:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
+
+  ctlplane-net:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
+
+  internal-api-net:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
+
+  storage-net:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
+
+  tenant-net:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
+
+  ironic-net:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
+
+  #
+  # Subnets
+  #
+  machine-subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: machine-net}
+      ip_version: 4
+      cidr: 192.168.32.0/24
+      enable_dhcp: true
+      dns_nameservers:
+        - 192.168.32.254
+
+  ctlplane-subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: ctlplane-net}
+      ip_version: 4
+      cidr: 192.168.122.0/24
+      enable_dhcp: false
+      allocation_pools:
+        - start: 192.168.122.100
+          end: 192.168.122.150
+      dns_nameservers:
+        - 192.168.122.80
+
+  internal-api-subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: internal-api-net}
+      ip_version: 4
+      cidr: 172.17.0.0/24
+      enable_dhcp: false
+      allocation_pools:
+        - start: 172.17.0.100
+          end: 172.17.0.150
+
+  storage-subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: storage-net}
+      ip_version: 4
+      cidr: 172.18.0.0/24
+      enable_dhcp: false
+      allocation_pools:
+        - start: 172.18.0.100
+          end: 172.18.0.150
+
+  tenant-subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: tenant-net}
+      ip_version: 4
+      cidr: 172.19.0.0/24
+      enable_dhcp: false
+      allocation_pools:
+        - start: 172.19.0.100
+          end: 172.19.0.150
+
+  ironic-subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: ironic-net}
+      ip_version: 4
+      cidr: 172.20.1.0/24
+      enable_dhcp: false
+      allocation_pools: [{start: 172.20.1.100, end: 172.20.1.150}]
+
+  #
+  # Routers
+  #
+  router:
+    type: OS::Neutron::Router
+    properties:
+      admin_state_up: true
+      external_gateway_info:
+        network: {get_param: router_external_network}
+        # enable_snat: true
+
+  machine-net-router-interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: {get_resource: router}
+      subnet: {get_resource: machine-subnet}
+
+  ctlplane-net-router-interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: {get_resource: router}
+      subnet: {get_resource: ctlplane-subnet}
+
+  ironic-net-router-interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: {get_resource: router}
+      subnet: {get_resource: ironic-subnet}
+
+  #
+  # Instances
+  #
+  controller_users:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        users:
+          - default
+          - name: zuul
+            gecos: "Zuul user"
+            sudo: ALL=(ALL) NOPASSWD:ALL
+            ssh_authorized_keys:
+              - {get_param: controller_ssh_pub_key}
+
+  controller-write-files:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        write_files:
+          - path: /etc/dnsmasq.conf
+            content: |
+              # dnsmasq service config
+              # Include all files in /etc/dnsmasq.d except RPM backup files
+              conf-dir=/etc/dnsmasq.d,.rpmnew,.rpmsave,.rpmorig
+              no-resolv
+            owner: root:dnsmasq
+          - path: /etc/dnsmasq.d/forwarders.conf
+            content:
+              str_replace:
+                template: |
+                  # DNS forwarders records
+                  server=$dns1
+                  server=$dns2
+                params:
+                  $dns1: {get_param: [dns_servers, 0]}
+                  $dns2: {get_param: [dns_servers, 1]}
+            owner: root:dnsmasq
+          - path: /etc/dnsmasq.d/host_records.conf
+            content:
+              str_replace:
+                template: |
+                  # Host records
+                  host-record=controller-0.openstack.lab,$controller0
+                  host-record=api.microshift.openstack.lab,$microshift0
+                  host-record=api-int.microshift.openstack.lab,$microshift0
+                  host-record=microshift-0.microshift.openstack.lab,$microshift0
+                params:
+                  $controller0: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
+                  $microshift0: {get_attr: [microshift0-machine-port, fixed_ips, 0, ip_address]}
+            owner: root:dnsmasq
+          - path: /etc/dnsmasq.d/wildcard_records.conf
+            content:
+              str_replace:
+                template: |
+                  # Wildcard records
+                  address=/apps.microshift.openstack.lab/$addr
+                params:
+                  $addr: {get_attr: [microshift0-machine-port, fixed_ips, 0, ip_address]}
+            owner: root:dnsmasq
+          - path: /etc/resolv.conf
+            content: |
+              nameserver: 127.0.0.1
+            owner: root:root
+          - path: /etc/NetworkManager/conf.d/98-rc-manager.conf
+            content: |
+              [main]
+              rc-manager=unmanaged
+            owner: root:root
+
+
+  controller-runcmd:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        runcmd:
+          - ['systemctl', 'enable', 'dnsmasq.service']
+          - ['systemctl', 'start', 'dnsmasq.service']
+          - ['setenforce', 'permissive']
+
+  controller-init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+        - config: {get_resource: controller_users}
+        - config: {get_resource: controller-write-files}
+        - config: {get_resource: controller-runcmd}
+
+  controller-machine-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: machine-net}
+      mac_address: "fa:16:9e:81:f6:05"
+      fixed_ips:
+        - ip_address: 192.168.32.254
+
+  controller-floating-ip:
+    depends_on: machine-net-router-interface
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: {get_param: floating_ip_network}
+      port_id: {get_resource: controller-machine-port}
+
+  controller:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: [controller_params, image]}
+      flavor: {get_param: [controller_params, flavor]}
+      networks:
+        - port: {get_resource: controller-machine-port}
+      user_data_format: RAW
+      user_data: {get_resource: controller-init}
+
+  # MicroShift Host
+
+  microshift_users:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        users:
+          - default
+          - name: zuul
+            gecos: "Zuul user"
+            sudo: ALL=(ALL) NOPASSWD:ALL
+            ssh_authorized_keys:
+              - {get_param: controller_ssh_pub_key}
+
+  microshift-hostname:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        hostname: microshift-0
+        fqdn: microshift-0.openstack.lab
+
+  microshift-init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+        - config: {get_resource: microshift_users}
+        - config: {get_resource: microshift-hostname}
+
+  microshift0-machine-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: machine-net}
+      port_security_enabled: false
+      mac_address: "fa:16:9e:81:f6:10"
+      fixed_ips:
+        - ip_address: 192.168.32.10
+
+  microshift0-ctlplane-trunk-parent-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ctlplane-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 192.168.122.10
+
+  microshift0-internal-api-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: internal-api-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.17.0.10
+
+  microshift0-storage-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: storage-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.18.0.10
+
+  microshift0-tenant-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: tenant-net}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.19.0.10
+
+  microshift0-trunk0:
+    type: OS::Neutron::Trunk
+    properties:
+      port: {get_resource: microshift0-ctlplane-trunk-parent-port}
+      sub_ports:
+        - port: {get_resource: microshift0-internal-api-port}
+          segmentation_id: 20
+          segmentation_type: vlan
+        - port: {get_resource: microshift0-storage-port}
+          segmentation_id: 21
+          segmentation_type: vlan
+        - port: {get_resource: microshift0-tenant-port}
+          segmentation_id: 22
+          segmentation_type: vlan
+
+  microshift0-ironic-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ironic-net}
+      port_security_enabled: false
+      fixed_ips: [{ip_address: 172.20.1.10}]
+
+  microshift0-lvms-vol0:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  microshift0-cinder-vol0:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  microshift0-cinder-vol1:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  microshift0-cinder-vol2:
+    type: OS::Cinder::Volume
+    properties:
+      size: 20
+
+  microshift0:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: [microshift_params, image]}
+      flavor: {get_param: [microshift_params, flavor]}
+      block_device_mapping_v2:
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: microshift0-lvms-vol0}
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: microshift0-cinder-vol0}
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: microshift0-cinder-vol1}
+        - boot_index: -1
+          device_type: disk
+          volume_id: {get_resource: microshift0-cinder-vol2}
+      networks:
+        - port: {get_resource: microshift0-machine-port}
+        - port: {get_attr: [microshift0-trunk0, port_id]}
+        - port: {get_resource: microshift0-ironic-port}
+      user_data_format: RAW
+      user_data: {get_resource: microshift-init}
+
+  #
+  # Ironics
+  #
+  ironic0-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ironic-net}
+      port_security_enabled: false
+
+  ironic0:
+    type: OS::Nova::Server
+    properties:
+      flavor: {get_param: [ironic_params, flavor]}
+      block_device_mapping_v2:
+        - device_type: disk
+          boot_index: 1
+          image_id: {get_param: [ironic_params, image]}
+          volume_size: 40
+          delete_on_termination: true
+        - device_type: cdrom
+          disk_bus: scsi
+          boot_index: 0
+          image_id: {get_param: [ironic_params, cd_image]}
+          volume_size: 5
+          delete_on_termination: true
+      networks:
+        - port: {get_resource: ironic0-port}
+
+  ironic1-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: ironic-net}
+      port_security_enabled: false
+
+  ironic1:
+    type: OS::Nova::Server
+    properties:
+      flavor: {get_param: [ironic_params, flavor]}
+      block_device_mapping_v2:
+        - device_type: disk
+          boot_index: 1
+          image_id: {get_param: [ironic_params, image]}
+          volume_size: 40
+          delete_on_termination: true
+        - device_type: cdrom
+          disk_bus: scsi
+          boot_index: 0
+          image_id: {get_param: [ironic_params, cd_image]}
+          volume_size: 5
+          delete_on_termination: true
+      networks:
+        - port: {get_resource: ironic1-port}
+
+
+outputs:
+  controller_floating_ip:
+    description: Controller Floating IP
+    value: {get_attr: [controller-floating-ip, floating_ip_address]}
+
+  microshift_config:
+    description: MicroShift configuration (raw YAML for /etc/microshift/config.yaml)
+    value:
+      dns:
+        baseDomain: microshift.openstack.lab
+      node:
+        hostnameOverride: microshift-0
+        nodeIP: {get_attr: [microshift0-machine-port, fixed_ips, 0, ip_address]}
+
+  microshift_nmstate_config:
+    description: nmstate network configuration for MicroShift node
+    value:
+      interfaces:
+        - name: eth0
+          type: ethernet
+          state: up
+          mac-address: {get_attr: [microshift0-machine-port, mac_address]}
+          ipv4:
+            enabled: true
+            dhcp: true
+          ipv6:
+            enabled: false
+        - name: eth1
+          type: ethernet
+          state: up
+          mac-address: {get_attr: [microshift0-ctlplane-trunk-parent-port, mac_address]}
+          ipv4:
+            enabled: false
+          ipv6:
+            enabled: false
+        - name: eth2
+          type: ethernet
+          state: up
+          mac-address: {get_attr: [microshift0-ironic-port, mac_address]}
+          ipv4:
+            enabled: false
+          ipv6:
+            enabled: false
+        - name: internalapi
+          type: vlan
+          state: up
+          vlan:
+            base-iface: eth1
+            id: 20
+          ipv4:
+            enabled: true
+            address:
+              - ip: 172.17.0.10
+                prefix-length: 24
+          ipv6:
+            enabled: false
+        - name: storage
+          type: vlan
+          state: up
+          vlan:
+            base-iface: eth1
+            id: 21
+          ipv4:
+            enabled: true
+            address:
+              - ip: 172.18.0.10
+                prefix-length: 24
+          ipv6:
+            enabled: false
+        - name: tenant
+          type: vlan
+          state: up
+          vlan:
+            base-iface: eth1
+            id: 22
+          ipv4:
+            enabled: true
+            address:
+              - ip: 172.19.0.10
+                prefix-length: 24
+          ipv6:
+            enabled: false
+        - name: ospbr
+          type: linux-bridge
+          state: up
+          bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+              - name: eth1
+          ipv4:
+            enabled: true
+            address:
+              - ip: 192.168.122.10
+                prefix-length: 24
+          ipv6:
+            enabled: false
+        - name: ironic
+          type: linux-bridge
+          state: up
+          bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+              - name: eth2
+          ipv4:
+            enabled: true
+            address:
+              - ip: 172.20.1.10
+                prefix-length: 24
+          ipv6:
+            enabled: false
+
+  sushy_emulator_uuids:
+    description: UUIDs of instances to manage with sushy-tools - RedFish virtual BMC
+    value:
+      ironic0: {get_resource: ironic0}
+      ironic1: {get_resource: ironic1}
+
+  ironic_nodes:
+    description: Ironic nodes YAML, used with openstack baremetal create to enroll nodes in Openstack Ironic
+    value:
+      nodes:
+        - name: ironic0
+          driver: redfish
+          bios_interface: no-bios
+          boot_interface: redfish-virtual-media
+          driver_info:
+            redfish_address: http://sushy-emulator.apps.microshift.openstack.lab
+            redfish_system_id:
+              str_replace:
+                template: "/redfish/v1/Systems/$SYS_ID"
+                params:
+                  $SYS_ID: {get_resource: ironic0}
+            redfish_username: admin
+            redfish_password: password
+          ports:
+            - address: {get_attr: [ironic0-port, mac_address]}
+              physical_network: ironic
+        - name: ironic1
+          driver: redfish
+          bios_interface: no-bios
+          boot_interface: redfish-virtual-media
+          driver_info:
+            redfish_address: http://sushy-emulator.apps.microshift.openstack.lab
+            redfish_system_id:
+              str_replace:
+                template: "/redfish/v1/Systems/$SYS_ID"
+                params:
+                  $SYS_ID: {get_resource: ironic1}
+            redfish_username: admin
+            redfish_password: password
+          ports:
+            - address: {get_attr: [ironic1-port, mac_address]}
+              physical_network: ironic
+
+  controller_ansible_host:
+    description: >
+      Controller ansible host, this struct can be passed to the ansible.builtin.add_host module
+    value:
+      name: controller-0
+      ansible_ssh_user: zuul
+      ansible_host: {get_attr: [controller-floating-ip, floating_ip_address]}
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+      groups:
+        - controllers
+
+  microshift_ansible_host:
+    description: >
+      MicroShift ansible host, this struct can be passed to the ansible.builtin.add_host module.
+      Uses controller-0 as SSH jump host (bastion) for access.
+    value:
+      name: microshift-0
+      ansible_ssh_user: zuul
+      ansible_host: {get_attr: [microshift0-machine-port, fixed_ips, 0, ip_address]}
+      ansible_ssh_common_args:
+        str_replace:
+          template: '-o StrictHostKeyChecking=no -o ProxyJump=zuul@$controller_ip'
+          params:
+            $controller_ip: {get_attr: [controller-floating-ip, floating_ip_address]}
+      groups:
+        - microshifts
