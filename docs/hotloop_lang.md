@@ -124,9 +124,9 @@ Here's a breakdown of the common attributes within a stage:
       - "{{ foo is defined }}"
       - >-
         {{
-          openstack_operators_starting_csv is defined and
-          openstack_operators_starting_csv is version('v1.0.0', '>=') and
-          openstack_operators_starting_csv is version('v1.0.7', '<')
+          openstack_operator_starting_csv is defined and
+          openstack_operator_starting_csv is version('v1.0.0', '>=') and
+          openstack_operator_starting_csv is version('v1.0.7', '<')
         }}
     ```
 

@@ -103,9 +103,9 @@ Schema for a stage item is:
       - "{{ foo is defined }}"
       - >-
         {{
-          openstack_operators_starting_csv | default(none) is none or
-          openstack_operators_starting_csv is version('v1.0.0', '<') or
-          openstack_operators_starting_csv is version('v1.0.6', '>')
+          openstack_operator_starting_csv | default(none) is none or
+          openstack_operator_starting_csv is version('v1.0.0', '<') or
+          openstack_operator_starting_csv is version('v1.0.6', '>')
         }}
     ```
 

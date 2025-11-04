@@ -35,9 +35,9 @@
   run_conditions:
     - >-
       {{
-        openstack_operators_starting_csv | default(none) is none or
-        openstack_operators_starting_csv is version('v1.0.0', '<') or
-        openstack_operators_starting_csv is version('v1.0.11', '>')
+        openstack_operator_starting_csv | default(none) is none or
+        openstack_operator_starting_csv is version('v1.0.0', '<') or
+        openstack_operator_starting_csv is version('v1.0.11', '>')
       }}
 
 - name: Openstack operator initialization resource
@@ -56,7 +56,7 @@
   run_conditions:
     - >-
       {{
-        openstack_operators_starting_csv | default(none) is none or
-        openstack_operators_starting_csv is version('v1.0.0', '<') or
-        openstack_operators_starting_csv is version('v1.0.6', '>')
+        openstack_operator_starting_csv | default(none) is none or
+        openstack_operator_starting_csv is version('v1.0.0', '<') or
+        openstack_operator_starting_csv is version('v1.0.6', '>')
       }}

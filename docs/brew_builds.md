@@ -156,14 +156,14 @@ openstack_operator_channel: stable-v1.0
 The ClusterServiceVersion (CSV) is OLM's primary vehicle for describing
 Operator requirements and capabilities. A `Subscription` is an OLM resource
 that allows users to subscribe to channels within a `CatalogSource` to receive
-automatic updates for Operators. By setting `openstack_operators_starting_csv`
+automatic updates for Operators. By setting `openstack_operator_starting_csv`
 you are explicitly telling OLM which specific `ClusterServiceVersion` (i.e.,
 which version of the OpenStack Operator) from your 'brew' `CatalogSource`
 should be initially deployed. This ensures that even with automatic updates
 enabled via the `Subscription`, the deployment starts from a known version.
 
 Set the initial version of OpenStack Operator to be deployed  by setting the
-`openstack_operators_starting_csv` variable. This variable controls the
+`openstack_operator_starting_csv` variable. This variable controls the
 `spec.startingCSV` field of the `Subscription` resource.
 
 For versions prior to `v1.0.7` subscription for all openstack operators are
@@ -172,7 +172,7 @@ created when using [common/olm.yaml.j2](../scenarios/common/olm.yaml.j2).
 Example:
 
 ```yaml
-openstack_operators_starting_csv: v1.0.7
+openstack_operator_starting_csv: v1.0.7
 ```
 
 ### Set EDPM container registries

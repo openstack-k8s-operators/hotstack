@@ -41,13 +41,13 @@ spec:
   source: openstack-operator-index
   sourceNamespace: openstack-operators
   installPlanApproval: Manual
-{% if openstack_operators_starting_csv | default(none) %}
-  startingCSV: openstack-operator.{{ openstack_operators_starting_csv }}
+{% if openstack_operator_starting_csv | default(none) %}
+  startingCSV: openstack-operator.{{ openstack_operator_starting_csv }}
 {% endif %}
 
-{%- if openstack_operators_starting_csv | default(none) and
-       openstack_operators_starting_csv is version('v1.0.0', '>=') and
-       openstack_operators_starting_csv is version('v1.0.7', '<') -%}
+{%- if openstack_operator_starting_csv | default(none) and
+       openstack_operator_starting_csv is version('v1.0.0', '>=') and
+       openstack_operator_starting_csv is version('v1.0.7', '<') -%}
 {%     for operator_name in [
             'barbican',
             'cinder',
@@ -83,6 +83,6 @@ spec:
   name: {{ operator_name }}-operator
   source: openstack-operator-index
   sourceNamespace: openstack-operators
-  startingCSV: {{ operator_name }}-operator.{{ openstack_operators_starting_csv }}
+  startingCSV: {{ operator_name }}-operator.{{ openstack_operator_starting_csv }}
 {%     endfor %}
 {%- endif -%}

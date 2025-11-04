@@ -11,3 +11,4 @@
       jobs:
         - vexxhost-hotstack-sno-2-bm
         - vexxhost-hotstack-3-nodes
+        - vexxhost-hotstack-3-nodes-update
