@@ -65,6 +65,31 @@
         hotlogs_collection_failed: true
         hotlogs_failures: "{{ hotlogs_failures + ['Must-gather operations failed'] }}"
 
+- name: Collect tempest logs from test-operator PVCs
+  delegate_to: controller-0
+  ansible.builtin.command:
+    cmd: hotstack-collect-tempest-logs --namespace {{ item }}
+  loop: "{{ hotlog_tempest_namespaces }}"
+  register: tempest_logs_result
+  failed_when: false
+  changed_when: tempest_logs_result.rc == 0
+
+- name: Display tempest log collection results
+  ansible.builtin.debug:
+    msg: "Namespace {{ item.item }}: {{ item.stdout_lines | default(['No output']) }}"
+  loop: "{{ tempest_logs_result.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Track tempest log collection failures
+  when: item.rc != 0 and 'No tempest PVCs found' not in item.stdout
+  ansible.builtin.set_fact:
+    hotlogs_collection_failed: true
+    hotlogs_failures: "{{ hotlogs_failures + ['Tempest log collection failed for namespace ' + item.item] }}"
+  loop: "{{ tempest_logs_result.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
 - name: Collect hotstack data
   delegate_to: "{{ inventory_hostname }}"
   ansible.posix.synchronize:
