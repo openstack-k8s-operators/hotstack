@@ -103,6 +103,7 @@ spec:
           load_balancer.enforce_new_defaults 'True'
           load_balancer.provider 'ovn'
           load_balancer.load_balancing_algorithm 'SOURCE_IP_PORT'
+          loadbalancer-feature-enabled.not_implemented_is_error 'False'
           enforce_scope.octavia 'False'
       tempestRun:
         concurrency: 4
@@ -278,6 +279,7 @@ spec:
           load_balancer.enforce_new_defaults 'True'
           load_balancer.provider 'ovn'
           load_balancer.load_balancing_algorithm 'SOURCE_IP_PORT'
+          loadbalancer-feature-enabled.not_implemented_is_error 'False'
           enforce_scope.octavia 'False'
       tempestRun:
         concurrency: 1
