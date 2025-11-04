@@ -74,6 +74,17 @@ spec:
           volume-feature-enabled.volume_revert true
           volume.storage_protocol 'iSCSI'
           volume.volume_type_multiattach 'multiattach'
+          load_balancer.region regionOne
+          load_balancer.enable_security_groups True
+          load_balancer.RBAC_test_type 'keystone_default_roles'
+          load_balancer.admin_role 'swiftoperator'
+          load_balancer.member_role 'swiftoperator'
+          load_balancer.observer_role 'swiftoperator'
+          load_balancer.global_observer_role 'swiftoperator'
+          load_balancer.enforce_new_defaults 'True'
+          load_balancer.provider 'ovn'
+          load_balancer.load_balancing_algorithm 'SOURCE_IP_PORT'
+          enforce_scope.octavia 'False'
       tempestRun:
         includeList: |
           ^.*smoke.*
