@@ -12,12 +12,12 @@
     - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}'=Active --timeout=30s"
     - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}'=Active --timeout=30s"
     - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}'=Active --timeout=30s"
-    - "oc wait -n metallb-system pod -l control-plane=controller-manager --for condition=Ready --timeout=180s"
-    - "oc wait -n metallb-system pod -l component=webhook-server --for condition=Ready --timeout=180s"
-    - "oc wait -n cert-manager-operator pod --for condition=Ready -l name=cert-manager-operator --timeout=180s"
-    - "oc wait -n cert-manager pod -l app=cainjector --for condition=Ready --timeout=180s"
-    - "oc wait -n cert-manager pod -l app=webhook --for condition=Ready --timeout=180s"
-    - "oc wait -n cert-manager pod -l app=cert-manager --for condition=Ready --timeout=180s"
+    - "oc wait -n metallb-system deployment -l control-plane=controller-manager --for condition=Available --timeout=180s"
+    - "oc wait -n metallb-system deployment -l component=webhook-server --for condition=Available --timeout=180s"
+    - "oc wait -n cert-manager-operator deployment cert-manager-operator-controller-manager --for condition=Available --timeout=180s"
+    - "oc wait -n cert-manager deployment -l app=cainjector --for condition=Available --timeout=180s"
+    - "oc wait -n cert-manager deployment -l app=webhook --for condition=Available --timeout=180s"
+    - "oc wait -n cert-manager deployment -l app=cert-manager --for condition=Available --timeout=180s"
 
 - name: Common MetalLB
   manifest: "{{ role_path }}/files/common/manifests/deps/metallb.yaml"
@@ -27,6 +27,6 @@
 
 - name: Wait for MetalLB and NMState
   wait_conditions:
-    - "oc wait -n metallb-system pod -l component=speaker --for condition=Ready --timeout=180s"
-    - "oc wait -n openshift-nmstate pod -l component=kubernetes-nmstate-handler --for condition=Ready --timeout=180s"
-    - "oc wait -n openshift-nmstate deployments/nmstate-webhook --for condition=Available --timeout=180s"
+    - "oc wait -n metallb-system daemonset -l component=speaker --for jsonpath='{.status.numberReady}'=1 --timeout=180s"
+    - "oc wait -n openshift-nmstate daemonset -l component=kubernetes-nmstate-handler --for jsonpath='{.status.numberReady}'=1 --timeout=180s"
+    - "oc wait -n openshift-nmstate deployment -l component=kubernetes-nmstate-webhook --for condition=Available --timeout=180s"
