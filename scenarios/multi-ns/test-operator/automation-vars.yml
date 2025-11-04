@@ -104,3 +104,15 @@ stages:
 
   - name: Run tempest
     manifest: tempest-tests.yml
+    wait_conditions:
+      - >-
+        oc wait -n openstack-a tempests.test.openstack.org tempest-tests
+        --for condition=ServiceConfigReady --timeout=120s
+    wait_pod_completion:
+      - namespace: openstack-a
+        labels:
+          operator: test-operator
+          service: tempest
+          workflowStep: "0"
+        timeout: 3600
+        poll_interval: 15

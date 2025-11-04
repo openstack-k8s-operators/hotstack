@@ -18,6 +18,10 @@ hotlog_dir: "{{ playbook_dir }}/logs"
 
 base_dir: /home/zuul
 
+# List of namespaces to collect tempest logs from
+hotlog_tempest_namespaces:
+  - openstack
+
 hotlog_collect_paths:
   - src: "{{ base_dir }}/ocp-cluster/.openshift_install.log"
     dest_dir: ocp_cluster
@@ -29,6 +33,8 @@ hotlog_collect_paths:
     dest_dir: manifests
   - src: "{{ base_dir }}/must-gather.tar.gz"
     dest_dir: .
+  - src: "{{ base_dir }}/logs/tempest"
+    dest_dir: tempest
 
 hotlogs_must_gather_enabled: true
 hotlogs_must_gather_additional_namespaces: sushy-emulator

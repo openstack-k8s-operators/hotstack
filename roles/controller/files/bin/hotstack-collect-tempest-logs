@@ -1,0 +1,200 @@
+#!/bin/bash
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+set -eo pipefail
+
+if [ "$EUID" -eq 0 ]; then
+    echo "Please do not run as root."
+    exit 1
+fi
+
+function usage {
+    echo "Collect tempest test logs from test-operator PVCs"
+    echo
+    echo "This command collects stestr results, HTML reports, and subunit files"
+    echo "from tempest test PVCs by mounting them to a helper pod."
+    echo
+    echo "Example:"
+    echo "  $ hotstack-collect-tempest-logs"
+    echo
+    echo "options:"
+    echo "  --namespace      Namespace where test-operator is running (Optional, defaults to openstack)"
+    echo "  --logs-dir       Base directory to store collected logs (Optional, defaults to /home/zuul/logs)"
+    echo
+}
+
+function cleanup_helper_pod {
+    local namespace=$1
+    local pod_name=$2
+
+    echo "Cleaning up helper pod: ${pod_name}"
+    oc delete pod -n "${namespace}" "${pod_name}" --ignore-not-found=true --wait=false 2>/dev/null || true
+}
+
+# Default values
+NAMESPACE="openstack"
+LOGS_DIR="/home/zuul/logs"
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        "--namespace")
+            NAMESPACE="$2"
+            shift
+            ;;
+        "--logs-dir")
+            LOGS_DIR="$2"
+            shift
+            ;;
+        *)
+            echo "Unknown parameter passed: $1"
+            usage
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+# Create base logs directory for tempest
+TEMPEST_LOGS_DIR="${LOGS_DIR}/tempest"
+mkdir -p "${TEMPEST_LOGS_DIR}"
+
+echo "=========================================="
+echo "Tempest Log Collection"
+echo "=========================================="
+echo "Namespace: ${NAMESPACE}"
+echo "Logs directory: ${TEMPEST_LOGS_DIR}"
+echo "=========================================="
+echo
+
+# Find all tempest PVCs
+echo "Searching for tempest log PVCs..."
+PVC_NAMES=$(oc get pvc -n "${NAMESPACE}" \
+    -l "service=tempest" \
+    -o jsonpath='{.items[*].metadata.name}')
+
+if [ -z "$PVC_NAMES" ]; then
+    echo "WARNING: No tempest PVCs found"
+    echo "This is normal if tests haven't run yet or logs were already collected"
+    exit 0
+fi
+
+echo "Found PVCs: ${PVC_NAMES}"
+echo
+
+# Create a unique helper pod name
+HELPER_POD_NAME="tempest-logs-collector-$$"
+
+# Ensure cleanup on exit
+trap 'cleanup_helper_pod "${NAMESPACE}" "${HELPER_POD_NAME}"' EXIT
+
+# Build volume mounts and volumes for the helper pod
+VOLUMES=""
+VOLUME_MOUNTS=""
+INDEX=0
+
+for PVC_NAME in ${PVC_NAMES}; do
+    if [ ${INDEX} -gt 0 ]; then
+        VOLUMES="${VOLUMES},"
+        VOLUME_MOUNTS="${VOLUME_MOUNTS},"
+    fi
+
+    VOLUMES="${VOLUMES}{\"name\":\"vol-${INDEX}\",\"persistentVolumeClaim\":{\"claimName\":\"${PVC_NAME}\"}}"
+    VOLUME_MOUNTS="${VOLUME_MOUNTS}{\"name\":\"vol-${INDEX}\",\"mountPath\":\"/mnt/logs-${INDEX}\"}"
+
+    INDEX=$((INDEX + 1))
+done
+
+echo "Creating helper pod to mount PVCs..."
+
+# Create helper pod manifest
+cat <<EOF | oc apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ${HELPER_POD_NAME}
+  namespace: ${NAMESPACE}
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: log-collector
+    image: quay.io/quay/busybox:latest
+    command: ["sleep", "infinity"]
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      runAsNonRoot: true
+      runAsUser: 1000
+    volumeMounts: [${VOLUME_MOUNTS}]
+  volumes: [${VOLUMES}]
+  restartPolicy: Never
+EOF
+
+# Wait for helper pod to be ready
+echo "Waiting for helper pod to be ready..."
+oc wait -n "${NAMESPACE}" pod/"${HELPER_POD_NAME}" \
+    --for=condition=Ready \
+    --timeout=120s
+
+echo "Helper pod is ready. Collecting logs..."
+echo
+
+# Copy logs from each mounted PVC
+INDEX=0
+for PVC_NAME in ${PVC_NAMES}; do
+    echo "=========================================="
+    echo "Collecting logs from PVC: ${PVC_NAME}"
+    echo "=========================================="
+
+    MOUNT_PATH="/mnt/logs-${INDEX}"
+    TEMP_DIR="${TEMPEST_LOGS_DIR}/.tmp-${INDEX}"
+
+    mkdir -p "${TEMP_DIR}"
+
+    # Copy all contents from the PVC to temp location
+    if oc cp -n "${NAMESPACE}" "${HELPER_POD_NAME}:${MOUNT_PATH}" "${TEMP_DIR}" 2>/dev/null; then
+        echo "  ✓ Logs copied from ${PVC_NAME}"
+
+        # Move workflow directories with zero-padded index prefix
+        for WORKFLOW_DIR in "${TEMP_DIR}"/*; do
+            if [ -d "${WORKFLOW_DIR}" ]; then
+                WORKFLOW_NAME=$(basename "${WORKFLOW_DIR}")
+                PREFIXED_NAME=$(printf "%02d-%s" "${INDEX}" "${WORKFLOW_NAME}")
+                mv "${WORKFLOW_DIR}" "${TEMPEST_LOGS_DIR}/${PREFIXED_NAME}"
+                echo "    - ${PREFIXED_NAME}"
+            fi
+        done
+
+        # Remove temp directory
+        rm -rf "${TEMP_DIR}"
+    else
+        echo "  ✗ Failed to copy logs from ${PVC_NAME}"
+        rm -rf "${TEMP_DIR}"
+    fi
+
+    echo
+    INDEX=$((INDEX + 1))
+done
+
+echo "=========================================="
+echo "All tempest logs collected successfully!"
+echo "=========================================="

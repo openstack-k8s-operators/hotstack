@@ -75,6 +75,7 @@
         mode: '0755'
       loop:
         - bin/hotstack-approve-install-plan
+        - bin/hotstack-collect-tempest-logs
         - bin/hotstack-leader-election-tune
         - bin/hotstack-nova-discover-hosts
         - bin/hotstack-snapset

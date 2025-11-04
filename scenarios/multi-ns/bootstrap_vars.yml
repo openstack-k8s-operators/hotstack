@@ -27,6 +27,11 @@ ovn_k8s_gateway_config_host_routing: true
 enable_iscsi: true
 enable_multipath: true
 
+# Collect tempest logs from both OpenStack namespaces
+hotlog_tempest_namespaces:
+  - openstack-a
+  - openstack-b
+
 cinder_volume_pvs:
   - /dev/vdc
   - /dev/vdd
