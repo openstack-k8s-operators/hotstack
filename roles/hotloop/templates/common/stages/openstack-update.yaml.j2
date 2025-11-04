@@ -57,6 +57,6 @@
   wait_conditions:
     - >-
       oc -n openstack wait openstackversions.core.openstack.org controlplane
-      --for=condition=MinorUpdateControlplane --timeout=20m
+      --for=condition=MinorUpdateDataplane --timeout=20m
   run_conditions:
     - "{{ scenario not in hotstack_non_default_namespace_scenarios }}"
