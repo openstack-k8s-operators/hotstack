@@ -8,6 +8,8 @@ spec:
   workflow:
     - stepName: multi-thread-testing
       storageClass: lvms-local-storage
+      rerunFailedTests: true
+      rerunOverrideStatus: true
       resources:
         requests:
           cpu: 2000m
