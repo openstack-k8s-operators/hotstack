@@ -32,7 +32,7 @@ for upstream is provided for convenience.
   image to use for the update. For example the
   `openstack-operator-index-upgrade` image from the `openstack-k8s-operators`
   repository on Quay.io, with the `latest` tag.
-- **`openstack_operators_starting_csv`**: This setting defines the starting
+- **`openstack_operator_starting_csv`**: This setting defines the starting
   Cluster Service Version (CSV) for the update. For example `v0.3.0`.
 - **`openstack_operator_channel`**: This setting specifies the channel for the
   OpenStack operator. For example `stable-v1.0`.
@@ -131,7 +131,7 @@ version is within a specific range.
   include the OpenStack Operator, its controller pod, and specific deployments
   and services.
 
-  The `run_conditions` section checks if the `openstack_operators_starting_csv`
+  The `run_conditions` section checks if the `openstack_operator_starting_csv`
   variable is defined and if its version is between 'v1.0.0' and 'v1.0.7'
   (exclusive). If these conditions are met, the task will run; otherwise, it
   will be skipped.
