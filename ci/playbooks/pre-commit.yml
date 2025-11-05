@@ -20,11 +20,9 @@
           - pre-commit
           - ansible-core
     - name: Install ansible galaxy dependencies
-      ansible.builtin.shell: |
-        {{ pre_commit_venv_dir }}/bin/ansible-galaxy collection install community.general
-        {{ pre_commit_venv_dir }}/bin/ansible-galaxy collection install community.crypto
-        {{ pre_commit_venv_dir }}/bin/ansible-galaxy collection install openstack.cloud
-        {{ pre_commit_venv_dir }}/bin/ansible-galaxy collection install ansible.posix
+      ansible.builtin.command:
+        chdir: "{{ zuul.project.src_dir }}"
+        cmd: "{{ pre_commit_venv_dir }}/bin/ansible-galaxy collection install -r requirements.yml"
 
     - name: Run pre-commit
       ansible.builtin.command:
