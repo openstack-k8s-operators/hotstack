@@ -62,6 +62,8 @@ repos:
     rev: v6.22.2
     hooks:
       - id: ansible-lint
+        additional_dependencies:
+          - ansible-core
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.6

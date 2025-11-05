@@ -87,6 +87,7 @@ spec:
           loadbalancer-feature-enabled.not_implemented_is_error 'False'
           enforce_scope.octavia 'False'
       tempestRun:
+        concurrency: 2
         includeList: |
           ^.*smoke.*
           ^barbican_tempest_plugin.tests.scenario
