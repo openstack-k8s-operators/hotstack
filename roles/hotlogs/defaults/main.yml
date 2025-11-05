@@ -34,7 +34,7 @@ hotlog_collect_paths:
   - src: "{{ base_dir }}/must-gather.tar.gz"
     dest_dir: .
   - src: "{{ base_dir }}/logs/tempest"
-    dest_dir: tempest
+    dest_dir: .
 
 hotlogs_must_gather_enabled: true
 hotlogs_must_gather_additional_namespaces: sushy-emulator
