@@ -33,7 +33,7 @@ hotlog_collect_paths:
     dest_dir: manifests
   - src: "{{ base_dir }}/must-gather.tar.gz"
     dest_dir: .
-  - src: "{{ base_dir }}/logs/tempest"
+  - src: "{{ base_dir }}/logs/tempest/"
     dest_dir: .
 
 hotlogs_must_gather_enabled: true
