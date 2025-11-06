@@ -91,13 +91,27 @@
         delete: true
         rsync_timeout: 300
 
+- name: Render all stage task files
+  ansible.builtin.copy:
+    content: "{{ lookup('ansible.builtin.template', 'execute_stage.yml.j2', template_vars={'_stage': item}) }}"
+    dest: "{{ _templates_temp.path }}/stage_{{ ansible_loop.index }}.yml"
+  delegate_to: localhost
+  changed_when: false
+  loop: "{{ __loaded_stages.outputs.stages }}"
+  loop_control:
+    extended: true
+    label: "{{ item.name }}"
+
 - name: Execute automation stages
   vars:
     _work_dir: "{{ _work_temp.path }}"
     _templates_temp_dir: "{{ _templates_temp.path }}"
   ansible.builtin.include_tasks:
-    file: execute_stage.yml
+    file: "{{ _templates_temp.path }}/stage_{{ ansible_loop.index }}.yml"
   loop: "{{ __loaded_stages.outputs.stages }}"
+  loop_control:
+    extended: true
+    label: "{{ item.name }}"
 
 - name: Remove temporary hotloop work directory
   ansible.builtin.file:
