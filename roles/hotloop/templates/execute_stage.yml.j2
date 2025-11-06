@@ -1,0 +1,73 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+{% if _stage.command is defined %}
+- name: "Stage: {{ _stage.name }} :: Run command"
+  ansible.builtin.command:
+    cmd: "{{ _stage.command }}"
+{% endif %}
+
+{% if _stage.shell is defined %}
+- name: "Stage: {{ _stage.name }} :: Run shell"
+  ansible.builtin.shell:
+    cmd: |
+{{ _stage.shell | indent(6, True) }}
+{% endif %}
+
+{% if _stage.script is defined %}
+- name: "Stage: {{ _stage.name }} :: Run script"
+  ansible.builtin.include_tasks: script.yml
+{% endif %}
+
+{% if _stage.manifest is defined %}
+- name: "Stage: {{ _stage.name }} :: Apply static manifest"
+  ansible.builtin.include_tasks: static_manifest.yml
+{% endif %}
+
+{% if _stage.j2_manifest is defined %}
+- name: "Stage: {{ _stage.name }} :: Apply templates manifest"
+  ansible.builtin.include_tasks: template_manifest.yml
+{% endif %}
+
+{% if _stage.kustomize is defined %}
+- name: "Stage: {{ _stage.name }} :: Apply kustomize"
+  ansible.builtin.include_tasks: kustomize.yml
+{% endif %}
+
+{% if _stage.wait_conditions is defined %}
+- name: "Stage: {{ _stage.name }} :: Wait conditions"
+  hotloop_wait_condition:
+    command: "{% raw %}{{ wait_cmd }}{% endraw %}"
+    retries: "{% raw %}{{ wait_condition_retries }}{% endraw %}"
+    delay: "{% raw %}{{ wait_condition_retry_delay }}{% endraw %}"
+  loop:
+{{ _stage.wait_conditions | to_yaml | indent(4, True) }}
+  loop_control:
+    loop_var: wait_cmd
+{% endif %}
+
+{% if _stage.wait_pod_completion is defined %}
+- name: "Stage: {{ _stage.name }} :: Wait for pod completion"
+  hotloop_wait_pod_completion:
+    namespace: "{% raw %}{{ pod_wait.namespace }}{% endraw %}"
+    labels: "{% raw %}{{ pod_wait.labels }}{% endraw %}"
+    timeout: "{% raw %}{{ pod_wait.timeout | default(3600) }}{% endraw %}"
+    poll_interval: "{% raw %}{{ pod_wait.poll_interval | default(10) }}{% endraw %}"
+  loop:
+{{ _stage.wait_pod_completion | to_yaml | indent(4, True) }}
+  loop_control:
+    loop_var: pod_wait
+{% endif %}

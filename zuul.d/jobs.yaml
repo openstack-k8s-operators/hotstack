@@ -236,5 +236,4 @@
       - ci/playbooks/run-deploy.yml
       - ci/playbooks/run-tests.yml
     files:
-      - ^update-vars.yml
-      - ^roles/.*
+      - ^scenarios/3-nodes/.*
