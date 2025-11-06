@@ -15,59 +15,95 @@
 # under the License.
 
 {% if _stage.command is defined %}
+
 - name: "Stage: {{ _stage.name }} :: Run command"
   ansible.builtin.command:
     cmd: "{{ _stage.command }}"
+
 {% endif %}
 
-{% if _stage.shell is defined %}
+{%- if _stage.shell is defined %}
+
 - name: "Stage: {{ _stage.name }} :: Run shell"
   ansible.builtin.shell:
     cmd: |
 {{ _stage.shell | indent(6, True) }}
+
 {% endif %}
 
-{% if _stage.script is defined %}
+{%- if _stage.script is defined %}
+
 - name: "Stage: {{ _stage.name }} :: Run script"
   ansible.builtin.include_tasks: script.yml
+  vars:
+    _work_dir: "{{ _work_dir }}"
+    _stage:
+{{ _stage | to_nice_yaml | indent(6, True) }}
+
 {% endif %}
 
-{% if _stage.manifest is defined %}
+{%- if _stage.manifest is defined %}
+
 - name: "Stage: {{ _stage.name }} :: Apply static manifest"
   ansible.builtin.include_tasks: static_manifest.yml
+  vars:
+    _work_dir: "{{ _work_dir }}"
+    manifests_dir: "{{ manifests_dir }}"
+    _stage:
+{{ _stage | to_nice_yaml | indent(6, True) }}
+
 {% endif %}
 
-{% if _stage.j2_manifest is defined %}
+{%- if _stage.j2_manifest is defined %}
+
 - name: "Stage: {{ _stage.name }} :: Apply templates manifest"
   ansible.builtin.include_tasks: template_manifest.yml
+  vars:
+    _work_dir: "{{ _work_dir }}"
+    manifests_dir: "{{ manifests_dir }}"
+    _templates_temp_dir: "{{ _templates_temp_dir }}"
+    _stage:
+{{ _stage | to_nice_yaml | indent(6, True) }}
+
 {% endif %}
 
-{% if _stage.kustomize is defined %}
+{%- if _stage.kustomize is defined %}
+
 - name: "Stage: {{ _stage.name }} :: Apply kustomize"
   ansible.builtin.include_tasks: kustomize.yml
+  vars:
+    _work_dir: "{{ _work_dir }}"
+    manifests_dir: "{{ manifests_dir }}"
+    _stage:
+{{ _stage | to_nice_yaml | indent(6, True) }}
+
 {% endif %}
 
-{% if _stage.wait_conditions is defined %}
+{%- if _stage.wait_conditions is defined %}
+
 - name: "Stage: {{ _stage.name }} :: Wait conditions"
   hotloop_wait_condition:
     command: "{% raw %}{{ wait_cmd }}{% endraw %}"
-    retries: "{% raw %}{{ wait_condition_retries }}{% endraw %}"
-    delay: "{% raw %}{{ wait_condition_retry_delay }}{% endraw %}"
-  loop:
-{{ _stage.wait_conditions | to_yaml | indent(4, True) }}
+    retries: "{{ wait_condition_retries }}"
+    delay: "{{ wait_condition_retry_delay }}"
   loop_control:
     loop_var: wait_cmd
+  loop:
+{{ _stage.wait_conditions | to_nice_yaml | indent(4, True) }}
+
 {% endif %}
 
-{% if _stage.wait_pod_completion is defined %}
+{%- if _stage.wait_pod_completion is defined %}
+
 - name: "Stage: {{ _stage.name }} :: Wait for pod completion"
   hotloop_wait_pod_completion:
     namespace: "{% raw %}{{ pod_wait.namespace }}{% endraw %}"
     labels: "{% raw %}{{ pod_wait.labels }}{% endraw %}"
     timeout: "{% raw %}{{ pod_wait.timeout | default(3600) }}{% endraw %}"
     poll_interval: "{% raw %}{{ pod_wait.poll_interval | default(10) }}{% endraw %}"
-  loop:
-{{ _stage.wait_pod_completion | to_yaml | indent(4, True) }}
   loop_control:
     loop_var: pod_wait
+  loop:
+{{ _stage.wait_pod_completion | to_nice_yaml | indent(4, True) }}
+
 {% endif %}

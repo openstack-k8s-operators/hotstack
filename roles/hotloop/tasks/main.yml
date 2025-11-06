@@ -32,24 +32,22 @@
 
 - name: Ensure directory exists
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ manifests_dir }}"
     state: directory
     mode: '0755'
-  loop:
-    - "{{ manifests_dir }}"
+
+- name: Create temporary directory for rendered stage tasks
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: hotloop_rendered_stages
+  register: _rendered_stages_temp
+  delegate_to: localhost
 
 - name: Create temporary hotloop work directory
   ansible.builtin.tempfile:
     state: directory
     suffix: hotloop_work_temp
   register: _work_temp
-
-- name: Create temporary directory for templates
-  ansible.builtin.tempfile:
-    state: directory
-    suffix: hotloop_templates
-  register: _templates_temp
-  delegate_to: localhost
 
 - name: Sync work files to work directory
   vars:
@@ -93,8 +91,22 @@
 
 - name: Render all stage task files
   ansible.builtin.copy:
-    content: "{{ lookup('ansible.builtin.template', 'execute_stage.yml.j2', template_vars={'_stage': item}) }}"
-    dest: "{{ _templates_temp.path }}/stage_{{ ansible_loop.index }}.yml"
+    content: >-
+      {{
+        lookup('ansible.builtin.template', 'execute_stage.yml.j2',
+               template_vars={
+                 '_stage': item,
+                 '_work_dir': _work_temp.path,
+                 '_templates_temp_dir': _rendered_stages_temp.path,
+                 'manifests_dir': manifests_dir
+               })
+      }}
+    dest: >-
+      {{
+        _rendered_stages_temp.path + '/' +
+        ('%03d' | format(ansible_loop.index)) + '_' +
+        (item.name | regex_replace('[^a-zA-Z0-9_-]', '_')) + '.yml'
+      }}
   delegate_to: localhost
   changed_when: false
   loop: "{{ __loaded_stages.outputs.stages }}"
@@ -102,12 +114,55 @@
     extended: true
     label: "{{ item.name }}"
 
+- name: Save rendered stage tasks to controller for log collection
+  when: hotloop_save_rendered_stages | bool
+  vars:
+    _is_local: >-
+      {{
+        hostvars[inventory_hostname]['ansible_connection'] |
+        default('') == 'local'
+      }}
+    _dest_user: "{{ hostvars['controller-0']['ansible_user'] | default('zuul') }}"
+    _dest_host: "{{ hostvars['controller-0']['ansible_host'] | default('controller-0') }}"
+    _dest_target_path: >-
+      {{
+        _dest_user + '@' + _dest_host + ':' +
+        stage_tasks_base_dir + '/' + stage_tasks_run_id + '/'
+      }}
+  block:
+    - name: Create stage tasks directory
+      ansible.builtin.file:
+        path: "{{ stage_tasks_base_dir }}/{{ stage_tasks_run_id }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy rendered stage tasks (local connection)
+      when: _is_local
+      ansible.builtin.copy:
+        src: "{{ _rendered_stages_temp.path }}/"
+        dest: "{{ stage_tasks_base_dir }}/{{ stage_tasks_run_id }}/"
+        mode: preserve
+
+    - name: Copy rendered stage tasks (remote connection)
+      when: not _is_local
+      delegate_to: "{{ inventory_hostname }}"
+      ansible.posix.synchronize:
+        src: "{{ _rendered_stages_temp.path }}/"
+        dest: "{{ _dest_target_path }}"
+        mode: push
+        archive: true
+
 - name: Execute automation stages
   vars:
     _work_dir: "{{ _work_temp.path }}"
-    _templates_temp_dir: "{{ _templates_temp.path }}"
+    _templates_temp_dir: "{{ _rendered_stages_temp.path }}"
   ansible.builtin.include_tasks:
-    file: "{{ _templates_temp.path }}/stage_{{ ansible_loop.index }}.yml"
+    file: >-
+      {{
+        _rendered_stages_temp.path + '/' +
+        ('%03d' | format(ansible_loop.index)) + '_' +
+        (item.name | regex_replace('[^a-zA-Z0-9_-]', '_')) + '.yml'
+      }}
   loop: "{{ __loaded_stages.outputs.stages }}"
   loop_control:
     extended: true
@@ -118,8 +173,8 @@
     path: "{{ _work_temp.path }}"
     state: absent
 
-- name: Remove temporary templates directory
+- name: Remove temporary rendered stages directory
   ansible.builtin.file:
-    path: "{{ _templates_temp.path }}"
+    path: "{{ _rendered_stages_temp.path }}"
     state: absent
   delegate_to: localhost

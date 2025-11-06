@@ -20,6 +20,23 @@ manifests_dir: /home/zuul/manifests
 automation:
   stages: []
 
+# Rendered stage tasks directory
+# This will be collected by hotlogs automatically
+stage_tasks_base_dir: /home/zuul/stage_tasks
+
+# Unique identifier for this hotloop execution
+# Derived from epoch timestamp and work_dir basename for uniqueness and sorting
+# Format: 1704637822_3-nodes or 1704637822_test-operator
+stage_tasks_run_id: >-
+  {{
+    ansible_date_time.epoch + '_' +
+    (work_dir | default('default') | basename)
+  }}
+
+# Save rendered stage tasks for log collection and debugging
+# Default true for CI
+hotloop_save_rendered_stages: true
+
 openstack_operators_image: quay.io/openstack-k8s-operators/openstack-operator-index:latest
 openstack_operator_channel: alpha
 

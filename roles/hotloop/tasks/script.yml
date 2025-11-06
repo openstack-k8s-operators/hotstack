@@ -14,26 +14,26 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-- name: "Stage: {{ item.name }} :: Check if script exists in synced work directory"
-  when: not item.script.startswith('/')
+- name: "Stage: {{ _stage.name }} :: Check if script exists in synced work directory"
+  when: not _stage.script.startswith('/')
   ansible.builtin.stat:
     path: >-
       {{
-        [_work_dir, item.script] |
+        [_work_dir, _stage.script] |
         ansible.builtin.path_join
       }}
   register: _synced_script_stat
 
-- name: "Stage: {{ item.name }} :: Run script from synced work directory"
-  when: not item.script.startswith('/') and _synced_script_stat.stat.exists | default(false)
+- name: "Stage: {{ _stage.name }} :: Run script from synced work directory"
+  when: not _stage.script.startswith('/') and _synced_script_stat.stat.exists | default(false)
   ansible.builtin.command:
     cmd: >-
       {{
-        [_work_dir, item.script] |
+        [_work_dir, _stage.script] |
         ansible.builtin.path_join
       }}
 
-- name: "Stage: {{ item.name }} :: Run script from absolute path"
-  when: item.script.startswith('/') or (not item.script.startswith('/') and not (_synced_script_stat.stat.exists | default(false)))
+- name: "Stage: {{ _stage.name }} :: Run script from absolute path"
+  when: _stage.script.startswith('/') or (not _stage.script.startswith('/') and not (_synced_script_stat.stat.exists | default(false)))
   ansible.builtin.command:
-    cmd: "{{ item.script }}"
+    cmd: "{{ _stage.script }}"

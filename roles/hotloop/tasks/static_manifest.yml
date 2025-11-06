@@ -14,72 +14,72 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-- name: "Stage: {{ item.name }} :: Ensure manifest dir"
+- name: "Stage: {{ _stage.name }} :: Ensure manifest dir"
   ansible.builtin.file:
     path: >-
       {{
         [
           manifests_dir,
-          item.manifest | dirname | ansible.builtin.basename
+          _stage.manifest | dirname | ansible.builtin.basename
         ] | ansible.builtin.path_join
       }}
     state: directory
     mode: '0755'
 
-- name: "Stage: {{ item.name }} :: Check if manifest exists in synced work directory"
-  when: not item.manifest.startswith('/')
+- name: "Stage: {{ _stage.name }} :: Check if manifest exists in synced work directory"
+  when: not _stage.manifest.startswith('/')
   ansible.builtin.stat:
     path: >-
       {{
-        [_work_dir, item.manifest] |
+        [_work_dir, _stage.manifest] |
         ansible.builtin.path_join
       }}
   register: _synced_manifest_stat
 
-- name: "Stage: {{ item.name }} :: Copy manifest"
+- name: "Stage: {{ _stage.name }} :: Copy manifest"
   ansible.builtin.copy:
     backup: true
     remote_src: "{{ _synced_manifest_stat.stat.exists | default(false) }}"
     src: >-
       {{
-        [_work_dir, item.manifest] | ansible.builtin.path_join
+        [_work_dir, _stage.manifest] | ansible.builtin.path_join
         if _synced_manifest_stat.stat.exists | default(false)
-        else item.manifest
+        else _stage.manifest
       }}
     dest: >-
       {{
         [
           manifests_dir,
-          item.manifest | dirname | ansible.builtin.basename,
-          item.manifest | ansible.builtin.basename
+          _stage.manifest | dirname | ansible.builtin.basename,
+          _stage.manifest | ansible.builtin.basename
         ] | ansible.builtin.path_join
       }}
 
-- name: "Stage: {{ item.name }} :: Apply patches"
-  when: item.patches is defined
+- name: "Stage: {{ _stage.name }} :: Apply patches"
+  when: _stage.patches is defined
   hotloop_yaml_patch:
     file: >-
       {{
         [
           manifests_dir,
-          item.manifest | dirname | ansible.builtin.basename,
-          item.manifest | ansible.builtin.basename
+          _stage.manifest | dirname | ansible.builtin.basename,
+          _stage.manifest | ansible.builtin.basename
         ] | ansible.builtin.path_join
       }}
     path: "{{ __patch.path }}"
     value: "{{ __patch.value }}"
-  loop: "{{ item.patches }}"
+  loop: "{{ _stage.patches }}"
   loop_control:
     label: "{{ __patch.path }}"
     loop_var: __patch
 
-- name: "Stage: {{ item.name }} :: Apply static manifest"
+- name: "Stage: {{ _stage.name }} :: Apply static manifest"
   hotloop_oc_apply_file:
     file: >-
       {{
         [
           manifests_dir,
-          item.manifest | dirname | ansible.builtin.basename,
-          item.manifest | ansible.builtin.basename
+          _stage.manifest | dirname | ansible.builtin.basename,
+          _stage.manifest | ansible.builtin.basename
         ] | ansible.builtin.path_join
       }}

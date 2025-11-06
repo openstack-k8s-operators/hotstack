@@ -14,12 +14,12 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-- name: "Stage: {{ item.name }} :: Check if kustomize directory is URL"
+- name: "Stage: {{ _stage.name }} :: Check if kustomize directory is URL"
   ansible.builtin.set_fact:
-    _kustomize_is_url: "{{ item.kustomize.directory.startswith(('http://', 'https://')) }}"
-    _kustomize_dir_name: "{{ item.kustomize.directory | dirname | ansible.builtin.basename }}"
+    _kustomize_is_url: "{{ _stage.kustomize.directory.startswith(('http://', 'https://')) }}"
+    _kustomize_dir_name: "{{ _stage.kustomize.directory | dirname | ansible.builtin.basename }}"
 
-- name: "Stage: {{ item.name }} :: Ensure kustomize dir"
+- name: "Stage: {{ _stage.name }} :: Ensure kustomize dir"
   when: not _kustomize_is_url
   ansible.builtin.file:
     path: >-
@@ -32,25 +32,25 @@
     state: directory
     mode: '0755'
 
-- name: "Stage: {{ item.name }} :: Check if kustomize directory exists in synced work directory"
-  when: not _kustomize_is_url and not item.kustomize.directory.startswith('/')
+- name: "Stage: {{ _stage.name }} :: Check if kustomize directory exists in synced work directory"
+  when: not _kustomize_is_url and not _stage.kustomize.directory.startswith('/')
   ansible.builtin.stat:
     path: >-
       {{
-        [_work_dir, item.kustomize.directory] |
+        [_work_dir, _stage.kustomize.directory] |
         ansible.builtin.path_join
       }}
   register: _synced_kustomize_stat
 
-- name: "Stage: {{ item.name }} :: Copy kustomize directory"
+- name: "Stage: {{ _stage.name }} :: Copy kustomize directory"
   when: not _kustomize_is_url
   ansible.builtin.copy:
     remote_src: "{{ _synced_kustomize_stat.stat.exists | default(false) }}"
     src: >-
       {{
-        [_work_dir, item.kustomize.directory] | ansible.builtin.path_join
+        [_work_dir, _stage.kustomize.directory] | ansible.builtin.path_join
         if _synced_kustomize_stat.stat.exists | default(false)
-        else item.kustomize.directory
+        else _stage.kustomize.directory
       }}/
     dest: >-
       {{
@@ -60,19 +60,19 @@
         ] | ansible.builtin.path_join
       }}/
 
-- name: "Stage: {{ item.name }} :: Set kustomize directory path"
+- name: "Stage: {{ _stage.name }} :: Set kustomize directory path"
   ansible.builtin.set_fact:
     _kustomize_apply_dir: >-
       {{
-        item.kustomize.directory if _kustomize_is_url else
+        _stage.kustomize.directory if _kustomize_is_url else
         [
           manifests_dir,
           _kustomize_dir_name
         ] | ansible.builtin.path_join
       }}
 
-- name: "Stage: {{ item.name }} :: Apply Kustomize directory"
+- name: "Stage: {{ _stage.name }} :: Apply Kustomize directory"
   hotloop_oc_apply_kustomize:
     directory: "{{ _kustomize_apply_dir }}"
-    timeout: "{{ item.kustomize.timeout | default(60) }}"
+    timeout: "{{ _stage.kustomize.timeout | default(60) }}"
   register: kustomize_result

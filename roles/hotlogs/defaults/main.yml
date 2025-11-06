@@ -31,6 +31,8 @@ hotlog_collect_paths:
     dest_dir: data
   - src: "{{ base_dir }}/manifests/"
     dest_dir: manifests
+  - src: "{{ base_dir }}/stage_tasks/"
+    dest_dir: stage_tasks
   - src: "{{ base_dir }}/must-gather.tar.gz"
     dest_dir: .
   - src: "{{ base_dir }}/logs/tempest/"

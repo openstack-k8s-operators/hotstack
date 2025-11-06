@@ -14,77 +14,77 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-- name: "Stage: {{ item.name }} :: Ensure j2_manifest dir"
+- name: "Stage: {{ _stage.name }} :: Ensure j2_manifest dir"
   ansible.builtin.file:
     path: >-
       {{
         [
           manifests_dir,
-          item.j2_manifest | dirname | ansible.builtin.basename
+          _stage.j2_manifest | dirname | ansible.builtin.basename
         ] | ansible.builtin.path_join
       }}
     state: directory
     mode: '0755'
 
-- name: "Stage: {{ item.name }} :: Check if j2_manifest exists in synced work directory"
-  when: not item.j2_manifest.startswith('/')
+- name: "Stage: {{ _stage.name }} :: Check if j2_manifest exists in synced work directory"
+  when: not _stage.j2_manifest.startswith('/')
   ansible.builtin.stat:
     path: >-
       {{
-        [_work_dir, item.j2_manifest] |
+        [_work_dir, _stage.j2_manifest] |
         ansible.builtin.path_join
       }}
   register: _synced_j2_manifest_stat
 
-- name: "Stage: {{ item.name }} :: Fetch template from remote when needed"
+- name: "Stage: {{ _stage.name }} :: Fetch template from remote when needed"
   when: _synced_j2_manifest_stat is defined and _synced_j2_manifest_stat.stat.exists | default(false)
   ansible.builtin.fetch:
-    src: "{{ [_work_dir, item.j2_manifest] | ansible.builtin.path_join }}"
-    dest: "{{ _templates_temp_dir }}/{{ item.j2_manifest | ansible.builtin.basename }}"
+    src: "{{ [_work_dir, _stage.j2_manifest] | ansible.builtin.path_join }}"
+    dest: "{{ _templates_temp_dir }}/{{ _stage.j2_manifest | ansible.builtin.basename }}"
     flat: true
 
-- name: "Stage: {{ item.name }} :: Template manifest"
+- name: "Stage: {{ _stage.name }} :: Template manifest"
   ansible.builtin.template:
     src: >-
       {{
-        _templates_temp_dir + "/" + (item.j2_manifest | ansible.builtin.basename)
+        _templates_temp_dir + "/" + (_stage.j2_manifest | ansible.builtin.basename)
         if _synced_j2_manifest_stat is defined and _synced_j2_manifest_stat.stat.exists | default(false)
-        else item.j2_manifest
+        else _stage.j2_manifest
       }}
     dest: >-
       {{
         [
           manifests_dir,
-          item.j2_manifest | dirname | ansible.builtin.basename,
-          item.j2_manifest | ansible.builtin.basename | ansible.builtin.splitext | first
+          _stage.j2_manifest | dirname | ansible.builtin.basename,
+          _stage.j2_manifest | ansible.builtin.basename | ansible.builtin.splitext | first
         ] | ansible.builtin.path_join
       }}
 
-- name: "Stage: {{ item.name }} :: Apply patches"
-  when: item.patches is defined
+- name: "Stage: {{ _stage.name }} :: Apply patches"
+  when: _stage.patches is defined
   hotloop_yaml_patch:
     file: >-
       {{
         [
           manifests_dir,
-          item.j2_manifest | dirname | ansible.builtin.basename,
-          item.j2_manifest | ansible.builtin.basename | ansible.builtin.splitext | first
+          _stage.j2_manifest | dirname | ansible.builtin.basename,
+          _stage.j2_manifest | ansible.builtin.basename | ansible.builtin.splitext | first
         ] | ansible.builtin.path_join
       }}
     path: "{{ __patch.path }}"
     value: "{{ __patch.value }}"
-  loop: "{{ item.patches }}"
+  loop: "{{ _stage.patches }}"
   loop_control:
     label: "{{ __patch.path }}"
     loop_var: __patch
 
-- name: "Stage: {{ item.name }} :: Apply static manifest"
+- name: "Stage: {{ _stage.name }} :: Apply static manifest"
   hotloop_oc_apply_file:
     file: >-
       {{
         [
           manifests_dir,
-          item.j2_manifest | dirname | ansible.builtin.basename,
-          item.j2_manifest | ansible.builtin.basename | ansible.builtin.splitext | first
+          _stage.j2_manifest | dirname | ansible.builtin.basename,
+          _stage.j2_manifest | ansible.builtin.basename | ansible.builtin.splitext | first
         ] | ansible.builtin.path_join
       }}
