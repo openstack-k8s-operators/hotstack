@@ -339,9 +339,9 @@ spec:
             subPath: 03-ml2-genericswitch.conf
             readOnly: true
       ml2MechanismDrivers:
+      - ovn
       - genericswitch
       - baremetal
-      - ovn
       networkAttachments:
       - internalapi
       override:
