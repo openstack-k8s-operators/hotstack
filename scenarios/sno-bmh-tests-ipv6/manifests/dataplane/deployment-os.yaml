@@ -1,0 +1,18 @@
+---
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneDeployment
+metadata:
+  name: dataplane-os
+  namespace: openstack
+spec:
+  nodeSets:
+  - edpm
+  servicesOverride:
+  - bootstrap
+  - configure-network
+  - validate-network
+  - install-os
+  - configure-os
+  - ssh-known-hosts
+  - run-os
+  - reboot-os

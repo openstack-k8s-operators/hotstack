@@ -1,0 +1,63 @@
+---
+stages:
+  - name: Set a multiattach volume type and create it if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack volume type show multiattach &>/dev/null || \
+          oc rsh openstackclient openstack volume type create multiattach
+
+      oc rsh openstackclient openstack volume type set --property multiattach="<is> True" multiattach
+
+  - name: Create public network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack network show public &>/dev/null || \
+        oc rsh openstackclient openstack network create public \
+          --external \
+          --no-share \
+          --default \
+          --provider-network-type flat \
+          --provider-physical-network datacentre
+
+  - name: Create subnet on public network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack subnet show public_subnet &>/dev/null || \
+        oc rsh openstackclient openstack subnet create public_subnet \
+          --network public \
+          --ip-version 6 \
+          --subnet-range 2620:cf:cf:aaaa::/64 \
+          --allocation-pool start=2620:cf:cf:aaaa::ab,end=2620:cf:cf:aaaa::fa \
+          --gateway 2620:cf:cf:aaaa::1 \
+          --dhcp
+
+  - name: Create private network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack network show private &>/dev/null || \
+        oc rsh openstackclient openstack network create private --share
+
+  - name: Create subnet on private network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack subnet show private_subnet &>/dev/null || \
+        oc rsh openstackclient openstack subnet create private_subnet \
+          --network private \
+          --ip-version 6 \
+          --subnet-range fd00:10:2::/64 \
+          --allocation-pool start=fd00:10:2::10,end=fd00:10:2::fa \
+          --gateway fd00:10:2::1 \
+          --dhcp
+
+  - name: Run tempest
+    manifest: tempest-tests.yml

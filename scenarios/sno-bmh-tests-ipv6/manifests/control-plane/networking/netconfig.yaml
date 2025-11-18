@@ -1,0 +1,54 @@
+---
+apiVersion: network.openstack.org/v1beta1
+kind: NetConfig
+metadata:
+  name: netconfig
+  namespace: openstack
+spec:
+  networks:
+  - dnsDomain: ctlplane.openstack.lab
+    mtu: 1442
+    name: ctlplane
+    subnets:
+    - allocationRanges:
+      - end: 2620:cf:cf:aaaa::f199
+        start: 2620:cf:cf:aaaa::f150
+      cidr: 2620:cf:cf:aaaa::/64
+      gateway: 2620:cf:cf:aaaa::1
+      name: subnet1
+    - allocationRanges:
+      - end: 2620:cf:cf:aaab::f199
+        start: 2620:cf:cf:aaab::f150
+      cidr: 2620:cf:cf:aaab::/64
+      gateway: 2620:cf:cf:aaab::1
+      name: subnet2
+  - dnsDomain: internalapi.openstack.lab
+    mtu: 1442
+    name: internalapi
+    subnets:
+    - allocationRanges:
+      - end: 2620:cf:cf:bbbb::f199
+        start: 2620:cf:cf:bbbb::f150
+      cidr: 2620:cf:cf:bbbb::/64
+      name: subnet1
+      vlan: 20
+  - dnsDomain: storage.openstack.lab
+    mtu: 1442
+    name: storage
+    subnets:
+    - allocationRanges:
+      - end: 2620:cf:cf:cccc::f199
+        start: 2620:cf:cf:cccc::f150
+      cidr: 2620:cf:cf:cccc::/64
+      name: subnet1
+      vlan: 21
+  - dnsDomain: tenant.openstack.lab
+    mtu: 1442
+    name: tenant
+    subnets:
+    - allocationRanges:
+      - end: 2620:cf:cf:eeee::f199
+        start: 2620:cf:cf:eeee::f150
+      cidr: 2620:cf:cf:eeee::/64
+      name: subnet1
+      vlan: 22
