@@ -1,0 +1,67 @@
+---
+apiVersion: test.openstack.org/v1beta1
+kind: Tempest
+metadata:
+  name: tempest-tests
+  namespace: openstack
+spec:
+  networkAttachments:
+    - ctlplane
+  privileged: true
+  workflow:
+    - stepName: multi-thread-testing
+      storageClass: lvms-local-storage
+      tempestconfRun:
+        create: true
+        overrides: |
+          auth.tempest_roles swiftoperator
+          compute-feature-enabled.block_migration_for_live_migration true
+          compute-feature-enabled.console_output false
+          compute-feature-enabled.dhcp_domain ''
+          compute-feature-enabled.ide_bus False
+          compute-feature-enabled.vnc_console true
+          compute-feature-enabled.volume_multiattach true
+          compute-feature-enabled.attach_encrypted_volume false
+          compute.fixed_network_name private
+          compute.hypervisor_type QEMU
+          identity-feature-enabled.application_credentials true
+          identity.v2_admin_endpoint_type public
+          identity.v3_endpoint_type public
+          image_signature_verification.certificate_validation False
+          image_signature_verification.enforced False
+          network-feature-enabled.port_security true
+          neutron_plugin_options.available_type_drivers 'geneve'
+          neutron_plugin_options.create_shared_resources true
+          neutron_plugin_options.firewall_driver ovn
+          neutron_plugin_options.ipv6_metadata true
+          neutron_plugin_options.is_igmp_snooping_enabled true
+          service_available.murano false
+          service_available.ironic_inspector false
+          service_available.ironic false
+          validation.allowed_network_downtime 15
+          validation.image_alt_ssh_password cubswin:)
+          validation.image_alt_ssh_user cirros
+          validation.image_ssh_password cubswin:)
+          validation.image_ssh_user cirros
+          validation.run_validation true
+          volume-feature-enabled.extend_attached_volume true
+          volume-feature-enabled.manage_snapshot true
+          volume-feature-enabled.manage_volume true
+          volume-feature-enabled.volume_revert true
+          volume.storage_protocol 'iSCSI'
+          volume.volume_type_multiattach 'multiattach'
+      tempestRun:
+        includeList: |
+          ^.*smoke.*
+          ^tempest.scenario.test_minimum_basic.*
+          ^tempest.scenario.test_network_advanced_server_ops
+          ^tempest.scenario.test_network_basic_ops
+          ^tempest.scenario.test_network_v6
+          ^tempest.scenario.test_object_storage_basic_ops.*
+          ^tempest.scenario.test_security_groups_basic_ops
+          ^tempest.scenario.test_snapshot_pattern.*
+          ^tempest.scenario.test_stamp_pattern.*
+          ^tempest.scenario.test_volume_.*
+        excludeList: |
+          ^tempest.scenario.test_network_basic_ops.TestNetworkBasicOps.test_mtu_sized_frames
+          ^octavia_tempest_plugin.*
