@@ -323,10 +323,10 @@ spec:
         global_physnet_mtu = 1442
         type_drivers = geneve,vxlan,vlan,flat,local
         tenant_network_types = geneve,vlan,flat
-      databaseInstance: openstack
       ml2MechanismDrivers:
-        - baremetal
-        - ovn
+      - ovn
+      - baremetal
+      databaseInstance: openstack
       networkAttachments:
       - internalapi
       override:
