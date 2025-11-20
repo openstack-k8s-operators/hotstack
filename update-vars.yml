@@ -2,6 +2,7 @@
 # Include this additional variable file when running the
 # hotloop automation for RHOSO deployment.
 #
+do_not_merge_testing: true
 openstack_operators_update: true
 openstack_update: true
 openstack_operators_image: quay.io/openstack-k8s-operators/openstack-operator-index-upgrade:latest
