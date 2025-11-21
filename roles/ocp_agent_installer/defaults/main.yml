@@ -71,6 +71,12 @@ enable_image_content_source_policy: false
 # for the ICSP spec's repositoryDigestMirrors field.
 image_content_source_policy_mirrors: []
 
+ocp_agent_installer_enable_insecure_registries: false
+# To enable insecure registries, set this variable to contain a list of registry
+# hostnames (with optional ports) that should be treated as insecure.
+# Example: ['registry.example.com:5000', 'another-registry.example.com']
+ocp_agent_installer_insecure_registries: []
+
 enable_additional_trusted_ca: false
 ocp_additional_trusted_ca:
   - name: registry-proxy.engineering.redhat.com

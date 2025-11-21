@@ -1,0 +1,15 @@
+---
+apiVersion: config.openshift.io/v1
+kind: Image
+metadata:
+  name: cluster
+spec:
+{% if enable_additional_trusted_ca | bool and ocp_additional_trusted_ca is defined and ocp_additional_trusted_ca | length > 0 %}
+  additionalTrustedCA:
+    name: hotstack-additional-trusted-ca
+{% endif %}
+{% if ocp_agent_installer_enable_insecure_registries | bool and ocp_agent_installer_insecure_registries is defined and ocp_agent_installer_insecure_registries | length > 0 %}
+  registrySources:
+    insecureRegistries:
+      {{ ocp_agent_installer_insecure_registries | to_nice_yaml(indent=2) | indent(width=6) }}
+{% endif %}

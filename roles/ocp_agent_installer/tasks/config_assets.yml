@@ -50,7 +50,7 @@
         ] | ansible.builtin.path_join
       }}
 
-- name: Additional trusted CA
+- name: Additional trusted CA ConfigMap
   when:
     - enable_additional_trusted_ca | bool
     - ocp_additional_trusted_ca is defined
@@ -77,13 +77,20 @@
             ] | ansible.builtin.path_join
           }}
 
-    - name: Copy additional CA config image
-      ansible.builtin.copy:
-        src: additional-trusted-ca-config-image.yaml
-        dest: >-
-          {{
-            [
-              ocp_agent_installer_config_assets_dir,
-              '94-additional-ca-config-image.yaml'
-            ] | ansible.builtin.path_join
-          }}
+- name: Template Image config (additionalTrustedCA and/or insecureRegistries)
+  when: >-
+    (enable_additional_trusted_ca | bool and
+     ocp_additional_trusted_ca is defined and
+     ocp_additional_trusted_ca | length > 0) or
+    (ocp_agent_installer_enable_insecure_registries | bool and
+     ocp_agent_installer_insecure_registries is defined and
+     ocp_agent_installer_insecure_registries | length > 0)
+  ansible.builtin.template:
+    src: image-config.yaml.j2
+    dest: >-
+      {{
+        [
+          ocp_agent_installer_config_assets_dir,
+          '94-image-config.yaml'
+        ] | ansible.builtin.path_join
+      }}
