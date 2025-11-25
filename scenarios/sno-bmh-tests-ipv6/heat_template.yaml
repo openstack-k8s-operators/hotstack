@@ -47,6 +47,17 @@ parameters:
   net_value_specs:
     type: json
     default: {}
+  cdrom_disk_bus:
+    type: string
+    description: >
+      Disk bus type for CDROM device. 'sata' may be required for older versions
+      of OpenStack. Heat patch https://review.opendev.org/c/openstack/heat/+/966688
+      is needed for 'sata' support.
+    default: scsi
+    constraints:
+      - allowed_values:
+          - sata
+          - scsi
 
 
 resources:
@@ -726,7 +737,7 @@ resources:
           volume_size: 60
           delete_on_termination: true
         - device_type: cdrom
-          disk_bus: scsi
+          disk_bus: {get_param: cdrom_disk_bus}
           boot_index: 0
           image_id: {get_param: [bmh_params, cd_image]}
           volume_size: 5
@@ -791,7 +802,7 @@ resources:
           volume_size: 60
           delete_on_termination: true
         - device_type: cdrom
-          disk_bus: scsi
+          disk_bus: {get_param: cdrom_disk_bus}
           boot_index: 0
           image_id: {get_param: [bmh_params, cd_image]}
           volume_size: 5
