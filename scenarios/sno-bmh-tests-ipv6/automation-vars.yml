@@ -148,7 +148,7 @@ stages:
       - oc wait -n openstack jobs.batch install-os-dataplane-os-edpm --for condition=Complete --timeout=5m
       - oc wait -n openstack jobs.batch configure-os-dataplane-os-edpm --for condition=Complete --timeout=3m
       - oc wait -n openstack jobs.batch ssh-known-hosts-dataplane-os --for condition=Complete --timeout=2m
-      - oc wait -n openstack jobs.batch run-os-dataplane-os-edpm --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch run-os-dataplane-os-edpm --for condition=Complete --timeout=6m
       - oc wait -n openstack jobs.batch reboot-os-dataplane-os-edpm --for condition=Complete --timeout=5m
       - oc wait -n openstack openstackdataplanedeployment dataplane-os --for condition=Ready --timeout=10m
 
