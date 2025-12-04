@@ -237,3 +237,67 @@
       - ci/playbooks/run-tests.yml
     files:
       - ^scenarios/3-nodes/.*
+
+- job:
+    name: vexxhost-hotstack-multi-nodeset
+    parent: base-hotstack
+    nodeset: hotstack-image-vexxhost
+    description: |
+      Hotstack scenario: multi-nodeset
+    timeout: 10800
+    attempts: 1
+    vars:
+      cloud_name: vexxhost
+      scenario: multi-nodeset
+      scenario_dir: >-
+        {{
+          [
+            ansible_user_dir,
+            zuul.projects['github.com/openstack-k8s-operators/hotstack'].src_dir,
+            'scenarios'
+          ] | ansible.builtin.path_join
+        }}
+      hotstack_overrides:
+        stack_parameters:
+          dns_servers:
+            - 199.204.44.24
+            - 199.204.47.54
+          ntp_servers: []
+          router_external_network: public
+          floating_ip_network: public
+          controller_params:
+            image: hotstack-controller
+            # vpu: 1 ram 2GB disk: 20GB
+            flavor: ci.m1.small
+          ocp_master_params:
+            image: ipxe-boot-usb
+            # vpu: 16 ram 48GB disk: 200GB
+            flavor: 16vcpu_48GB
+          ocp_worker_params:
+            image: ipxe-boot-usb
+            # vpu: 12 ram 32GB disk: 200GB
+            flavor: 12vcpu_32GB
+          compute_params:
+            image: cs9stream-genericcloud
+            # vpu: 2 ram 4GB disk: 40GB
+            flavor: ci.m1.medium
+          networker_params:
+            image: cs9stream-genericcloud
+            # vpu: 2 ram 4GB disk: 40GB
+            flavor: ci.m1.medium
+          bmh_params:
+            image: sushy-tools-blank-image
+            cd_image: sushy-tools-blank-image
+            # vpu: 2 ram 4GB disk: 40GB
+            flavor: ci.m1.medium
+          ironic_params:
+            image: sushy-tools-blank-image
+            cd_image: sushy-tools-blank-image
+            # vpu: 1 ram 2GB disk: 20GB
+            flavor: ci.m1.small
+          cdrom_disk_bus: sata
+    run:
+      - ci/playbooks/run-deploy.yml
+      - ci/playbooks/run-tests.yml
+    files:
+      - ^scenarios/multi-nodeset/.*

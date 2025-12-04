@@ -89,4 +89,22 @@ stages:
       done
 
   - name: Run tempest
+    documentation: >-
+      Executes comprehensive OpenStack validation tests using the Tempest framework.
+      These tests validate API functionality, resource management, and integration
+      between OpenStack services in the baremetal environment. Includes both the
+      test execution phase (workflowStep=0) and log collection phase (workflowStep=1)
+      to ensure complete validation results are captured for analysis.
     manifest: tempest-tests.yml
+    wait_conditions:
+      - >-
+        oc wait -n openstack tempests.test.openstack.org tempest-tests
+        --for condition=ServiceConfigReady --timeout=120s
+    wait_pod_completion:
+      - namespace: openstack
+        labels:
+          operator: test-operator
+          service: tempest
+          workflowStep: "0"
+        timeout: 900
+        poll_interval: 15
