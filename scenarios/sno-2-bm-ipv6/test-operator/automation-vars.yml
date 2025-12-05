@@ -332,12 +332,28 @@ stages:
       counter=0
       max_retries=100
       node_state=available
-      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"; do
+      while true; do
+        node_states=$(oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State")
+
+        # Check if all nodes are in available state
+        if ! echo "$node_states" | grep -P "^(?!${node_state}).*$" > /dev/null; then
+          echo "All nodes have reached state: ${node_state}"
+          break
+        fi
+
+        # Check for failed states and exit immediately if found
+        if echo "$node_states" | grep -q "failed"; then
+          echo "ERROR: One or more nodes are in a failed state:"
+          oc rsh openstackclient openstack baremetal node list
+          exit 1
+        fi
+
         ((counter++))
         if (( counter > max_retries )); then
           echo "ERROR: Timeout. Nodes did not reach state: available"
           exit 1
         fi
+
         echo "Waiting for nodes to reach state: available"
         sleep 10
       done
