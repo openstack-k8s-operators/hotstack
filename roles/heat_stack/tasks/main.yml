@@ -59,15 +59,10 @@
   delay: 10
   until: _stack_info.stacks[0].status in ['CREATE_COMPLETE', 'UPDATE_COMPLETE', 'CREATE_FAILED', 'UPDATE_FAILED']
 
-- name: Debug - stack_info
-  when: _stack_info.stacks[0].status not in ['CREATE_COMPLETE', 'UPDATE_COMPLETE']
-  ansible.builtin.debug:
-    msg: "{{ _stack_info }}"
-
 - name: Stop if stack not complete
   when: _stack_info.stacks[0].status not in ['CREATE_COMPLETE', 'UPDATE_COMPLETE']
   ansible.builtin.fail:
-    msg: "Failing - stack create not complete in time, or failed"
+    msg: "Failing - stack create not complete in time, or failed :: {{ _stack_info }}"
 
 - name: Get stack outputs
   register: _stack_outputs
