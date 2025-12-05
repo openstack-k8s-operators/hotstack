@@ -206,6 +206,9 @@ spec:
         replicas: 1
       ironicConductors:
       - customServiceConfig: |
+          [Default]
+          debug = true
+
           [conductor]
           power_state_change_timeout = 120
 
