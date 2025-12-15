@@ -1,0 +1,26 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: neutron-switch-config
+  namespace: openstack
+stringData:
+  03-ml2-genericswitch.conf: |
+    [ngs]
+    session_log_file = /var/log/neutron/ngs.log
+
+    [genericswitch:nxos]
+    device_type = netmiko_cisco_nxos
+    ngs_mac_address = 22:dd:fe:aa:1b:08
+    # 101 = ironic
+    # 102 = tenant-vlan102 (native vlan)
+    # 103 = tenant-vlan103
+    # 104 = tenant-vlan104
+    ngs_allowed_vlans = 101,102,103,104
+    ngs_port_default_vlan = 102
+    ngs_trunk_ports = ethernet1/1
+    ngs_physical_networks = bmnet
+    ip = nxos.openstack.lab
+    username = admin
+    password = password
+type: Opaque
