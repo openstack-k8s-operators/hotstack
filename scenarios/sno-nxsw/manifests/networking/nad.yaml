@@ -22,6 +22,27 @@ spec:
       }
     }
 ---
+# NAD for ovn-controller to access the bmnet physical network (like datacentre)
+# Must be created BEFORE ovn-operator to prevent host-device NAD creation
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  labels:
+    osp/net: bmnet
+    osp/net-attach-def-type: standard
+  name: bmnet
+  namespace: openstack
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "bmnet",
+      "type": "bridge",
+      "bridge": "ironicbr",
+      "ipam": {}
+    }
+---
+# NAD for OpenStack pods (ironic-conductor, etc.) to attach to provisioning network
 apiVersion: k8s.cni.cncf.io/v1
 kind: NetworkAttachmentDefinition
 metadata:
@@ -34,9 +55,9 @@ spec:
   config: |
     {
       "cniVersion": "0.3.1",
-      "name": "ironic",
-      "type": "bridge",
-      "bridge": "ironic",
+      "name": "ironicnet",
+      "type": "macvlan",
+      "master": "ironicbr.101",
       "mtu": 1442,
       "ipam": {
         "type": "whereabouts",

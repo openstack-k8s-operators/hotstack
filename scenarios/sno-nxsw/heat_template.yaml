@@ -851,7 +851,7 @@ outputs:
             redfish_password: password
           ports:
             - address: {get_attr: [ironic0-port, mac_address]}
-              physical_network: ironic
+              physical_network: bmnet
               local_link_connection:
                 switch_info: nxos.openstack.lab
                 switch_id: "22:dd:fe:aa:1b:08"
@@ -871,7 +871,7 @@ outputs:
             redfish_password: password
           ports:
             - address: {get_attr: [ironic1-port, mac_address]}
-              physical_network: ironic
+              physical_network: bmnet
               local_link_connection:
                 switch_info: nxos.openstack.lab
                 switch_id: "22:dd:fe:aa:1b:08"

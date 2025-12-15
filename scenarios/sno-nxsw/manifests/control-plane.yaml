@@ -409,8 +409,8 @@ spec:
       ovnController:
         networkAttachment: tenant
         nicMappings:
-          datacentre: ocpbr
-          ironic: ironic
+          datacentre: ospbr
+          bmnet: ironicbr
       ovnDBCluster:
         ovndbcluster-nb:
           dbType: NB
