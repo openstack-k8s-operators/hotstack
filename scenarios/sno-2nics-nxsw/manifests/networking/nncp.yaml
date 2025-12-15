@@ -1,0 +1,133 @@
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp/nncm-config-type: standard
+  name: master-0
+  namespace: openstack
+spec:
+  desiredState:
+    dns-resolver:
+      config:
+        search: []
+        server:
+        - 192.168.32.254
+    interfaces:
+    - description: ctlplane vlan interface
+      ipv4:
+        address:
+        - ip: 192.168.122.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: ctlplane
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "10"
+        reorder-headers: true
+    - description: internalapi vlan interface
+      ipv4:
+        address:
+        - ip: 172.17.0.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: internalapi
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "20"
+        reorder-headers: true
+    - description: storage vlan interface
+      ipv4:
+        address:
+        - ip: 172.18.0.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: storage
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "21"
+        reorder-headers: true
+    - description: tenant vlan interface
+      ipv4:
+        address:
+        - ip: 172.19.0.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: tenant
+      state: up
+      type: vlan
+      vlan:
+        base-iface: eth1
+        id: "22"
+        reorder-headers: true
+    - description: trunk interface
+      ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: eth1
+      state: up
+      type: ethernet
+    - description: ospbr bridge over eth1
+      type: linux-bridge
+      bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: eth1
+          vlan: {}
+      ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: ospbr
+      state: up
+    - description: ironic vlan interface on ospbr
+      ipv4:
+        address:
+        - ip: 172.20.1.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      name: ironic
+      state: up
+      type: vlan
+      vlan:
+        base-iface: ospbr
+        id: "101"
+        reorder-headers: true
+    route-rules:
+      config: []
+    routes:
+      config: []
+  nodeSelector:
+    kubernetes.io/hostname: master-0
+    node-role.kubernetes.io/worker: ""
