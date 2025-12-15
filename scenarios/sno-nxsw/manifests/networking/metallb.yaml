@@ -61,7 +61,7 @@ metadata:
   namespace: metallb-system
 spec:
   interfaces:
-  - ironic
+  - ironicbr.101
   ipAddressPools:
   - ironic
 ---

@@ -95,7 +95,7 @@ stages:
           openstack network create provisioning \
             --share \
             --disable-port-security \
-            --provider-physical-network ironic \
+            --provider-physical-network bmnet \
             --provider-network-type vlan \
             --provider-segment 101
 
@@ -123,7 +123,7 @@ stages:
           openstack network create vlan103 \
             --share \
             --disable-port-security \
-            --provider-physical-network ironic \
+            --provider-physical-network bmnet \
             --provider-network-type vlan \
             --provider-segment 103
 
@@ -151,7 +151,7 @@ stages:
           openstack network create vlan104 \
             --share \
             --disable-port-security \
-            --provider-physical-network ironic \
+            --provider-physical-network bmnet \
             --provider-network-type vlan \
             --provider-segment 104
 
