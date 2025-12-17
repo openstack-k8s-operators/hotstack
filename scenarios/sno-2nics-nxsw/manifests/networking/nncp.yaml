@@ -14,23 +14,6 @@ spec:
         server:
         - 192.168.32.254
     interfaces:
-    - description: ctlplane vlan interface
-      ipv4:
-        address:
-        - ip: 192.168.122.10
-          prefix-length: "24"
-        dhcp: false
-        enabled: true
-      ipv6:
-        enabled: false
-      mtu: 1442
-      name: ctlplane
-      state: up
-      type: vlan
-      vlan:
-        base-iface: eth1
-        id: "10"
-        reorder-headers: true
     - description: internalapi vlan interface
       ipv4:
         address:
@@ -91,7 +74,7 @@ spec:
       name: eth1
       state: up
       type: ethernet
-    - description: ospbr bridge over eth1
+    - description: ospbr bridge over eth1 with ctlplane IP
       type: linux-bridge
       bridge:
         options:
@@ -101,7 +84,11 @@ spec:
         - name: eth1
           vlan: {}
       ipv4:
-        enabled: false
+        address:
+        - ip: 192.168.122.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
       ipv6:
         enabled: false
       mtu: 1442

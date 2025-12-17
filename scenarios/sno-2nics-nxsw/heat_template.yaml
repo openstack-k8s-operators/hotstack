@@ -521,12 +521,6 @@ resources:
   master0-ctlplane-trunk-parent-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: trunk-net}
-      port_security_enabled: false
-
-  master0-ctlplane-subport:
-    type: OS::Neutron::Port
-    properties:
       network: {get_resource: ctlplane-net}
       port_security_enabled: false
       fixed_ips:
@@ -561,9 +555,6 @@ resources:
     properties:
       port: {get_resource: master0-ctlplane-trunk-parent-port}
       sub_ports:
-        - port: {get_resource: master0-ctlplane-subport}
-          segmentation_id: 10
-          segmentation_type: vlan
         - port: {get_resource: master0-internal-api-port}
           segmentation_id: 20
           segmentation_type: vlan
