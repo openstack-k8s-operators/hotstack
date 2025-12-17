@@ -281,7 +281,7 @@ spec:
         report_interval = 300
 
         [ml2_type_vlan]
-        network_vlan_ranges = bmnet:100:120
+        network_vlan_ranges = bmnet:100:105
 
         [ml2]
         type_drivers = geneve,vxlan,vlan,flat,local

@@ -113,62 +113,6 @@ stages:
             --dns-nameserver 172.20.1.80 \
             --allocation-pool start=172.20.1.100,end=172.20.1.200
 
-  - name: Create tenant network vlan 103 if needed
-    shell: |
-      set -xe -o pipefail
-      oc project openstack
-
-      oc rsh openstackclient openstack network show vlan103 &>/dev/null || \
-        oc rsh openstackclient \
-          openstack network create vlan103 \
-            --share \
-            --disable-port-security \
-            --provider-physical-network bmnet \
-            --provider-network-type vlan \
-            --provider-segment 103
-
-  - name: Create subnet for tenant network vlan 103 if needed
-    shell: |
-      set -xe -o pipefail
-      oc project openstack
-
-      oc rsh openstackclient openstack subnet show vlan103-subnet &>/dev/null || \
-        oc rsh openstackclient \
-          openstack subnet create vlan103-subnet \
-            --network vlan103 \
-            --subnet-range 172.20.3.0/24 \
-            --gateway 172.20.3.1 \
-            --dns-nameserver 192.168.32.254 \
-            --allocation-pool start=172.20.3.100,end=172.20.3.200
-
-  - name: Create tenant network vlan 104 if needed
-    shell: |
-      set -xe -o pipefail
-      oc project openstack
-
-      oc rsh openstackclient openstack network show vlan104 &>/dev/null || \
-        oc rsh openstackclient \
-          openstack network create vlan104 \
-            --share \
-            --disable-port-security \
-            --provider-physical-network bmnet \
-            --provider-network-type vlan \
-            --provider-segment 104
-
-  - name: Create subnet for tenant network vlan 104 if needed
-    shell: |
-      set -xe -o pipefail
-      oc project openstack
-
-      oc rsh openstackclient openstack subnet show vlan104-subnet &>/dev/null || \
-        oc rsh openstackclient \
-          openstack subnet create vlan104-subnet \
-            --network vlan104 \
-            --subnet-range 172.20.4.0/24 \
-            --gateway 172.20.4.1 \
-            --dns-nameserver 192.168.32.254 \
-            --allocation-pool start=172.20.4.100,end=172.20.4.200
-
   - name: Create baremetal flavor if needed
     shell: |
       set -xe -o pipefail
@@ -322,4 +266,19 @@ stages:
         --namespace openstack --num-computes 1
 
   - name: Run tempest
+    documentation: >-
+      Executes Ironic baremetal scenario tests using the Tempest framework.
+      Tests validate provisioning and managing baremetal servers through OpenStack.
     manifest: tempest-tests.yml
+    wait_conditions:
+      - >-
+        oc wait -n openstack tempests.test.openstack.org tempest-tests
+        --for condition=ServiceConfigReady --timeout=120s
+    wait_pod_completion:
+      - namespace: openstack
+        labels:
+          operator: test-operator
+          service: tempest
+          workflowStep: "0"
+        timeout: 900
+        poll_interval: 15

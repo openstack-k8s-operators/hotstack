@@ -132,6 +132,12 @@ resources:
       port_security_enabled: false
       value_specs: {get_param: net_value_specs}
 
+  public-vlan100:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
+
   tenant-vlan103:
     type: OS::Neutron::Net
     properties:
@@ -139,6 +145,12 @@ resources:
       value_specs: {get_param: net_value_specs}
 
   tenant-vlan104:
+    type: OS::Neutron::Net
+    properties:
+      port_security_enabled: false
+      value_specs: {get_param: net_value_specs}
+
+  tenant-vlan105:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
@@ -236,16 +248,23 @@ resources:
         - start: 172.20.2.100
           end: 172.20.2.150
 
+  public-vlan100-subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: public-vlan100}
+      ip_version: 4
+      cidr: 172.20.0.0/24
+      gateway_ip: 172.20.0.1
+      enable_dhcp: false
+
   tenant-vlan103-subnet:
     type: OS::Neutron::Subnet
     properties:
       network: {get_resource: tenant-vlan103}
       ip_version: 4
       cidr: 172.20.3.0/24
+      gateway_ip: null
       enable_dhcp: false
-      allocation_pools:
-        - start: 172.20.3.100
-          end: 172.20.3.150
 
   tenant-vlan104-subnet:
     type: OS::Neutron::Subnet
@@ -253,10 +272,17 @@ resources:
       network: {get_resource: tenant-vlan104}
       ip_version: 4
       cidr: 172.20.4.0/24
+      gateway_ip: null
       enable_dhcp: false
-      allocation_pools:
-        - start: 172.20.4.100
-          end: 172.20.4.150
+
+  tenant-vlan105-subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: {get_resource: tenant-vlan105}
+      ip_version: 4
+      cidr: 172.20.5.0/24
+      gateway_ip: null
+      enable_dhcp: false
 
   ironic0-br-subnet:
     type: OS::Neutron::Subnet
@@ -305,17 +331,11 @@ resources:
       router: {get_resource: router}
       subnet: {get_resource: ironic-subnet}
 
-  tenant-vlan103-router-interface:
+  public-vlan100-router-interface:
     type: OS::Neutron::RouterInterface
     properties:
       router: {get_resource: router}
-      subnet: {get_resource: tenant-vlan103-subnet}
-
-  tenant-vlan104-router-interface:
-    type: OS::Neutron::RouterInterface
-    properties:
-      router: {get_resource: router}
-      subnet: {get_resource: tenant-vlan104-subnet}
+      subnet: {get_resource: public-vlan100-subnet}
 
   #
   # Instances
@@ -567,11 +587,17 @@ resources:
         - port: {get_resource: master0-ironic-subport}
           segmentation_id: 101
           segmentation_type: vlan
+        - port: {get_resource: master0-public-vlan100-subport}
+          segmentation_id: 100
+          segmentation_type: vlan
         - port: {get_resource: master0-tenant-vlan103-subport}
           segmentation_id: 103
           segmentation_type: vlan
         - port: {get_resource: master0-tenant-vlan104-subport}
           segmentation_id: 104
+          segmentation_type: vlan
+        - port: {get_resource: master0-tenant-vlan105-subport}
+          segmentation_id: 105
           segmentation_type: vlan
 
   master0-ironic-subport:
@@ -581,6 +607,14 @@ resources:
       port_security_enabled: false
       fixed_ips:
         - ip_address: 172.20.1.10
+
+  master0-public-vlan100-subport:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: public-vlan100}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.20.0.10
 
   master0-tenant-vlan103-subport:
     type: OS::Neutron::Port
@@ -597,6 +631,14 @@ resources:
       port_security_enabled: false
       fixed_ips:
         - ip_address: 172.20.4.10
+
+  master0-tenant-vlan105-subport:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: tenant-vlan105}
+      port_security_enabled: false
+      fixed_ips:
+        - ip_address: 172.20.5.10
 
   master0-lvms-vol0:
     type: OS::Cinder::Volume
@@ -675,6 +717,13 @@ resources:
       port_security_enabled: false
       mac_address: "22:57:f8:dd:fe:0b"
 
+  switch-trunk-tenant-vlan105-port:
+    type: OS::Neutron::Port
+    properties:
+      network: {get_resource: tenant-vlan105}
+      port_security_enabled: false
+      mac_address: "22:57:f8:dd:fe:0c"
+
   switch-trunk:
     type: OS::Neutron::Trunk
     properties:
@@ -691,20 +740,23 @@ resources:
         - port: {get_resource: switch-trunk-tenant-vlan104-port}
           segmentation_id: 104
           segmentation_type: vlan
+        - port: {get_resource: switch-trunk-tenant-vlan105-port}
+          segmentation_id: 105
+          segmentation_type: vlan
 
   switch-ironic0-br-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: ironic0-br-net}
       port_security_enabled: false
-      mac_address: "22:57:f8:dd:fe:0c"
+      mac_address: "22:57:f8:dd:fe:0d"
 
   switch-ironic1-br-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: ironic1-br-net}
       port_security_enabled: false
-      mac_address: "22:57:f8:dd:fe:0d"
+      mac_address: "22:57:f8:dd:fe:0e"
 
   switch:
     type: OS::Nova::Server
@@ -810,9 +862,15 @@ outputs:
                   $SYS_ID: {get_resource: ironic0}
             redfish_username: admin
             redfish_password: password
+          properties:
+            cpu_arch: x86_64
+            cpus: 1
+            memory_mb: 1024
+            local_gb: 15
+            capabilities: boot_mode:uefi
           ports:
             - address: {get_attr: [ironic0-port, mac_address]}
-              physical_network: ironic
+              physical_network: bmnet
               local_link_connection:
                 switch_info: nxos.openstack.lab
                 switch_id: "22:dd:fe:aa:1b:08"
@@ -830,9 +888,15 @@ outputs:
                   $SYS_ID: {get_resource: ironic1}
             redfish_username: admin
             redfish_password: password
+          properties:
+            cpu_arch: x86_64
+            cpus: 1
+            memory_mb: 1024
+            local_gb: 15
+            capabilities: boot_mode:uefi
           ports:
             - address: {get_attr: [ironic1-port, mac_address]}
-              physical_network: ironic
+              physical_network: bmnet
               local_link_connection:
                 switch_info: nxos.openstack.lab
                 switch_id: "22:dd:fe:aa:1b:08"
