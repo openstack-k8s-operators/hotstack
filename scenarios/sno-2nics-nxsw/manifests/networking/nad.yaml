@@ -33,7 +33,7 @@ spec:
       "cniVersion": "0.3.1",
       "name": "ctlplane",
       "type": "macvlan",
-      "master": "ctlplane",
+      "master": "ospbr",
       "ipam": {
         "type": "whereabouts",
         "range": "192.168.122.0/24",
