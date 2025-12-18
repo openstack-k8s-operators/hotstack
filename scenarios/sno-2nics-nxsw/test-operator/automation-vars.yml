@@ -28,28 +28,6 @@ stages:
     wait_conditions:
       - "oc -n sushy-emulator wait deployments.apps sushy-emulator --for condition=Available --timeout=300s"
 
-  - name: Create private network if needed
-    shell: |
-      set -xe -o pipefail
-      oc project openstack
-
-      oc rsh openstackclient openstack network show private &>/dev/null || \
-        oc rsh openstackclient openstack network create private --share
-
-  - name: Create subnet on private network if needed
-    shell: |
-      set -xe -o pipefail
-      oc project openstack
-
-      oc rsh openstackclient openstack subnet show private_subnet &>/dev/null || \
-        oc rsh openstackclient openstack subnet create private_subnet \
-          --network private \
-          --subnet-range 10.2.0.0/24 \
-          --allocation-pool start=10.2.0.10,end=10.2.0.250 \
-          --gateway 10.2.0.1 \
-          --dns-nameserver 192.168.32.254 \
-          --dhcp
-
   - name: Create network for ironic provisioning if needed
     shell: |
       set -xe -o pipefail
@@ -101,6 +79,28 @@ stages:
           --allocation-pool start=172.20.0.100,end=172.20.0.200 \
           --dns-nameserver 192.168.32.254 \
           --gateway 172.20.0.1
+
+  - name: Create private network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack network show private &>/dev/null || \
+        oc rsh openstackclient openstack network create private --share
+
+  - name: Create subnet on private network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack subnet show private_subnet &>/dev/null || \
+        oc rsh openstackclient openstack subnet create private_subnet \
+          --network private \
+          --subnet-range 10.2.0.0/24 \
+          --allocation-pool start=10.2.0.10,end=10.2.0.250 \
+          --gateway 10.2.0.1 \
+          --dns-nameserver 192.168.32.254 \
+          --dhcp
 
   - name: Create router with external gateway if needed
     shell: |
