@@ -22,8 +22,9 @@ Single Node OpenShift deployment with OpenStack and Ironic, using 2 NICs with al
   - VLAN 22: tenant (172.19.0.0/24) on eth1
   - VLAN 101: ironic (172.20.1.0/24) on ospbr - Ironic provisioning network
 
-**OVN Provider Networks (bmnet physical network):**
+**OVN Networks (bmnet physical network):**
 - VLAN 100: public (172.20.0.0/24) - external network for floating IPs
+- VLAN 101: provisioning (172.20.1.0/24) - Ironic provisioning network
 - VLAN 102: parking VLAN - NGS default VLAN for idle baremetal ports
 - VLAN 103: tenant network (172.20.3.0/24) - available for tenant allocation
 - VLAN 104: tenant network (172.20.4.0/24) - available for tenant allocation
@@ -39,7 +40,30 @@ Single Node OpenShift deployment with OpenStack and Ironic, using 2 NICs with al
 - ironic0: connected via ironic0-br-net - virtual media boot, sushy-tools
 - ironic1: connected via ironic1-br-net - virtual media boot, sushy-tools
 - Both nodes use physical_network: bmnet
-- networking-generic-switch manages VLAN configuration on switch ports eth2/eth3
+- networking-generic-switch manages VLAN configuration on switch ports `ethernet 1/2`/`ethernet 1/3`
+
+## Tempest Testing
+
+The scenario includes Tempest tests for baremetal instance lifecycle:
+
+**Test Configuration:**
+- Test: `test_server_basic_ops` - basic instance lifecycle with SSH validation
+- Pre-created shared "private" network (Neutron auto-assigns VLAN from bmnet range)
+- Router with external gateway to public network for floating IP support
+- Config drive enabled (metadata service disabled, standard for baremetal)
+- SSH validation via floating IPs
+
+**Network Setup:**
+- `provisioning` network (VLAN 101, not shared) - Ironic service only
+- `private` network (auto-assigned VLAN) - shared tenant network for instances
+- `public` network (VLAN 100, external) - for floating IPs
+- Router connects private and public networks
+
+**What's Tested:**
+- Baremetal instance creation on provider VLAN network
+- VIF attachment via networking-generic-switch
+- SSH connectivity via floating IP
+- Instance cleanup
 
 ## NX-OS Switch Image Preparation
 
@@ -66,26 +90,3 @@ openstack image create nexus9300v.9.3.15 \
   --property os_type=linux \
   --property hw_boot_menu=true
 ```
-
-## Tempest Testing
-
-The scenario includes Tempest tests for baremetal instance lifecycle:
-
-**Test Configuration:**
-- Test: `test_server_basic_ops` - basic instance lifecycle with SSH validation
-- Pre-created shared "private" network (Neutron auto-assigns VLAN from bmnet range)
-- Router with external gateway to public network for floating IP support
-- Config drive enabled (metadata service disabled, standard for baremetal)
-- SSH validation via floating IPs
-
-**Network Setup:**
-- `provisioning` network (VLAN 101, not shared) - Ironic service only
-- `private` network (auto-assigned VLAN) - shared tenant network for instances
-- `public` network (VLAN 100, external) - for floating IPs
-- Router connects private and public networks
-
-**What's Tested:**
-- Baremetal instance creation on provider VLAN network
-- VIF attachment via networking-generic-switch
-- SSH connectivity via floating IP
-- Instance cleanup
