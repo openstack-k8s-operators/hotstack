@@ -1,0 +1,28 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: neutron-switch-config
+  namespace: openstack
+stringData:
+  03-ml2-genericswitch.conf: |
+    [ngs]
+    session_log_file = /var/log/neutron/ngs.log
+
+    [genericswitch:force10-os10]
+    device_type = netmiko_dell_os10
+    ngs_mac_address = 22:dd:fe:aa:1b:08
+    # 100 = public
+    # 101 = ironic
+    # 102 = tenant-vlan102 (native/parking vlan)
+    # 103 = tenant-vlan103
+    # 104 = tenant-vlan104
+    # 105 = tenant-vlan105
+    ngs_allowed_vlans = 100,101,102,103,104,105
+    ngs_port_default_vlan = 102
+    ngs_trunk_ports = ethernet1/1/1
+    ngs_physical_networks = bmnet
+    ip = force10-os10.openstack.lab
+    username = admin
+    password = system_secret
+type: Opaque

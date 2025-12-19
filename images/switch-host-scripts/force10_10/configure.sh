@@ -18,8 +18,10 @@ fi
 
 CONSOLE_HOST="${CONSOLE_HOST:-localhost}"
 CONSOLE_PORT="${CONSOLE_PORT:-55001}"
-MGMT_IP="${SWITCH_MGMT_IP:-172.24.5.20/24}"
+MGMT_IP="${SWITCH_MGMT_IP:-172.24.5.20}"
+MGMT_PREFIX="${SWITCH_MGMT_PREFIX:-24}"
 BM_INTERFACE_COUNT="${BM_INTERFACE_COUNT:-8}"
+PARKING_VLAN="${PARKING_VLAN:-102}"
 
 send_cmd() {
     send_switch_config "$CONSOLE_HOST" "$CONSOLE_PORT" "$1"
@@ -30,21 +32,23 @@ log "Starting Force10 OS10 switch configuration..."
 # Login (default credentials: admin/admin)
 log "Logging in as admin..."
 send_cmd "admin"
-sleep 6
+sleep 8
 
 # Send credentials again (sometimes needed)
 send_cmd "admin"
+sleep 4
 send_cmd "admin"
-sleep 6
+sleep 8
 
 log "Entering configuration mode..."
 send_cmd "configure terminal"
-sleep 2
+sleep 4
 
 # Set admin password
 # NOTE: Force10 OS doesn't allow 'admin' in the password
 log "Setting admin password..."
 send_cmd "username admin password system_secret role sysadmin"
+sleep 3
 
 # Enable SSH
 log "Enabling SSH..."
@@ -52,25 +56,35 @@ send_cmd "ip ssh server enable"
 send_cmd "ip ssh server password-authentication"
 
 # Configure management interface
-log "Configuring management interface (mgmt1/1/1) with IP: $MGMT_IP"
+log "Configuring management interface (mgmt1/1/1) with IP: $MGMT_IP/$MGMT_PREFIX"
 send_cmd "int mgmt1/1/1"
 send_cmd "no ip address dhcp"
 send_cmd "no ipv6 address autoconfig"
-send_cmd "ip address $MGMT_IP"
+send_cmd "ip address $MGMT_IP/$MGMT_PREFIX"
+send_cmd "exit"
+
+# Create parking VLAN
+log "Creating parking VLAN $PARKING_VLAN..."
+send_cmd "interface vlan $PARKING_VLAN"
+send_cmd "description parking"
 send_cmd "exit"
 
 # Configure trunk interface (ethernet1/1/1)
 log "Configuring trunk interface (ethernet1/1/1)..."
 send_cmd "int ethernet1/1/1"
 send_cmd "switchport mode trunk"
+send_cmd "no switchport access vlan"
+send_cmd "switchport trunk allowed vlan $PARKING_VLAN"
 send_cmd "exit"
 
 # Configure baremetal interfaces (ethernet1/1/2 onwards based on BM_INTERFACE_COUNT)
-log "Configuring $BM_INTERFACE_COUNT baremetal interfaces..."
+log "Configuring $BM_INTERFACE_COUNT baremetal interfaces with parking VLAN $PARKING_VLAN..."
 for i in $(seq 1 "$BM_INTERFACE_COUNT"); do
     interface=$((i + 1))  # Start at ethernet1/1/2 (after trunk on ethernet1/1/1)
     log "  Configuring ethernet1/1/$interface"
     send_cmd "int ethernet1/1/$interface"
+    send_cmd "switchport mode access"
+    send_cmd "switchport access vlan $PARKING_VLAN"
     send_cmd "lldp port-description-tlv advertise port-id"
     send_cmd "exit"
 done
@@ -84,6 +98,7 @@ send_cmd "exit"
 
 log "Saving configuration..."
 send_cmd "write memory"
+sleep 10
 
 log "Force10 OS10 switch configuration complete!"
 log "Switch management IP: $MGMT_IP"

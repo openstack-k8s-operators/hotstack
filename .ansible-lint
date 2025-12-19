@@ -5,7 +5,6 @@ exclude_paths:
 strict: true
 quiet: false
 verbosity: 1
-parseable: true
 offline: false
 skip_list:
   - yaml[indentation]
