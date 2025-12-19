@@ -114,6 +114,7 @@ send_switch_config() {
     local host="$1"
     local port="$2"
     local cmd="$3"
+    local delay="${SWITCH_CMD_DELAY:-1}"
 
     log "Send command ($host:$port): $cmd"
 
@@ -121,7 +122,7 @@ send_switch_config() {
     echo "$cmd" | nc -w1 "$host" "$port" 2>/dev/null | strings
 
     # Brief sleep to allow command execution
-    sleep 1
+    sleep "$delay"
 }
 
 # Wait for switch to boot and respond with expected prompt
