@@ -36,7 +36,7 @@ These scripts enable running switch operating systems (that cannot run directly 
 ## Workflow
 
 ### 1. Instance Boot
-OpenStack creates an instance from the `hotstack-virtual-switch-host` image with multiple network ports attached.
+OpenStack creates an instance from the `hotstack-switch-host` image with multiple network ports attached.
 
 ### 2. Cloud-Init Execution
 Cloud-init writes configuration and executes the startup script:
