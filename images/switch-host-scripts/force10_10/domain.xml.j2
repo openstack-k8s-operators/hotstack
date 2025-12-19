@@ -1,0 +1,69 @@
+<domain type='kvm'>
+  <name>{{ vm_name }}</name>
+  <memory unit='GiB'>4</memory>
+  <vcpu>2</vcpu>
+  <os>
+    <type arch='x86_64' machine='q35'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <cpu mode='host-passthrough'/>
+  <clock offset='utc'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <devices>
+
+    <!-- ONIE Disk (SATA) -->
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='{{ onie_disk }}'/>
+      <target dev='sda' bus='sata'/>
+      <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+    </disk>
+
+    <!-- Installer Disk (virtio) -->
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='{{ installer_disk }}'/>
+      <target dev='vdb' bus='virtio'/>
+    </disk>
+
+    <!-- Profile Disk (virtio) -->
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='{{ profile_disk }}'/>
+      <target dev='vdc' bus='virtio'/>
+    </disk>
+
+    <!-- SATA Controller -->
+    <controller type='sata' index='0'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x1f' function='0x2'/>
+    </controller>
+
+    <!-- Serial Console -->
+    <serial type='tcp'>
+      <source mode='bind' host='127.0.0.1' service='{{ console_port }}'/>
+      <protocol type='telnet'/>
+      <target type='isa-serial' port='0'>
+        <model name='isa-serial'/>
+      </target>
+    </serial>
+    <console type='tcp'>
+      <source mode='bind' host='127.0.0.1' service='{{ console_port }}'/>
+      <protocol type='telnet'/>
+      <target type='serial' port='0'/>
+    </console>
+
+    <!-- Network Interfaces -->
+    {% for i in range(num_bridges) %}
+    <interface type='bridge'>
+      <source bridge='sw-br{{ i }}'/>
+      <model type='e1000'/>
+    </interface>
+    {% endfor %}
+  </devices>
+</domain>
