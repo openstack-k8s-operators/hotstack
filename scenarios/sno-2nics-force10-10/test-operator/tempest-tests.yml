@@ -1,0 +1,31 @@
+---
+apiVersion: test.openstack.org/v1beta1
+kind: Tempest
+metadata:
+  name: tempest-tests
+  namespace: openstack
+spec:
+  privileged: true
+  workflow:
+    - stepName: ironic-scenario-testing
+      storageClass: lvms-local-storage
+      tempestconfRun:
+        create: true
+        overrides: |
+          auth.create_isolated_networks false
+          compute-feature-enabled.disk_config false
+          compute-feature-enabled.interface_attach false
+          compute-feature-enabled.metadata_service false
+          compute.fixed_network_name private
+          compute.flavor_ref 123456789-1234-1234-1234-000000000001
+          compute.hypervisor_type ironic
+          compute.build_timeout 900
+          network.shared_physical_network true
+          service_available.ironic_inspector false
+          service_available.ironic true
+          service_available.murano false
+          validation.connect_method floating
+      tempestRun:
+        concurrency: 1
+        includeList: |
+          ^tempest.scenario.test_server_basic_ops.TestServerBasicOps.test_server_basic_ops

@@ -49,9 +49,6 @@ stages:
   - name: MetalLB - L2Advertisement and IPAddressPool
     manifest: manifests/networking/metallb.yaml
 
-  - name: Netconfig
-    manifest: manifests/networking/netconfig.yaml
-
   - name: NGS config (Networking Generic Switch)
     manifest: manifests/ngs/config.yaml
     wait_conditions:

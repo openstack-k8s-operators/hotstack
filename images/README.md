@@ -193,7 +193,7 @@ make clean
 2. Upload the switch-host image to Glance:
 
    ```shell
-   openstack image create hotstack-virtual-switch-host \
+   openstack image create hotstack-switch-host \
      --disk-format raw \
      --file switch-host.qcow2 \
      --property hw_firmware_type=uefi \
