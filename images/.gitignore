@@ -1,5 +1,7 @@
 controller.qcow2
 blank-image.qcow2
 nat64-appliance.qcow2
+switch-host.qcow2
+switch-host-base.qcow2
 .ci-framework/
 .nat64-build/
