@@ -57,6 +57,12 @@ repos:
       language: system
       files: ^scenarios/sno-nxsw/poap\.py$
       pass_filenames: false
+    - id: networking-lab-poap-md5sums
+      name: Format networking-lab POAP scripts with md5sum management
+      entry: scenarios/networking-lab/manage-poap-md5sums.sh
+      language: system
+      files: ^scenarios/networking-lab/.*-poap\.py$
+      pass_filenames: false
 
   - repo: https://github.com/ansible/ansible-lint
     rev: v6.22.2

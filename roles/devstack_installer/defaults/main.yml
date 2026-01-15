@@ -1,0 +1,73 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+# Devstack installer defaults
+
+# Devstack host configuration
+devstack_ansible_host: {}
+
+# Devstack repository
+devstack_repo_url: https://opendev.org/openstack/devstack
+devstack_branch: master
+
+# Network interface for physical bridge
+devstack_public_interface: trunk0
+
+# Netplan configuration for devstack node (REQUIRED)
+# This MUST be provided from Heat stack outputs (devstack_netplan_config)
+# The value should be a complete netplan YAML structure
+# Example structure:
+#   devstack_netplan_config:
+#     network:
+#       version: 2
+#       ethernets:
+#         enp3s0:
+#           match:
+#             macaddress: "fa:16:9e:81:f6:20"
+#           dhcp4: true
+#           set-name: "enp3s0"
+#           mtu: 1442
+#         trunk0:
+#           match:
+#             macaddress: "fa:16:9e:81:f6:21"
+#           dhcp4: false
+#           dhcp6: false
+#           set-name: trunk0
+#           mtu: 1442
+#       vlans:
+#         trunk0.100:
+#           id: 100
+#           link: trunk0
+#           mtu: 1442
+#           dhcp4: false
+#           addresses:
+#             - "172.20.0.10/24"
+devstack_netplan_config: {}
+
+# System updates and reboot
+devstack_update_packages: true  # Set to false to skip package updates
+
+# Physical switch configuration for networking-generic-switch
+# Define this in scenario bootstrap_vars.yml to configure physical switches
+# Provide INI format content as a multiline string
+# Example:
+#   devstack_genericswitch_config: |
+#     [genericswitch:switch01]
+#     device_type = netmiko_cisco_nxos
+#     ip = switch01.example.com
+#     username = admin
+#     password = secret
+devstack_genericswitch_config: ""
