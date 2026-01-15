@@ -1,3 +1,5 @@
 **/__pycache__/
 .ansible/*
 .venv/*
+*.gz.b64
+*.tar.gz
