@@ -1,0 +1,37 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Install RedFish Virtual BMC (Podman)
+  hosts: localhost
+  gather_facts: true
+  strategy: linear
+  pre_tasks:
+    - name: Load stack output vars from file
+      ansible.builtin.include_vars:
+        file: "{{ hotstack_work_dir | default(playbook_dir) }}/{{ stack_name }}-outputs.yaml"
+        name: stack_outputs
+
+    - name: Add controller-0 to the Ansible inventory
+      ansible.builtin.add_host: "{{ stack_outputs.controller_ansible_host }}"
+
+  roles:
+    - role: redfish_vbmc_podman
+      when:
+        - stack_outputs.sushy_emulator_uuids | default({}) | length > 0
+      delegate_to: controller-0
+      vars:
+        redfish_vbmc_podman_instances_uuids: "{{ stack_outputs.sushy_emulator_uuids.values() }}"
+        redfish_vbmc_podman_os_cloud: default

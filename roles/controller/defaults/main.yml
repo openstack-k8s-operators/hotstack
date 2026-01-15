@@ -6,6 +6,7 @@ bin_dir: "{{ base_dir }}/bin"
 ssh_key_dir: "{{ base_dir }}/.ssh"
 data_dir: "{{ base_dir }}/data"
 cloud_config_dir: "{{ base_dir }}/.hotcloud"
+controller_install_openstack_client: false
 hotstack_cloud_secrets:
   auth_url: http://cloud.example.com:5000
   application_credential_id: app_credential_id

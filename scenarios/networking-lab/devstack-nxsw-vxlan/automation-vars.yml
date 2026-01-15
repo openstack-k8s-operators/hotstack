@@ -1,0 +1,80 @@
+---
+# Networking lab automation stages
+
+stages:
+  - name: Enroll nodes in devstack ironic
+    documentation: >-
+      Registers physical baremetal nodes with the Ironic service in the DevStack
+      deployment using the node definitions from ironic_nodes.yaml. This creates
+      Ironic node records with BMC access credentials, hardware profiles, and port
+      configurations for networking-generic-switch integration.
+    shell: |
+      set -xe -o pipefail
+
+      NODES_FILE=/home/zuul/data/ironic_nodes.yaml
+
+      # Enroll the nodes
+      openstack --os-cloud devstack-admin baremetal create "$NODES_FILE"
+
+      echo "Nodes enrolled successfully"
+      openstack --os-cloud devstack-admin baremetal node list
+
+  - name: Wait for ironic nodes to reach enroll state
+    documentation: >-
+      Monitors node state transition to 'enroll' status, indicating that Ironic
+      has successfully registered the nodes and validated basic BMC connectivity.
+      This is the first state in the baremetal provisioning lifecycle.
+    shell: |
+      set -xe -o pipefail
+
+      counter=0
+      max_retries=60
+      sleep_interval=5
+
+      echo "Waiting for all nodes to reach 'enroll' state..."
+
+      until ! openstack --os-cloud devstack-admin baremetal node list -f value -c "Provisioning State" | grep -v "enroll"; do
+        ((counter++))
+        if (( counter > max_retries )); then
+          echo "ERROR: Timeout waiting for nodes to reach enroll state"
+          openstack --os-cloud devstack-admin baremetal node list
+          exit 1
+        fi
+        echo "Attempt $counter/$max_retries - waiting ${sleep_interval}s..."
+        sleep ${sleep_interval}
+      done
+
+      echo "All nodes successfully reached enroll state"
+      openstack --os-cloud devstack-admin baremetal node list
+
+  - name: Manage nodes
+    documentation: >-
+      Transitions nodes from 'enroll' to 'manageable' state. This validates
+      basic hardware connectivity and prepares nodes for further operations.
+    shell: |
+      set -xe -o pipefail
+
+      # Get list of node UUIDs
+      node_uuids=$(openstack --os-cloud devstack-admin baremetal node list -f value -c UUID)
+
+      # Manage each node
+      for uuid in $node_uuids; do
+        echo "Managing node: $uuid"
+        openstack --os-cloud devstack-admin baremetal node manage $uuid
+      done
+
+      # Wait for manageable state
+      counter=0
+      max_retries=60
+      until ! openstack --os-cloud devstack-admin baremetal node list -f value -c "Provisioning State" | grep -v "manageable"; do
+        ((counter++))
+        if (( counter > max_retries )); then
+          echo "ERROR: Timeout waiting for nodes to reach manageable state"
+          openstack --os-cloud devstack-admin baremetal node list
+          exit 1
+        fi
+        sleep 5
+      done
+
+      echo "All nodes successfully reached manageable state"
+      openstack --os-cloud devstack-admin baremetal node list
