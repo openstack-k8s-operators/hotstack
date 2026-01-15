@@ -1,0 +1,176 @@
+---
+- name: Assert config is defined
+  ansible.builtin.assert:
+    that:
+      - devstack_ansible_host is defined
+      - devstack_ansible_host | length > 0
+
+- name: Add devstack to the Ansible inventory
+  ansible.builtin.add_host: "{{ devstack_ansible_host }}"
+
+- name: Block delegated to devstack
+  delegate_to: "{{ devstack_ansible_host.name }}"
+  block:
+    - name: Wait for devstack node to be ready
+      ansible.builtin.wait_for_connection:
+        sleep: 2
+        timeout: 300
+
+    - name: Update all packages to latest version
+      become: true
+      ansible.builtin.apt:
+        upgrade: dist
+        update_cache: true
+        cache_valid_time: 3600
+      register: apt_upgrade
+      when: devstack_update_packages | bool
+
+    - name: Check if reboot is required
+      become: true
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+      when: devstack_update_packages | bool
+
+    - name: Reboot the system if required
+      become: true
+      ansible.builtin.reboot:
+        msg: "Reboot initiated by Ansible for kernel updates"
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+        test_command: uptime
+      when:
+        - devstack_update_packages | bool
+        - reboot_required_file.stat.exists
+
+    - name: Install required packages
+      become: true
+      ansible.builtin.apt:
+        name:
+          - git
+          - python3
+          - python3-pip
+        state: present
+        update_cache: true
+
+    - name: Verify trunk interface is up
+      ansible.builtin.command: ip link show {{ devstack_public_interface }}
+      register: interface_status
+      changed_when: false
+      failed_when: "'UP' not in interface_status.stdout"
+
+    - name: Ensure /opt/stack has correct ownership
+      become: true
+      ansible.builtin.file:
+        path: /opt/stack
+        state: directory
+        owner: stack
+        group: stack
+        mode: '0755'
+
+    - name: Create Ironic data directory
+      become: true
+      ansible.builtin.file:
+        path: /opt/stack/data/ironic
+        state: directory
+        owner: stack
+        group: stack
+        mode: '0755'
+
+    - name: Create empty hardware_info file (nodes enrolled separately)
+      become: true
+      ansible.builtin.file:
+        path: /opt/stack/data/ironic/hardware_info
+        state: touch
+        owner: stack
+        group: stack
+        mode: '0644'
+        modification_time: preserve
+        access_time: preserve
+
+
+    - name: Clone devstack repository
+      ansible.builtin.git:
+        repo: "{{ devstack_repo_url }}"
+        dest: /opt/stack/devstack
+        version: "{{ devstack_branch }}"
+        force: false
+
+    - name: Pre-create networking-generic-switch data directory
+      become: true
+      ansible.builtin.file:
+        path: /opt/stack/data/networking-generic-switch
+        state: directory
+        owner: stack
+        group: stack
+        mode: '0755'
+
+    - name: Fetch local.conf.j2 template from devstack node
+      ansible.builtin.fetch:
+        src: /etc/hotstack/local.conf.j2
+        dest: /tmp/devstack-local-conf-{{ inventory_hostname }}.j2
+        flat: true
+
+    - name: Render local.conf from fetched template
+      become: true
+      become_user: stack
+      ansible.builtin.template:
+        src: /tmp/devstack-local-conf-{{ inventory_hostname }}.j2
+        dest: /opt/stack/devstack/local.conf
+        mode: '0644'
+
+    - name: Clean up temporary template file on controller
+      ansible.builtin.file:
+        path: /tmp/devstack-local-conf-{{ inventory_hostname }}.j2
+        state: absent
+      delegate_to: localhost
+      run_once: true
+
+    - name: Run stack.sh (output logged to /opt/stack/stack.sh.log)
+      become: true
+      become_user: stack
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          ./stack.sh 2>&1 | tee /opt/stack/stack.sh.log
+        chdir: /opt/stack/devstack
+        creates: /opt/stack/devstack/.stack.sh.complete
+        executable: /bin/bash
+      environment:
+        HOME: /opt/stack
+      register: devstack_install
+      async: 3600
+      poll: 10
+
+    - name: Create completion marker
+      become: true
+      become_user: stack
+      ansible.builtin.file:
+        path: /opt/stack/devstack/.stack.sh.complete
+        state: touch
+        mode: '0644'
+      when: devstack_install.rc == 0
+
+    - name: Configure physical switches in networking-generic-switch
+      become: true
+      ansible.builtin.blockinfile:
+        path: /etc/neutron/plugins/ml2/ml2_conf_genericswitch.ini
+        block: "{{ devstack_genericswitch_config }}"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - Physical Switches"
+        mode: '0644'
+      when: devstack_install.rc == 0 and devstack_genericswitch_config is defined and devstack_genericswitch_config | length > 0
+      register: switch_config
+
+    - name: Restart neutron-server to apply switch configuration
+      become: true
+      ansible.builtin.systemd:
+        name: devstack@neutron-api.service
+        state: restarted
+      when: devstack_install.rc == 0 and switch_config is defined and switch_config.changed
+
+    - name: Display stack.sh output summary
+      ansible.builtin.debug:
+        msg: "Devstack installation completed successfully!"
+      when: devstack_install.rc == 0

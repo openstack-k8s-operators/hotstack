@@ -1,0 +1,27 @@
+---
+# Devstack installer defaults
+
+# Devstack host configuration
+devstack_ansible_host: {}
+
+# Devstack repository
+devstack_repo_url: https://opendev.org/openstack/devstack
+devstack_branch: master
+
+# Network interface for physical bridge (configured by heat template via MAC matching)
+devstack_public_interface: trunk0
+
+# System updates and reboot
+devstack_update_packages: true  # Set to false to skip package updates
+
+# Physical switch configuration for networking-generic-switch
+# Define this in scenario bootstrap_vars.yml to configure physical switches
+# Provide INI format content as a multiline string
+# Example:
+#   devstack_genericswitch_config: |
+#     [genericswitch:switch01]
+#     device_type = netmiko_cisco_nxos
+#     ip = switch01.example.com
+#     username = admin
+#     password = secret
+devstack_genericswitch_config: ""
