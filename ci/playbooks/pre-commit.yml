@@ -18,7 +18,7 @@
         virtualenv: "{{ pre_commit_venv_dir }}"
         name:
           - pre-commit
-          - ansible-core
+          - ansible-core>=2.16,<2.19
     - name: Install ansible galaxy dependencies
       ansible.builtin.command:
         chdir: "{{ zuul.project.src_dir }}"
