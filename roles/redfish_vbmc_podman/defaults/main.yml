@@ -1,0 +1,40 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+# OpenStack cloud configuration
+redfish_vbmc_podman_os_cloud: default
+redfish_vbmc_podman_cloud_config_dir: "/home/zuul/.hotcloud"
+
+# Authentication
+redfish_vbmc_podman_username: admin
+redfish_vbmc_podman_password: password
+
+# Instance filtering
+redfish_vbmc_podman_instances_uuids: []
+
+# Container configuration
+redfish_vbmc_podman_image: quay.io/rhn_gps_hjensas/sushy-tools:dev-1761151453
+redfish_vbmc_podman_listen_port: 8000
+
+# Paths
+redfish_vbmc_podman_config_dir: /etc/sushy-emulator
+redfish_vbmc_podman_openstack_config_dir: /etc/openstack
+
+# Sushy-emulator configuration options
+redfish_vbmc_podman_debug: true
+redfish_vbmc_podman_vmedia_file_upload: true
+redfish_vbmc_podman_vmedia_delay_eject: true
+redfish_vbmc_podman_ignore_boot_device: false

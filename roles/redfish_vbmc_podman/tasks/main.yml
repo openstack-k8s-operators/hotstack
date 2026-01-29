@@ -1,0 +1,79 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Install package requirements
+  become: true
+  ansible.builtin.dnf:
+    name:
+      - httpd-tools
+      - podman
+    state: present
+
+- name: Create sushy-emulator configuration directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ redfish_vbmc_podman_config_dir }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Generate htpasswd
+  register: _htpasswd
+  ansible.builtin.command:
+    cmd: >-
+     htpasswd -nbB
+       {{ redfish_vbmc_podman_username | quote }}
+       {{ redfish_vbmc_podman_password | quote }}
+  changed_when: false
+
+- name: Create htpasswd file
+  become: true
+  ansible.builtin.copy:
+    content: "{{ _htpasswd.stdout + '\n' }}"
+    dest: "{{ redfish_vbmc_podman_config_dir }}/.htpasswd"
+    mode: '0600'
+    owner: root
+    group: root
+  notify: Restart sushy-emulator service
+
+- name: Create sushy-emulator config file
+  become: true
+  ansible.builtin.template:
+    src: sushy-emulator.conf.j2
+    dest: "{{ redfish_vbmc_podman_config_dir }}/config.conf"
+    mode: '0644'
+    owner: root
+    group: root
+  notify: Restart sushy-emulator service
+
+- name: Deploy systemd service file for sushy-emulator
+  become: true
+  ansible.builtin.template:
+    src: sushy-emulator.service.j2
+    dest: /etc/systemd/system/sushy-emulator.service
+    mode: '0644'
+    owner: root
+    group: root
+  notify: Restart sushy-emulator service
+
+- name: Enable and start sushy-emulator service
+  become: true
+  ansible.builtin.systemd_service:
+    name: sushy-emulator
+    enabled: true
+    state: started
+    daemon_reload: true
