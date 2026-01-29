@@ -1,0 +1,30 @@
+{% set sushy_cmd = '/usr/local/bin/sushy-emulator' -%}
+{% set sushy_args = [] -%}
+{% if redfish_vbmc_podman_debug -%}
+{%   set _ = sushy_args.append('--debug') -%}
+{% endif -%}
+{% set _ = sushy_args.append('--config /etc/sushy-emulator/config.conf') -%}
+[Unit]
+Description=Sushy Emulator - RedFish Virtual BMC
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+Restart=always
+TimeoutStopSec=70
+ExecStartPre=/usr/bin/podman pull {{ redfish_vbmc_podman_image }}
+ExecStartPre=/usr/bin/podman rm -f sushy-emulator
+ExecStart=/usr/bin/podman run \
+  --name sushy-emulator \
+  --network host \
+  --replace \
+  -v {{ redfish_vbmc_podman_config_dir }}:/etc/sushy-emulator:ro,z \
+  -v {{ redfish_vbmc_podman_cloud_config_dir }}:{{ redfish_vbmc_podman_openstack_config_dir }}:ro,z \
+  {{ redfish_vbmc_podman_image }} \
+  {{ sushy_cmd }} {{ sushy_args | join(' ') }}
+ExecStop=/usr/bin/podman stop -t 10 sushy-emulator
+ExecStopPost=/usr/bin/podman rm -f sushy-emulator
+
+[Install]
+WantedBy=multi-user.target
