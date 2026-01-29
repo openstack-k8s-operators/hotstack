@@ -327,7 +327,7 @@ stages:
       oc project openstack
 
       counter=0
-      max_retries=100
+      max_retries=200
       node_state=available
       while true; do
         node_states=$(oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State")
