@@ -36,6 +36,18 @@
     msg:
       "{{ _latest_snapset.output }}"
 
+- name: Compress files for user data
+  when: compress_heat_files | default([]) | length > 0
+  block:
+    - name: Create tar archives and compress
+      ansible.builtin.shell: |
+        tar -czf "{{ item.archive }}.tar.gz" {{ item.files | join(' ') }}
+        base64 -w0 "{{ item.archive }}.tar.gz" > "{{ item.archive }}.tar.gz.b64"
+      args:
+        chdir: "{{ stack_template_path | dirname }}"
+      loop: "{{ compress_heat_files }}"
+      changed_when: true
+
 - name: Create stack
   openstack.cloud.stack:
     cloud: "{{ os_cloud }}"
