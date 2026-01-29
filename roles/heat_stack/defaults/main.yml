@@ -17,3 +17,7 @@
 hotstack_work_dir: "{{ playbook_dir }}"
 os_cloud: "{{ lookup('ansible.builtin.env', 'OS_CLOUD') }}"
 hotstack_revive_snapshot: false
+# List of file archives to compress and base64 encode for user data.
+# Creates tar.gz and tar.gz.b64 files that can be referenced in Heat
+# template using get_file. See README.md for complete usage examples.
+compress_heat_files: []
