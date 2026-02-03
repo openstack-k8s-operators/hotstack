@@ -47,7 +47,6 @@
   manifest: "{{ role_path }}/files/common/manifests/olm/openstack-init.yaml"
   wait_conditions:
     - "oc wait -n openstack-operators openstack openstack --for condition=Ready --timeout=300s"
-    - "oc wait -n openstack-operators deployment openstack-operator-controller-operator --for condition=Available --timeout=60s"
     - "oc wait -n openstack-operators -l openstack.org/operator-name deployment --for condition=Available --timeout=60s"
     - "oc wait -n openstack-operators -l app.kubernetes.io/name=rabbitmq-cluster-operator deployment --for condition=Available --timeout=60s"
   run_conditions:
