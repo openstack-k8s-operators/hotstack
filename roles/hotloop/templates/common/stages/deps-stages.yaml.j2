@@ -6,12 +6,31 @@
     Once these CRs are created, run the `oc wait` commands to confirm that
     each step of this procedure is complete.
   manifest: "{{ role_path }}/files/common/manifests/deps/olm-deps.yaml"
-
-- name: Wait for all the OLM dependencies
   wait_conditions:
     - "oc wait namespaces cert-manager-operator --for jsonpath='{.status.phase}'=Active --timeout=30s"
     - "oc wait namespaces metallb-system --for jsonpath='{.status.phase}'=Active --timeout=30s"
     - "oc wait namespaces openshift-nmstate --for jsonpath='{.status.phase}'=Active --timeout=30s"
+
+- name: Wait for OLM dependency CSVs
+  documentation: |
+    Wait for the ClusterServiceVersions (CSVs) to reach 'Succeeded' phase.
+    This ensures OLM has finished installing the operators and their deployments exist.
+  wait_conditions:
+    - >-
+      oc wait -n metallb-system csv -l operators.coreos.com/metallb-operator.metallb-system=
+      --for jsonpath='{.status.phase}'=Succeeded --timeout=300s
+    - >-
+      oc wait -n cert-manager-operator csv -l operators.coreos.com/openshift-cert-manager-operator.cert-manager-operator=
+      --for jsonpath='{.status.phase}'=Succeeded --timeout=300s
+    - >-
+      oc wait -n openshift-nmstate csv -l operators.coreos.com/kubernetes-nmstate-operator.openshift-nmstate=
+      --for jsonpath='{.status.phase}'=Succeeded --timeout=300s
+
+- name: Wait for OLM dependency deployments
+  documentation: |
+    Wait for operator deployments to become available.
+    At this point, the CSVs are succeeded and deployments should exist.
+  wait_conditions:
     - "oc wait -n metallb-system deployment -l control-plane=controller-manager --for condition=Available --timeout=180s"
     - "oc wait -n metallb-system deployment -l component=webhook-server --for condition=Available --timeout=180s"
     - "oc wait -n cert-manager-operator deployment cert-manager-operator-controller-manager --for condition=Available --timeout=180s"
