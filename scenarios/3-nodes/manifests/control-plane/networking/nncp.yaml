@@ -12,7 +12,7 @@ spec:
       config:
         search: []
         server:
-        - 192.168.32.3
+        - 192.168.32.254
     interfaces:
     - description: internalapi vlan interface
       ipv4:
