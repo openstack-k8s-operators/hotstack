@@ -10,6 +10,8 @@
     github-experimental-trigger:
       jobs:
         - vexxhost-hotstack-sno-2-bm
-        - vexxhost-hotstack-3-nodes
+        - vexxhost-hotstack-3-nodes-ocp-4.16
+        - vexxhost-hotstack-3-nodes-ocp-4.18
+        - vexxhost-hotstack-3-nodes-ocp-4.20
         - vexxhost-hotstack-3-nodes-update
         - vexxhost-hotstack-multi-nodeset
