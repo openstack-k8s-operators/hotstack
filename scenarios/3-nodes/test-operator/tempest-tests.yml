@@ -118,6 +118,8 @@ spec:
           memory: 6Gi
       tempestconfRun:
         create: false
+        overrides: |
+          auth.tempest_roles swiftoperator
       tempestRun:
         concurrency: 2
         includeList: |

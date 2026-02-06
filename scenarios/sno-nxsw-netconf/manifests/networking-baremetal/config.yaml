@@ -1,0 +1,51 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: neutron-switch-config
+  namespace: openstack
+stringData:
+  03-ml2-networking-baremetal.conf: |
+    [ml2]
+    tenant_network_types = geneve,vlan,flat
+    mechanism_drivers = openvswitch,baremetal
+
+    [ml2_type_vlan]
+    network_vlan_ranges = datacentre,bmnet:100:120
+
+    [networking_baremetal]
+    enabled_devices = nxos.openstack.lab
+
+    [nxos.openstack.lab]
+    driver = netconf-openconfig
+    device_params = name:nexus
+    switch_info = nexus
+    switch_id = 22:dd:fe:aa:1b:08
+    host = nxos.openstack.lab
+    username = admin
+    password = password
+    port = 830
+    physical_networks = bmnet
+    manage_vlans = true
+    # For Cisco NXOS: Port-Channel is the link aggregate prefix
+    link_aggregate_prefix = Port-Channel
+    link_aggregate_range = 1000..2000
+    manage_lacp_aggregates = true
+    # Port ID regex substitution for NXOS (Ethernet -> eth)
+    port_id_re_sub = pattern:Ethernet,repl:eth
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ironic-neutron-agent-config
+  namespace: openstack
+stringData:
+  01-ironic-neutron-agent.conf: |
+    [DEFAULT]
+    debug = true
+
+    [agent]
+    report_interval = 30
+    log_agent_heartbeats = false
+type: Opaque

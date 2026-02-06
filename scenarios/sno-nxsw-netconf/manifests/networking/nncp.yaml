@@ -1,0 +1,139 @@
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp/nncm-config-type: standard
+  name: master-0
+  namespace: openstack
+spec:
+  desiredState:
+    dns-resolver:
+      config:
+        search: []
+        server:
+        - 192.168.32.254
+    interfaces:
+    - name: internalapi
+      type: vlan
+      description: internalapi vlan interface
+      ipv4:
+        address:
+        - ip: 172.17.0.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      state: up
+      vlan:
+        base-iface: eth1
+        id: "20"
+    - name: storage
+      type: vlan
+      description: storage vlan interface
+      ipv4:
+        address:
+        - ip: 172.18.0.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      state: up
+      vlan:
+        base-iface: eth1
+        id: "21"
+    - name: tenant
+      type: vlan
+      description: tenant vlan interface
+      ipv4:
+        address:
+        - ip: 172.19.0.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      state: up
+      vlan:
+        base-iface: eth1
+        id: "22"
+    - description: ctlplane interface
+      mtu: 1442
+      name: eth1
+      state: up
+      type: ethernet
+    - name: ospbr
+      type: linux-bridge
+      description: linux-bridge over ctlplane interface
+      bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: eth1
+          vlan: {}
+      ipv4:
+        address:
+        - ip: 192.168.122.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+      state: up
+    - description: ironic interface
+      mtu: 1442
+      name: eth2
+      state: up
+      type: ethernet
+    - name: ironicbr
+      type: linux-bridge
+      description: ironic-bridge
+      bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: eth2
+      ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
+      mtu: 1442
+    - name: ironicbr.101
+      type: vlan
+      description: ironic provisioning vlan interface
+      state: up
+      vlan:
+        base-iface: ironicbr
+        id: 101
+      ipv4:
+        address:
+        - ip: 172.20.1.10
+          prefix-length: "24"
+        dhcp: false
+        enabled: true
+      ipv6:
+        enabled: false
+      mtu: 1442
+    route-rules:
+      config: []
+    routes:
+      config:
+        - destination: 172.20.3.0/24
+          next-hop-address: 172.20.1.1
+          next-hop-interface: ironicbr.101
+          table-id: 254
+        - destination: 172.20.4.0/24
+          next-hop-address: 172.20.1.1
+          next-hop-interface: ironicbr.101
+          table-id: 254
+  nodeSelector:
+    kubernetes.io/hostname: master-0
+    node-role.kubernetes.io/worker: ""
