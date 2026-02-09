@@ -62,6 +62,8 @@ metadata:
 spec:
   secret: osp-secret
   storageClass: lvms-local-storage
+  notificationsBus:
+    cluster: rabbitmq
 
   # Key management service (barbican)
   barbican:
