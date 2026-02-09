@@ -571,6 +571,8 @@ spec:
         replicas: 3
   secret: osp-secret
   storageClass: lvms-local-storage
+  notificationsBus:
+    cluster: rabbitmq
   swift:
     enabled: true
     proxyOverride:
