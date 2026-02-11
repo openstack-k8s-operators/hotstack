@@ -1,16 +1,22 @@
 #!/bin/bash
-# Common functions for virtual switch management
-# Source this file in your scripts: source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-
-# Logging functions
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >&2
-}
-
-die() {
-    log "ERROR: $*"
-    exit 1
-}
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+# Force10 OS10 utility functions
+# Provides network bridge management
+# Source this file after common.sh
 
 # Build bridge configuration JSON from interface list
 # Usage: build_bridge_config <mgmt_interface> <switch_mgmt_interface> <trunk_interface> <bm_interface_start> <bm_interface_count>
@@ -61,12 +67,13 @@ build_bridge_config() {
 }
 
 # Create multiple Linux bridges using nmstate (single atomic operation)
-# Usage: create_bridges <bridges_json>
+# Usage: create_bridges <bridges_json> [template_path] [output_file]
 # Where bridges_json is a JSON array like: [{"name":"sw-br0","port":"eth0"},{"name":"sw-br1","port":"eth1"}]
+# template_path defaults to model-specific nmstate.yaml.j2 in caller's directory
 create_bridges() {
     local bridges_json="$1"
-    local template_dir="${LIB_DIR:-/usr/local/lib/hotstack-switch-vm}"
-    local output_file="${2:-/tmp/bridges-nmstate.yaml}"
+    local template_path="${2:-$SCRIPT_DIR/nmstate.yaml.j2}"
+    local output_file="${3:-/tmp/bridges-nmstate.yaml}"
 
     log "Creating bridges using nmstate"
 
@@ -76,7 +83,7 @@ import json
 from jinja2 import Template
 
 # Load template
-with open("$template_dir/bridges.nmstate.yaml.j2", "r") as f:
+with open("$template_path", "r") as f:
     template = Template(f.read())
 
 # Parse bridges configuration
@@ -94,7 +101,7 @@ with open("$output_file", "w") as f:
 print(f"Rendered nmstate config for {len(bridges)} bridges")
 EOF
     then
-        die "Failed to render nmstate template from $template_dir/bridges.nmstate.yaml.j2"
+        die "Failed to render nmstate template from $template_path"
     fi
 
     # Apply configuration with nmstate
@@ -106,60 +113,4 @@ EOF
     log "Successfully created all bridges"
     rm -f "$output_file"
     return 0
-}
-
-# Send a command to switch console via telnet
-# Usage: send_switch_config <host> <port> <command>
-send_switch_config() {
-    local host="$1"
-    local port="$2"
-    local cmd="$3"
-    local delay="${SWITCH_CMD_DELAY:-1}"
-
-    log "Send command ($host:$port): $cmd"
-
-    # Send command to switch and strip non-ASCII characters
-    echo "$cmd" | nc -w1 "$host" "$port" 2>/dev/null | strings
-
-    # Brief sleep to allow command execution
-    sleep "$delay"
-}
-
-# Wait for switch to boot and respond with expected prompt
-# Usage: wait_for_switch_prompt <host> <port> <sleep_seconds> <max_attempts> <expected_string> [use_enable]
-wait_for_switch_prompt() {
-    local host="$1"
-    local port="$2"
-    local sleep_first="$3"
-    local max_attempts="$4"
-    local expected_string="$5"
-    local use_enable="${6:-False}"
-
-    log "Waiting for $sleep_first seconds before polling the switch on $host:$port"
-    sleep "$sleep_first"
-
-    for attempt in $(seq 1 "$max_attempts"); do
-        log "Attempt $attempt/$max_attempts: Checking for prompt..."
-
-        # Connect, send input, then wait for response (keep connection open)
-        local output
-        if [ "$use_enable" != "False" ]; then
-            # Send carriage returns then 'en' command, keep connection open to read response
-            output=$( (printf "\r\n\r\nen\r\n"; sleep 3) | nc "$host" "$port" 2>/dev/null | tr -cd '\11\12\15\40-\176')
-        else
-            # Send carriage returns to trigger prompt, keep connection open to read response
-            output=$( (printf "\r\n\r\n"; sleep 3) | nc "$host" "$port" 2>/dev/null | tr -cd '\11\12\15\40-\176')
-        fi
-
-        if echo "$output" | grep -q "$expected_string"; then
-            log "Got switch prompt - Switch ready for configuration."
-            return 0
-        fi
-
-        log "Switch not online yet, waiting..."
-        sleep 10
-    done
-
-    log "ERROR: Switch did not respond with expected prompt after $max_attempts attempts"
-    return 1
 }

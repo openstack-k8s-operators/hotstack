@@ -51,6 +51,9 @@ write_files:
       TRUNK_INTERFACE=eth2                # Switch trunk (bridged)
       BM_INTERFACE_START=eth3             # Baremetal ports start (bridged)
       BM_INTERFACE_COUNT=8
+      SWITCH_MGMT_MAC=52:54:00:xx:xx:xx  # MAC address from Neutron port
+      TRUNK_MAC=52:54:00:yy:yy:yy         # MAC address from Neutron port
+      BM_MACS=(52:54:00:aa:aa:aa 52:54:00:bb:bb:bb ...)  # MAC addresses array
       SWITCH_MGMT_IP=172.24.5.20/24
 
 runcmd:
@@ -67,12 +70,13 @@ runcmd:
 6. Calls configuration script to configure the switch
 
 ### 4. Model-Specific Setup
-Model scripts (e.g., `force10_10/setup.sh`):
-1. Extract/prepare switch disk images from `/opt/force10_10/`
-2. Convert VMDK images to qcow2 format for KVM compatibility
-3. Create Linux bridges using nmstate for each switch port
-4. Render libvirt domain XML from Jinja2 template
-5. Define and start VM using libvirt (virsh)
+Model scripts (e.g., `force10_10/setup.sh`, `nxos/setup.sh`):
+1. Extract/prepare switch disk images from `/opt/<model>/`
+2. Convert VMDK images to qcow2 format for KVM compatibility (if needed)
+3. For Force10: Create Linux bridges using nmstate for each switch port
+4. For NXOS: Extract MAC addresses and interface names for direct passthrough mode
+5. Render libvirt domain XML from Jinja2 template
+6. Define and start VM using libvirt (virsh)
 
 ### 5. Wait for Switch Boot
 Wait scripts (e.g., `force10_10/wait.sh`):
@@ -110,18 +114,20 @@ The startup script writes status information to `/var/lib/hotstack-switch-vm/sta
 └── start-switch-vm.sh              # Main entry point (called by cloud-init)
 
 /usr/local/lib/hotstack-switch-vm/
-├── common.sh                       # Shared functions library
-├── bridges.nmstate.yaml.j2         # Jinja2 template for bridge config
+├── common.sh                       # Shared logging and console helpers
 ├── force10_10/                     # Model-specific directory
 │   ├── setup.sh                    # Setup and start VM
 │   ├── wait.sh                     # Wait for switch to boot
 │   ├── configure.sh                # Initial configuration
-│   └── domain.xml.j2               # Libvirt domain XML template
-└── nxos/                           # Cisco NXOS directory
+│   ├── utils.sh                    # Network bridge helpers
+│   ├── domain.xml.j2               # Libvirt domain XML template
+│   └── nmstate.yaml.j2             # Network bridge template
+└── nxos/                           # NXOS directory
     ├── setup.sh                    # Setup and start VM
     ├── wait.sh                     # Wait for switch to boot
     ├── configure.sh                # No-op (POAP handles config)
-    └── domain.xml.j2               # Libvirt domain XML template
+    ├── nxos-switch.service.j2      # Systemd service template
+    └── nmstate.yaml.j2             # Macvtap network template
 
 /etc/hotstack-switch-vm/
 └── config                          # Configuration file (from cloud-init)
@@ -141,7 +147,10 @@ The startup script writes status information to `/var/lib/hotstack-switch-vm/sta
 
 /opt/nxos/                          # Pre-installed NXOS images
 ├── *.qcow2                         # Cisco NXOS qcow2 image
-└── image-info.txt                  # Original filename metadata
+└── image-config                    # Build-time metadata (sourceable shell variables)
+
+/usr/local/share/edk2/ovmf/         # UEFI firmware (NXOS only)
+└── OVMF-edk2-stable202305.fd       # GNS3 "switch friendly" UEFI firmware (default)
 ```
 
 ## Configuration
@@ -221,23 +230,13 @@ exit_code=1
 
 ## Common Functions
 
-The `common.sh` library provides:
+The `common.sh` library provides shared functions used by all switch models:
 
 **`log <message>`**
 - Logs timestamped messages to stderr
 
 **`die <message>`**
 - Logs error and exits with status 1
-
-**`build_bridge_config <mgmt_if> <switch_mgmt_if> <trunk_if> <bm_if_start> <bm_if_count>`**
-- Validates network interfaces exist
-- Builds JSON array of bridge configurations
-- Returns JSON suitable for `create_bridges()`
-
-**`create_bridges <bridges_json>`**
-- Renders nmstate YAML from Jinja2 template
-- Applies configuration atomically using nmstatectl
-- Creates all bridges in a single operation
 
 **`send_switch_config <host> <port> <command>`**
 - Sends a command to switch console via telnet
@@ -249,6 +248,79 @@ The `common.sh` library provides:
 - Sends carriage returns to trigger prompt
 - Polls telnet console with configurable retry logic
 - Returns 0 on success, 1 on timeout
+
+## Force10-Specific Functions
+
+The `force10_10/utils.sh` library provides Force10 OS10-specific network bridge functions:
+
+**`build_bridge_config <mgmt_if> <switch_mgmt_if> <trunk_if> <bm_if_start> <bm_if_count>`**
+- Validates network interfaces exist
+- Builds JSON array of bridge configurations
+- Returns JSON suitable for `create_bridges()`
+
+**`create_bridges <bridges_json>`**
+- Renders nmstate YAML from Jinja2 template
+- Applies configuration atomically using nmstatectl
+- Creates all bridges in a single operation
+
+## Network Interface Modes
+
+Different switch models use different approaches for connecting the nested VM to OpenStack networks:
+
+### Force10 OS10 - Linux Bridge Mode
+
+Uses traditional Linux bridges created with nmstate:
+
+- **How it works**: Creates `sw-br0`, `sw-br1`, etc. bridges that connect host interfaces to VM interfaces
+- **Configuration**: Bridges configured via nmstate YAML templates
+- **MAC addresses**: VM generates its own MAC addresses (libvirt defaults)
+- **Use case**: Works well when switch doesn't need to directly respond to OpenStack DHCP
+
+### Cisco NXOS - Direct Passthrough Mode
+
+Uses direct passthrough mode for exclusive interface access:
+
+- **How it works**: VM gets exclusive access to host interfaces using `type='direct'` mode='passthrough'
+- **MAC addresses**: VM inherits/uses the host interface MAC addresses (from OpenStack ports)
+- **Benefits**:
+  - **No MAC conflicts**: Eliminates bridge MAC address collision warnings
+  - Transparent DHCP: OpenStack's DHCP server sees requests from the correct MAC
+  - Best performance (direct hardware access)
+  - Simpler setup (no bridge creation needed)
+- **Trade-off**: Host loses access to those interfaces while VM is running
+- **Use case**: Required for POAP which needs DHCP responses from OpenStack
+
+**Key difference**: With passthrough mode, the VM has exclusive access to the network interfaces. When the nested NXOS switch sends DHCP with the host interface's MAC (e.g., `22:57:f8:dd:fe:08`), OpenStack recognizes it as the `switch-switch-mgmt-port` and responds with POAP configuration options. No bridges means no MAC address conflicts.
+
+## UEFI Firmware (NXOS Only)
+
+When building with `NXOS_IMAGE`, a "switch friendly" UEFI firmware from the GNS3 project
+is automatically included:
+
+- **Firmware**: `OVMF-edk2-stable202305.fd` (default)
+- **Source**: https://sourceforge.net/projects/gns-3/files/Qemu%20Appliances/
+- **Location**: `/usr/local/share/edk2/ovmf/OVMF-edk2-stable202305.fd`
+- **Purpose**: Provides better compatibility with Cisco NXOS virtual switches
+
+This firmware is automatically downloaded during the `make switch-host` build process
+when `NXOS_IMAGE` is set, and is used by the NXOS domain.xml.j2 template. The firmware
+resolves NIC initialization issues that can occur with the standard OVMF firmware when
+running NXOS virtual switches.
+
+Build-time metadata (image filename and firmware filename) is stored in `/opt/nxos/image-config`
+as sourceable shell variables during the image build process, ensuring the runtime scripts
+use the same firmware version that was embedded in the image.
+
+**Example `/opt/nxos/image-config`:**
+```bash
+NXOS_IMAGE_FILE="nexus9300v.10.3.7.M.qcow2"
+UEFI_FIRMWARE_FILE="OVMF-edk2-stable202305.fd"
+```
+
+To use a different UEFI firmware version during build:
+```bash
+make NXOS_IMAGE=/path/to/nexus.qcow2 NXOS_UEFI_FIRMWARE_FILE=OVMF-newer.fd
+```
 
 ## Supported Switch Models
 
