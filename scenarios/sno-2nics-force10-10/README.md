@@ -77,7 +77,7 @@ The scenario includes Tempest tests for baremetal instance lifecycle:
 
 The scenario uses the `hotstack-switch-host` image which runs a nested Force10 OS10 switch VM inside a CentOS 9 Stream host with KVM/libvirt.
 
-See [images/README.md](../../images/README.md) and [switch-host-scripts/README.md](../../images/switch-host-scripts/README.md) for details on building the switch host image and how the nested switch setup works.
+See [switch-images/README.md](../../switch-images/README.md) and [runtime-scripts/README.md](../../switch-images/runtime-scripts/README.md) for details on building the switch host image and how the nested switch setup works.
 
 ## Switch Access
 
@@ -97,5 +97,5 @@ Force10 OS10 port naming convention:
 
 ## References
 
-- [Switch Host Scripts README](../../images/switch-host-scripts/README.md)
-- [Building Switch Host Images](../../images/README.md)
+- [Switch Runtime Scripts README](../../switch-images/runtime-scripts/README.md)
+- [Building Switch Host Images](../../switch-images/README.md)
