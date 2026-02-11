@@ -19,7 +19,7 @@ SWITCH_HOST_INSTALL_PACKAGES ?= libvirt,qemu-kvm,qemu-img,expect,unzip,jq,iprout
 # These will be copied into the image at /opt/<model>/ during build
 FORCE10_10_IMAGE            ?=
 FORCE10_9_IMAGE             ?=
-CISCO_NEXUS_IMAGE           ?=
+NXOS_IMAGE                  ?=
 SONIC_IMAGE                 ?=
 
 all: controller blank nat64
@@ -109,8 +109,8 @@ endif
 ifneq ($(FORCE10_9_IMAGE),)
 	@test -f $(FORCE10_9_IMAGE) || (echo "ERROR: Force10 OS9 image not found: $(FORCE10_9_IMAGE)" && exit 1)
 endif
-ifneq ($(CISCO_NEXUS_IMAGE),)
-	@test -f $(CISCO_NEXUS_IMAGE) || (echo "ERROR: Cisco Nexus image not found: $(CISCO_NEXUS_IMAGE)" && exit 1)
+ifneq ($(NXOS_IMAGE),)
+	@test -f $(NXOS_IMAGE) || (echo "ERROR: NXOS image not found: $(NXOS_IMAGE)" && exit 1)
 endif
 ifneq ($(SONIC_IMAGE),)
 	@test -f $(SONIC_IMAGE) || (echo "ERROR: SONiC image not found: $(SONIC_IMAGE)" && exit 1)
@@ -139,9 +139,15 @@ endif
 		$(if $(FORCE10_9_IMAGE), \
 			--run-command 'mkdir -p /opt/force10_9' \
 			--copy-in $(FORCE10_9_IMAGE):/opt/force10_9,) \
-		$(if $(CISCO_NEXUS_IMAGE), \
-			--run-command 'mkdir -p /opt/cisco_nexus' \
-			--copy-in $(CISCO_NEXUS_IMAGE):/opt/cisco_nexus,) \
+		$(if $(NXOS_IMAGE), \
+			--copy-in switch-host-scripts/nxos:/usr/local/lib/hotstack-switch-vm \
+			--chmod 0755:/usr/local/lib/hotstack-switch-vm/nxos/setup.sh \
+			--chmod 0755:/usr/local/lib/hotstack-switch-vm/nxos/wait.sh \
+			--chmod 0755:/usr/local/lib/hotstack-switch-vm/nxos/configure.sh \
+			--chmod 0644:/usr/local/lib/hotstack-switch-vm/nxos/domain.xml.j2 \
+			--run-command 'mkdir -p /opt/nxos' \
+			--copy-in $(NXOS_IMAGE):/opt/nxos \
+			--run-command 'basename $(NXOS_IMAGE) > /opt/nxos/image-info.txt',) \
 		$(if $(SONIC_IMAGE), \
 			--run-command 'mkdir -p /opt/sonic' \
 			--copy-in $(SONIC_IMAGE):/opt/sonic,) \

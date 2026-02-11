@@ -112,10 +112,15 @@ The startup script writes status information to `/var/lib/hotstack-switch-vm/sta
 /usr/local/lib/hotstack-switch-vm/
 ├── common.sh                       # Shared functions library
 ├── bridges.nmstate.yaml.j2         # Jinja2 template for bridge config
-└── force10_10/                     # Model-specific directory
+├── force10_10/                     # Model-specific directory
+│   ├── setup.sh                    # Setup and start VM
+│   ├── wait.sh                     # Wait for switch to boot
+│   ├── configure.sh                # Initial configuration
+│   └── domain.xml.j2               # Libvirt domain XML template
+└── nxos/                           # Cisco NXOS directory
     ├── setup.sh                    # Setup and start VM
     ├── wait.sh                     # Wait for switch to boot
-    ├── configure.sh                # Initial configuration
+    ├── configure.sh                # No-op (POAP handles config)
     └── domain.xml.j2               # Libvirt domain XML template
 
 /etc/hotstack-switch-vm/
@@ -132,6 +137,10 @@ The startup script writes status information to `/var/lib/hotstack-switch-vm/sta
 
 /opt/force10_10/                    # Pre-installed switch images
 ├── OS10_Virtualization*.zip        # Force10 OS10 archive
+└── image-info.txt                  # Original filename metadata
+
+/opt/nxos/                          # Pre-installed NXOS images
+├── *.qcow2                         # Cisco NXOS qcow2 image
 └── image-info.txt                  # Original filename metadata
 ```
 
@@ -240,3 +249,40 @@ The `common.sh` library provides:
 - Sends carriage returns to trigger prompt
 - Polls telnet console with configurable retry logic
 - Returns 0 on success, 1 on timeout
+
+## Supported Switch Models
+
+### Force10 OS10 (`force10_10`)
+- Uses three disk images (ONIE, Installer, Platform profile)
+- Requires manual configuration via console
+- Boot time: ~400-500 seconds
+
+### Cisco NXOS (`nxos`)
+- Uses single qcow2 disk image
+- Configuration via POAP (Power-On Auto Provisioning)
+- POAP files (poap.py, poap.cfg) must be served from TFTP/HTTP server
+- Requires UEFI firmware, e1000 NICs, and q35 machine type
+- Boot time: ~10-20 minutes (including POAP)
+
+### POAP Configuration
+
+Cisco NXOS switches use POAP for zero-touch provisioning. The POAP process:
+
+1. **Boot**: Switch boots and detects no startup configuration
+2. **DHCP**: Obtains IP address and POAP script location via DHCP (option 67)
+3. **Download**: Fetches `poap.py` script from TFTP/HTTP server
+4. **Execute**: Runs POAP script which downloads and applies `poap.cfg`
+5. **Apply**: Configuration is applied automatically
+6. **Complete**: Switch is fully configured and operational
+
+**DHCP Configuration Example:**
+```
+dhcp-option=66,<tftp-server-ip>
+dhcp-option=67,poap.py
+```
+
+**Required Files:**
+- `poap.py` - POAP bootstrap script
+- `poap.cfg` - Switch configuration file
+
+See `scenarios/sno-nxsw/` for a complete POAP implementation example.
