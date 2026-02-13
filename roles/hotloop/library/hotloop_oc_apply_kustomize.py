@@ -14,6 +14,7 @@
 # under the License.
 import os
 import re
+from datetime import datetime
 from subprocess import Popen, PIPE, TimeoutExpired
 from time import sleep
 import yaml
@@ -66,8 +67,9 @@ RETURN = r"""
 
 RETRYABLE_ERR_REGEX = {
     r"failed calling webhook.*no endpoints available",
-    r".*tcp.*:6443: connect: connection refused.*",
-    r".*connection to the server.*:6443 was refused.*",
+    r".*tcp.*:\d+: connect: connection refused.*",
+    r".*connection to the server.*was refused.*",
+    r".*timed out waiting for the condition.*",
 }
 INITIAL_RETRY_DELAY = 5
 RETRY_MAX_DELAY = INITIAL_RETRY_DELAY * 12
@@ -90,6 +92,59 @@ def is_error_retryable(error):
             return True
 
     return False
+
+
+def write_log_file(log_path, directory, rc, outs, errs, timeout, timestamp_dt):
+    """Write log file with apply command output
+
+    Creates a log file containing the timestamp, command details,
+    and output from the oc apply command.
+
+    :param log_path: The path where the log file should be written.
+    :param directory: The kustomize directory path.
+    :param rc: The return code from the oc apply command.
+    :param outs: The stdout from the oc apply command.
+    :param errs: The stderr from the oc apply command.
+    :param timeout: The timeout used for the oc apply command.
+    :param timestamp_dt: The datetime object representing when the operation occurred.
+    """
+    with open(log_path, "w") as log_file:
+        log_file.write(f"Timestamp: {timestamp_dt.isoformat()}\n")
+        log_file.write(f"Command: oc apply -k {directory}\n")
+        log_file.write(f"Return Code: {rc}\n")
+        log_file.write(f"Timeout: {timeout}\n\n")
+        log_file.write("=== STDOUT ===\n")
+        log_file.write(outs if outs else "(empty)\n")
+        log_file.write("\n=== STDERR ===\n")
+        log_file.write(errs if errs else "(empty)\n")
+
+
+def save_retry_log(directory, retry_count, rc, outs, errs, timeout):
+    """Save log file for a retry attempt
+
+    Creates a timestamped log file for a failed retry attempt.
+
+    :param directory: The kustomize directory path.
+    :param retry_count: The current retry attempt number.
+    :param rc: The return code from the oc apply command.
+    :param outs: The stdout from the oc apply command.
+    :param errs: The stderr from the oc apply command.
+    :param timeout: The timeout used for the oc apply command.
+    """
+    now = datetime.now()
+    timestamp = now.strftime("%Y%m%d_%H%M%S")
+    # Use directory basename for log filename
+    dir_basename = os.path.basename(os.path.normpath(directory))
+    retry_log_path = os.path.join(
+        (
+            os.path.dirname(directory)
+            if not directory.startswith(("http://", "https://"))
+            # TODO(hjensas): use better path for URL-based kustomize directories
+            else "/tmp"
+        ),
+        f"{dir_basename}.retry_{retry_count}_{timestamp}.log",
+    )
+    write_log_file(retry_log_path, directory, rc, outs, errs, timeout, now)
 
 
 def apply_kustomize(directory, timeout=60):
@@ -174,6 +229,8 @@ def run_module():
         stderr="",
         stdout_lines=[],
         stderr_lines=[],
+        retry_count=0,
+        retry_time=0,
     )
 
     directory = module.params["directory"]
@@ -191,9 +248,14 @@ def run_module():
             directory, timeout=timeout
         )
 
+        retry_count = 0
+        retry_time = 0
         delay = INITIAL_RETRY_DELAY
         while rc != 0 and is_error_retryable(errs) and delay <= RETRY_MAX_DELAY:
+            retry_count += 1
+            save_retry_log(directory, retry_count, rc, outs, errs, timeout)
             sleep(delay)
+            retry_time += delay
             delay = delay * 2
             rc, outs, errs, out_lines, err_lines = apply_kustomize(
                 directory, timeout=timeout
@@ -204,9 +266,14 @@ def run_module():
         result["stderr"] = errs
         result["stdout_lines"] = out_lines
         result["stderr_lines"] = err_lines
+        result["retry_count"] = retry_count
+        result["retry_time"] = retry_time
 
         if rc == 0:
-            result["msg"] = f"Kustomize directory {directory} applied"
+            msg = f"Kustomize directory {directory} applied"
+            if retry_count > 0:
+                msg += f" (WARNING: {retry_count} retries after {retry_time}s due to transient errors)"
+            result["msg"] = msg
             result["success"] = True
             result["changed"] = True
         else:

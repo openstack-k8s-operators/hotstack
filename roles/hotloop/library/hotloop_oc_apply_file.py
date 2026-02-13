@@ -74,8 +74,9 @@ LOG_EXTENSION = ".log"
 
 RETRYABLE_ERR_REGEX = {
     r"failed calling webhook.*no endpoints available",
-    r".*tcp.*:6443: connect: connection refused.*",
-    r".*connection to the server.*:6443 was refused.*",
+    r".*tcp.*:\d+: connect: connection refused.*",
+    r".*connection to the server.*was refused.*",
+    r".*timed out waiting for the condition.*",
 }
 INITIAL_RETRY_DELAY = 5
 RETRY_MAX_DELAY = INITIAL_RETRY_DELAY * 12
@@ -112,7 +113,7 @@ def apply_manifest(file, timeout=60):
 
     proc = Popen(["oc", "apply", "-f", file], stdout=PIPE, stderr=PIPE)
     try:
-        outs, errs = proc.communicate(timeout=60)
+        outs, errs = proc.communicate(timeout=timeout)
     except TimeoutExpired:
         proc.kill()
         outs, errs = proc.communicate()
@@ -149,6 +150,24 @@ def write_log_file(log_path, file, rc, outs, errs, timeout, timestamp_dt):
         log_file.write(outs if outs else "(empty)\n")
         log_file.write("\n=== STDERR ===\n")
         log_file.write(errs if errs else "(empty)\n")
+
+
+def save_retry_log(file, retry_count, rc, outs, errs, timeout):
+    """Save log file for a retry attempt
+
+    Creates a timestamped log file for a failed retry attempt.
+
+    :param file: The manifest file path.
+    :param retry_count: The current retry attempt number.
+    :param rc: The return code from the oc apply command.
+    :param outs: The stdout from the oc apply command.
+    :param errs: The stderr from the oc apply command.
+    :param timeout: The timeout used for the oc apply command.
+    """
+    now = datetime.now()
+    timestamp = now.strftime("%Y%m%d_%H%M%S")
+    retry_log_path = f"{file}.retry_{retry_count}_{timestamp}{LOG_EXTENSION}"
+    write_log_file(retry_log_path, file, rc, outs, errs, timeout, now)
 
 
 def move_to_applied(file, rc, outs, errs, timeout):
@@ -222,6 +241,8 @@ def run_module():
         stderr="",
         stdout_lines=[],
         stderr_lines=[],
+        retry_count=0,
+        retry_time=0,
     )
 
     file = module.params["file"]
@@ -241,9 +262,14 @@ def run_module():
 
         rc, outs, errs, out_lines, err_lines = apply_manifest(file, timeout=timeout)
 
+        retry_count = 0
+        retry_time = 0
         delay = INITIAL_RETRY_DELAY
         while rc != 0 and is_error_retryable(errs) and delay <= RETRY_MAX_DELAY:
+            retry_count += 1
+            save_retry_log(file, retry_count, rc, outs, errs, timeout)
             sleep(delay)
+            retry_time += delay
             delay = delay * 2
             rc, outs, errs, out_lines, err_lines = apply_manifest(file, timeout=timeout)
 
@@ -252,16 +278,21 @@ def run_module():
         result["stderr"] = errs
         result["stdout_lines"] = out_lines
         result["stderr_lines"] = err_lines
+        result["retry_count"] = retry_count
+        result["retry_time"] = retry_time
 
         if rc == 0:
             move_to_applied(file, rc, outs, errs, timeout)
-            result["msg"] = (
-                "Manifest file {file} applied and saved as {applied} with log at {log}".format(
-                    file=file,
-                    applied=file + APPLIED_EXTENSION,
-                    log=file + APPLIED_EXTENSION + LOG_EXTENSION,
-                )
+            msg = "Manifest file {file} applied and saved as {applied} with log at {log}".format(
+                file=file,
+                applied=file + APPLIED_EXTENSION,
+                log=file + APPLIED_EXTENSION + LOG_EXTENSION,
             )
+            if retry_count > 0:
+                msg += " (WARNING: {count} retries after {time}s due to transient errors)".format(
+                    count=retry_count, time=retry_time
+                )
+            result["msg"] = msg
             result["success"] = True
             result["changed"] = True
         else:
