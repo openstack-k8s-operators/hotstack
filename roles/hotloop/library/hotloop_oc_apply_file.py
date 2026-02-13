@@ -16,6 +16,7 @@ import os
 import filecmp
 import re
 import shutil
+from datetime import datetime
 from subprocess import Popen, PIPE, TimeoutExpired
 from time import sleep
 import yaml
@@ -33,23 +34,20 @@ DOCUMENTATION = r"""
 ---
 module: hotloop_oc_apply_file
 
-short_description: Apply a manifest file to Kubernetes if different from backup
+short_description: Apply a manifest file to Kubernetes if different from previously applied version
 
 version_added: "2.8"
 
 description:
-    - Replace the value of a path in a YAML file
+    - Apply a manifest file to Kubernetes, comparing against the last successfully applied version.
+    - On success, the manifest is renamed to .applied extension.
+    - On failure, the manifest and error logs are saved with timestamped extensions.
 
 options:
   file:
     description:
       - The manifest file to apply
     type: str
-  backup:
-    description:
-      - The backup file to compare to
-    type: str
-    default: ''
   timeout:
     description:
       - The timeout for the oc apply command
@@ -63,15 +61,16 @@ author:
 EXAMPLES = r"""
 - name: Apply a manifest file to Kubernetes
   hotloop_oc_apply_file:
-    file: foo.yaml'
-    backup: foo.yaml.backup
+    file: foo.yaml
     timeout: 30
 """
 
 RETURN = r"""
 """
 
-BACKUP_EXTENSION = ".previous"
+APPLIED_EXTENSION = ".applied"
+FAILED_EXTENSION = ".failed"
+LOG_EXTENSION = ".log"
 
 RETRYABLE_ERR_REGEX = {
     r"failed calling webhook.*no endpoints available",
@@ -127,28 +126,87 @@ def apply_manifest(file, timeout=60):
     return rc, outs, errs, out_lines, err_lines
 
 
-def create_backup(file):
-    """Create a backup of the file
+def write_log_file(log_path, file, rc, outs, errs, timeout, timestamp_dt):
+    """Write log file with apply command output
 
-    Creates a backup of the given appending the
-    BACKUP_EXTENSION to its name.
+    Creates a log file containing the timestamp, command details,
+    and output from the oc apply command.
+
+    :param log_path: The path where the log file should be written.
+    :param file: The original manifest file path.
+    :param rc: The return code from the oc apply command.
+    :param outs: The stdout from the oc apply command.
+    :param errs: The stderr from the oc apply command.
+    :param timeout: The timeout used for the oc apply command.
+    :param timestamp_dt: The datetime object representing when the operation occurred.
+    """
+    with open(log_path, "w") as log_file:
+        log_file.write(f"Timestamp: {timestamp_dt.isoformat()}\n")
+        log_file.write(f"Command: oc apply -f {file}\n")
+        log_file.write(f"Return Code: {rc}\n")
+        log_file.write(f"Timeout: {timeout}\n\n")
+        log_file.write("=== STDOUT ===\n")
+        log_file.write(outs if outs else "(empty)\n")
+        log_file.write("\n=== STDERR ===\n")
+        log_file.write(errs if errs else "(empty)\n")
+
+
+def move_to_applied(file, rc, outs, errs, timeout):
+    """Move the file to mark it as applied and save log
+
+    Renames the file by appending the APPLIED_EXTENSION to its name,
+    indicating this version has been successfully applied to the cluster.
+    Also creates an accompanying log file with the apply output.
 
     :param file: The path to the file.
+    :param rc: The return code from the oc apply command.
+    :param outs: The stdout from the oc apply command.
+    :param errs: The stderr from the oc apply command.
+    :param timeout: The timeout used for the oc apply command.
     """
-    shutil.copy(file, file + BACKUP_EXTENSION)
+    now = datetime.now()
+    applied_file = file + APPLIED_EXTENSION
+    shutil.move(file, applied_file)
+    write_log_file(applied_file + LOG_EXTENSION, file, rc, outs, errs, timeout, now)
+
+
+def save_failed_manifest(file, rc, outs, errs, timeout):
+    """Save failed manifest and error logs with timestamp
+
+    Renames the manifest file and creates an accompanying log file
+    with the error output. Both files use the same timestamp for
+    adjacent sorting in directory listings.
+
+    :param file: The path to the manifest file.
+    :param rc: The return code from the oc apply command.
+    :param outs: The stdout from the oc apply command.
+    :param errs: The stderr from the oc apply command.
+    :param timeout: The timeout used for the oc apply command.
+    :returns: The base name used for the failed files (without extension).
+    """
+    now = datetime.now()
+    timestamp = now.strftime("%Y%m%d_%H%M%S")
+    failed_base = f"{file}.{timestamp}"
+
+    # Move the failed manifest
+    shutil.move(file, failed_base + FAILED_EXTENSION)
+
+    # Save the error log
+    write_log_file(failed_base + LOG_EXTENSION, file, rc, outs, errs, timeout, now)
+
+    return failed_base
 
 
 def no_diff(file):
-    """Check if the file is different from the backup file.
+    """Check if the file is different from the previously applied version.
 
     :param file: The path to the file.
-    :backup: The path to the backup file.
-    :returns: False if the file is different from the backup file, True otherwise.
+    :returns: False if the file is different from the applied version or if no applied version exists, True otherwise.
     """
-    if os.path.exists(file + BACKUP_EXTENSION) is False:
+    if os.path.exists(file + APPLIED_EXTENSION) is False:
         return False
 
-    return filecmp.cmp(file, file + BACKUP_EXTENSION)
+    return filecmp.cmp(file, file + APPLIED_EXTENSION)
 
 
 def run_module():
@@ -173,8 +231,8 @@ def run_module():
 
         if no_diff(file):
             result["msg"] = (
-                "Manifest {file} is not different from backup {backup}. No changes needed".format(
-                    file=file, backup=file + BACKUP_EXTENSION
+                "Manifest {file} is not different from previously applied version {applied}. No changes needed".format(
+                    file=file, applied=file + APPLIED_EXTENSION
                 )
             )
             result["success"] = True
@@ -196,13 +254,25 @@ def run_module():
         result["stderr_lines"] = err_lines
 
         if rc == 0:
-            create_backup(file)
-            result["msg"] = "Manifest file {file} applied".format(file=file)
+            move_to_applied(file, rc, outs, errs, timeout)
+            result["msg"] = (
+                "Manifest file {file} applied and saved as {applied} with log at {log}".format(
+                    file=file,
+                    applied=file + APPLIED_EXTENSION,
+                    log=file + APPLIED_EXTENSION + LOG_EXTENSION,
+                )
+            )
             result["success"] = True
             result["changed"] = True
         else:
-            result["msg"] = "Error while applying manifest file {file}".format(
-                file=file
+            failed_base = save_failed_manifest(file, rc, outs, errs, timeout)
+            result["msg"] = (
+                "Error while applying manifest file {file}. "
+                "Saved to {failed} with logs in {log}".format(
+                    file=file,
+                    failed=failed_base + FAILED_EXTENSION,
+                    log=failed_base + LOG_EXTENSION,
+                )
             )
             module.fail_json(**result)
 
