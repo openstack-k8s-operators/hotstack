@@ -76,3 +76,17 @@
     directory: "{{ _kustomize_apply_dir }}"
     timeout: "{{ item.kustomize.timeout | default(60) }}"
   register: kustomize_result
+
+- name: "Stage: {{ item.name }} :: Track retry metrics"
+  ansible.builtin.set_fact:
+    hotloop_retry_metrics: >-
+      {{
+        hotloop_retry_metrics | default([]) + [{
+          'stage': item.name,
+          'type': 'kustomize',
+          'directory': item.kustomize.directory,
+          'retry_count': kustomize_result.retry_count | default(0),
+          'retry_time': kustomize_result.retry_time | default(0)
+        }]
+      }}
+  when: kustomize_result.retry_count | default(0) | int > 0

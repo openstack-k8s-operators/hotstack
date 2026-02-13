@@ -28,7 +28,11 @@ stages:
     wait_conditions:
       - "oc wait -n sushy-emulator service/sushy-emulator-service --for jsonpath='{.status.loadBalancer}' --timeout=30s"
 
+  - name: "Sushy Emulator : Service :: Wait for Endpoints"
+    wait_conditions:
+      - "oc wait -n sushy-emulator endpoints/sushy-emulator-service --for jsonpath='{.subsets[*].addresses[*].ip}' --timeout=120s"
+
   - name: "Sushy Emulator : Route"
     manifest: route.yaml
     wait_conditions:
-      - "oc wait -n sushy-emulator routes/sushy-emulator-route --for jsonpath='{.status.ingress[*].conditions[*].status}'=True --timeout=30s"
+      - "oc wait -n sushy-emulator routes/sushy-emulator-route --for jsonpath='{.status.ingress[*].conditions[*].status}'=True --timeout=60s"
