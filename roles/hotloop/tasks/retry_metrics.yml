@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-- name: Display retry metrics summary
+- name: Write retry metrics summary to file
   vars:
     _total_retries: >-
       {{
@@ -31,22 +31,29 @@
         | sum
       }}
     _stages_with_retries: "{{ hotloop_retry_metrics | length }}"
-  ansible.builtin.debug:
-    msg: |
-
-      ╔══════════════════════════════════════════════════════════════════╗
-      ║            HOTLOOP RETRY METRICS SUMMARY                         ║
-      ╚══════════════════════════════════════════════════════════════════╝
+  ansible.builtin.copy:
+    content: |
+      HOTLOOP RETRY METRICS SUMMARY
+      ======================================================================
 
       Total Stages with Retries: {{ _stages_with_retries }}
       Total Retry Attempts:      {{ _total_retries }}
       Total Retry Time:          {{ _total_retry_time }}s
+      {% if _stages_with_retries > 0 %}
 
+      Stages with Retries:
       {% for metric in hotloop_retry_metrics %}
-      ┌─ Stage: {{ metric.stage }}
-      │  Type:     {{ metric.type }}
-      │  Resource: {{ metric.file | default(metric.directory | default('N/A')) }}
-      │  Retries:  {{ metric.retry_count }}
-      │  Time:     {{ metric.retry_time }}s
-      └─
+
+      Stage: {{ metric.stage }}
+        Resource:     {{ metric.file | default(metric.directory | default('N/A')) }}
+        Retry Count:  {{ metric.retry_count }}
+        Retry Time:   {{ metric.retry_time }}s
       {% endfor %}
+      {% endif %}
+    dest: "{{ manifests_dir }}/hotloop_retry_metrics.txt"
+    mode: "0644"
+
+- name: Display retry metrics summary
+  ansible.builtin.command:
+    cmd: cat {{ manifests_dir }}/hotloop_retry_metrics.txt
+  changed_when: false

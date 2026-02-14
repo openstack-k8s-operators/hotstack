@@ -76,10 +76,8 @@
 
 - name: Display tempest log collection results
   ansible.builtin.debug:
-    msg: "Namespace {{ item.item }}: {{ item.stdout_lines | default(['No output']) }}"
+    msg: "Namespace {{ item.item }}: {{ 'Logs collected successfully' if item.rc == 0 else 'Collection failed' }}"
   loop: "{{ tempest_logs_result.results }}"
-  loop_control:
-    label: "{{ item.item }}"
 
 - name: Track tempest log collection failures
   when: item.rc != 0 and 'No tempest PVCs found' not in item.stdout

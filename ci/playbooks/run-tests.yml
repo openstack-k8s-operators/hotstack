@@ -3,6 +3,13 @@
   hosts: hotstack
   vars:
     hotstack_work_dir: "{{ ansible_user_dir }}/hotstack"
+    # Prepend patch workspace roles to search path to test PR changes.
+    # Parent job's roles: directive loads main branch for security.
+    ansible_roles_path: >-
+      {{ zuul.projects['github.com/openstack-k8s-operators/hotstack'].src_dir }}/roles:{{
+        lookup('env', 'ANSIBLE_ROLES_PATH') |
+        default('/etc/ansible/roles:/usr/share/ansible/roles', true)
+      }}
   tasks:
 
     - name: Fetch bootstrap vars from remote to zuul executor
