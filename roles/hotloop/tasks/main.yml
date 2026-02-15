@@ -14,6 +14,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+- name: Initialize retry metrics
+  ansible.builtin.set_fact:
+    hotloop_retry_metrics: []
+
 - name: Assert config is defined
   ansible.builtin.assert:
     that:
@@ -114,7 +118,6 @@
     label: "{{ item.name }}"
 
 - name: Display retry metrics summary
-  when: hotloop_retry_metrics is defined
   ansible.builtin.include_tasks: retry_metrics.yml
 
 - name: Remove temporary hotloop work directory

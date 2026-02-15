@@ -50,6 +50,22 @@ options:
       - The timeout for the oc apply command
     type: int
     default: 60
+  stage_name:
+    description:
+      - The name of the stage for retry metrics tracking
+    type: str
+    required: false
+  resource_identifier:
+    description:
+      - The resource identifier for retry metrics (e.g., original directory path from config)
+    type: str
+    required: false
+  hotloop_retry_metrics:
+    description:
+      - Current list of retry metrics to append to
+    type: list
+    required: false
+    default: []
 
 author:
     - Harald Jensås <hjensas@redhat.com>
@@ -173,6 +189,31 @@ def apply_kustomize(directory, timeout=60):
     return rc, outs, errs, out_lines, err_lines
 
 
+def add_retry_metrics_fact(
+    result, current_metrics, stage_name, directory, retry_count, retry_time
+):
+    """Add retry metrics to ansible_facts in the result.
+
+    :param result: The module result dictionary to update.
+    :param current_metrics: Current list of retry metrics.
+    :param stage_name: The name of the stage.
+    :param directory: The kustomize directory path.
+    :param retry_count: Number of retries that occurred.
+    :param retry_time: Total time spent in retries.
+    """
+    result["ansible_facts"] = {
+        "hotloop_retry_metrics": current_metrics
+        + [
+            {
+                "stage": stage_name,
+                "directory": directory,
+                "retry_count": retry_count,
+                "retry_time": retry_time,
+            }
+        ]
+    }
+
+
 def validate_directory(directory):
     """Validate the directory parameter.
 
@@ -235,6 +276,9 @@ def run_module():
 
     directory = module.params["directory"]
     timeout = module.params["timeout"]
+    stage_name = module.params.get("stage_name")
+    resource_identifier = module.params.get("resource_identifier", directory)
+    hotloop_retry_metrics = module.params.get("hotloop_retry_metrics", [])
 
     try:
         # Validate directory parameter
@@ -273,6 +317,15 @@ def run_module():
             msg = f"Kustomize directory {directory} applied"
             if retry_count > 0:
                 msg += f" (WARNING: {retry_count} retries after {retry_time}s due to transient errors)"
+                # Update ansible_facts with retry metrics
+                add_retry_metrics_fact(
+                    result,
+                    hotloop_retry_metrics,
+                    stage_name,
+                    resource_identifier,
+                    retry_count,
+                    retry_time,
+                )
             result["msg"] = msg
             result["success"] = True
             result["changed"] = True

@@ -53,6 +53,22 @@ options:
       - The timeout for the oc apply command
     type: int
     default: 60
+  stage_name:
+    description:
+      - The name of the stage for retry metrics tracking
+    type: str
+    required: false
+  resource_identifier:
+    description:
+      - The resource identifier for retry metrics (e.g., original manifest path from config)
+    type: str
+    required: false
+  hotloop_retry_metrics:
+    description:
+      - Current list of retry metrics to append to
+    type: list
+    required: false
+    default: []
 
 author:
     - Harald Jensås <hjensas@redhat.com>
@@ -216,6 +232,31 @@ def save_failed_manifest(file, rc, outs, errs, timeout):
     return failed_base
 
 
+def add_retry_metrics_fact(
+    result, current_metrics, stage_name, resource_identifier, retry_count, retry_time
+):
+    """Add retry metrics to ansible_facts in the result.
+
+    :param result: The module result dictionary to update.
+    :param current_metrics: Current list of retry metrics.
+    :param stage_name: The name of the stage.
+    :param resource_identifier: The resource identifier (e.g., manifest file path).
+    :param retry_count: Number of retries that occurred.
+    :param retry_time: Total time spent in retries.
+    """
+    result["ansible_facts"] = {
+        "hotloop_retry_metrics": current_metrics
+        + [
+            {
+                "stage": stage_name,
+                "file": resource_identifier,
+                "retry_count": retry_count,
+                "retry_time": retry_time,
+            }
+        ]
+    }
+
+
 def no_diff(file):
     """Check if the file is different from the previously applied version.
 
@@ -247,6 +288,9 @@ def run_module():
 
     file = module.params["file"]
     timeout = module.params["timeout"]
+    stage_name = module.params.get("stage_name")
+    resource_identifier = module.params.get("resource_identifier", file)
+    hotloop_retry_metrics = module.params.get("hotloop_retry_metrics", [])
 
     try:
 
@@ -291,6 +335,15 @@ def run_module():
             if retry_count > 0:
                 msg += " (WARNING: {count} retries after {time}s due to transient errors)".format(
                     count=retry_count, time=retry_time
+                )
+                # Update ansible_facts with retry metrics
+                add_retry_metrics_fact(
+                    result,
+                    hotloop_retry_metrics,
+                    stage_name,
+                    resource_identifier,
+                    retry_count,
+                    retry_time,
                 )
             result["msg"] = msg
             result["success"] = True
