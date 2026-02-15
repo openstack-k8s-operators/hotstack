@@ -46,3 +46,8 @@ data:
     # It is useful in a tenant environment where only some instances represent
     # virtual baremetal.
     SUSHY_EMULATOR_ALLOWED_INSTANCES = {{ instances_uuids }}
+
+    # Periodically poll console output from powered-on instances and emit
+    # new content to the application log at INFO level. Poll interval in seconds.
+    # Set to 0 to disable (default: 0).
+    SUSHY_EMULATOR_OS_CONSOLE_LOG_POLL_INTERVAL = 30
