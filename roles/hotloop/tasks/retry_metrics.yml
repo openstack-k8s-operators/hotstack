@@ -18,19 +18,19 @@
   vars:
     _total_retries: >-
       {{
-        hotloop_retry_metrics
+        hotloop_retry_metrics | default([])
         | map(attribute='retry_count')
         | map('int')
         | sum
       }}
     _total_retry_time: >-
       {{
-        hotloop_retry_metrics
+        hotloop_retry_metrics | default([])
         | map(attribute='retry_time')
         | map('int')
         | sum
       }}
-    _stages_with_retries: "{{ hotloop_retry_metrics | length }}"
+    _stages_with_retries: "{{ hotloop_retry_metrics | default([]) | length }}"
   ansible.builtin.debug:
     msg: |
 
@@ -42,9 +42,8 @@
       Total Retry Attempts:      {{ _total_retries }}
       Total Retry Time:          {{ _total_retry_time }}s
 
-      {% for metric in hotloop_retry_metrics %}
+      {% for metric in hotloop_retry_metrics | default([]) %}
       ┌─ Stage: {{ metric.stage }}
-      │  Type:     {{ metric.type }}
       │  Resource: {{ metric.file | default(metric.directory | default('N/A')) }}
       │  Retries:  {{ metric.retry_count }}
       │  Time:     {{ metric.retry_time }}s
