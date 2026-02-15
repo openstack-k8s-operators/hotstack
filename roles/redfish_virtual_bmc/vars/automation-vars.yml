@@ -23,6 +23,11 @@ stages:
     wait_conditions:
       - "oc wait -n sushy-emulator pod -l app=sushy-emulator --for condition=Ready --timeout=300s"
 
+  - name: "Nova Console Poller : Deployment"
+    manifest: console_poller_deployment.yaml
+    wait_conditions:
+      - "oc wait -n sushy-emulator pod -l app=nova-console-poller --for condition=Ready --timeout=300s"
+
   - name: "Sushy Emulator : Service"
     manifest: service.yaml
     wait_conditions:

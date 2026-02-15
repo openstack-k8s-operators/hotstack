@@ -1,0 +1,48 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nova-console-poller
+  namespace: sushy-emulator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nova-console-poller
+  triggers:
+  - type: "ConfigChange"
+  strategy:
+    type: Recreate
+  paused: false
+  revisionHistoryLimit: 2
+  minReadySeconds: 0
+  template:
+    metadata:
+      annotations: {}
+      labels:
+        app: nova-console-poller
+        name: nova-console-poller
+    spec:
+      volumes:
+      - name: os-client-config
+        secret:
+          secretName: os-client-config
+          defaultMode: 0644  # u=rw,g=r,o=r
+          items:
+            - key: openstack-clouds-yaml
+              path: clouds.yaml
+            - key: certificate-pem
+              path: cacert.pem
+      containers:
+{% for instance_uuid in instances_uuids %}
+      - name: console-poller-{{ instance_uuid }}
+        image: quay.io/rhn_gps_hjensas/nova-console-poller:latest
+        env:
+        - name: OS_CLOUD
+          value: "{{ sushy_emulator_os_cloud }}"
+        - name: INSTANCE_UUID
+          value: "{{ instance_uuid }}"
+        volumeMounts:
+        - name: os-client-config
+          mountPath: /etc/openstack/
+{% endfor %}
