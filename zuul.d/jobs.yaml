@@ -171,6 +171,33 @@
       - ^roles/.*
 
 - job:
+    name: vexxhost-hotstack-3-nodes-ocp-4.16
+    parent: vexxhost-hotstack-3-nodes
+    description: |
+      Hotstack scenario: 3-nodes with OpenShift 4.16
+    vars:
+      hotstack_overrides:
+        openshift_version: stable-4.16
+
+- job:
+    name: vexxhost-hotstack-3-nodes-ocp-4.18
+    parent: vexxhost-hotstack-3-nodes
+    description: |
+      Hotstack scenario: 3-nodes with OpenShift 4.18
+    vars:
+      hotstack_overrides:
+        openshift_version: stable-4.18
+
+- job:
+    name: vexxhost-hotstack-3-nodes-ocp-4.20
+    parent: vexxhost-hotstack-3-nodes
+    description: |
+      Hotstack scenario: 3-nodes with OpenShift 4.20
+    vars:
+      hotstack_overrides:
+        openshift_version: stable-4.20
+
+- job:
     name: vexxhost-hotstack-3-nodes-update
     parent: base-hotstack
     nodeset: hotstack-image-vexxhost
