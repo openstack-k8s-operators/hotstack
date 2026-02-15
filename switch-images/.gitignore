@@ -1,0 +1,11 @@
+# Built images
+switch-host.qcow2
+switch-host.qcow2.gz
+switch-host-base.qcow2
+
+# Temporary files
+*.tmp
+
+# Firmware downloads (downloaded during build)
+firmware/OVMF-edk2-stable202305.fd
+firmware/*.zip
