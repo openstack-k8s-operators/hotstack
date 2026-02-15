@@ -69,6 +69,17 @@
             ] | ansible.builtin.path_join
           }}
 
+    - name: Template the Console Poller Deployment
+      ansible.builtin.template:
+        src: console_poller_deployment.yaml.j2
+        dest: >-
+          {{
+            [
+              _tempdir.path,
+              'console_poller_deployment.yaml'
+            ] | ansible.builtin.path_join
+          }}
+
     - name: Load automation vars
       ansible.builtin.include_vars:
         file: automation-vars.yml
