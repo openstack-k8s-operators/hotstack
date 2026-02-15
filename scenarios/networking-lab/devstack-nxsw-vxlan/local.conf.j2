@@ -1,0 +1,96 @@
+[[local|localrc]]
+# Credentials
+ADMIN_PASSWORD=secret
+DATABASE_PASSWORD=$ADMIN_PASSWORD
+RABBIT_PASSWORD=$ADMIN_PASSWORD
+SERVICE_PASSWORD=$ADMIN_PASSWORD
+
+# Service timeouts
+SERVICE_TIMEOUT=120
+
+# Networking
+HOST_IP=192.168.32.20
+SERVICE_HOST=$HOST_IP
+MYSQL_HOST=$HOST_IP
+RABBIT_HOST=$HOST_IP
+GLANCE_HOSTPORT=$HOST_IP:9292
+
+# Network ranges (avoiding Heat template allocations)
+FIXED_RANGE=172.20.100.0/24
+IPV4_ADDRS_SAFE_TO_USE=172.20.100.0/24
+FLOATING_RANGE=172.20.200.0/24
+PUBLIC_NETWORK_GATEWAY=172.20.200.1
+
+# Enable Neutron with OVN
+enable_plugin neutron https://opendev.org/openstack/neutron
+disable_service n-net
+enable_service q-svc
+# Disable traditional neutron agents
+disable_service q-agt
+disable_service q-dhcp
+disable_service q-l3
+disable_service q-meta
+# Enable OVN services
+enable_service ovn-northd
+enable_service ovn-controller
+enable_service q-ovn-metadata-agent
+
+# Enable Ironic and networking-baremetal
+enable_plugin ironic https://opendev.org/openstack/ironic
+enable_service ir-api
+enable_service ir-cond
+enable_plugin networking-baremetal https://opendev.org/openstack/networking-baremetal
+enable_service ir-neutronagt
+
+# Ironic configuration
+VIRT_DRIVER=ironic
+DEFAULT_INSTANCE_TYPE=baremetal
+IRONIC_BAREMETAL_BASIC_OPS=True
+IRONIC_IS_HARDWARE=True
+IRONIC_VM_COUNT=0
+IRONIC_NETWORK_SIMULATOR=none
+IRONIC_BUILD_DEPLOY_RAMDISK=False
+IRONIC_DEPLOY_DRIVER=redfish
+IRONIC_ENABLED_HARDWARE_TYPES=redfish
+IRONIC_ENABLED_BOOT_INTERFACES=ipxe,redfish-virtual-media,http-ipxe
+IRONIC_ENABLED_POWER_INTERFACES=redfish
+IRONIC_ENABLED_MANAGEMENT_INTERFACES=redfish
+IRONIC_ENABLED_DEPLOY_INTERFACES=direct,ramdisk
+IRONIC_NETWORK_INTERFACE=neutron
+IRONIC_ENABLED_NETWORK_INTERFACES=flat,neutron
+IRONIC_AUTOMATED_CLEAN_ENABLED=False
+FORCE_CONFIG_DRIVE=True
+
+# Networking configuration for ML2 with OVN and Generic Switch
+Q_PLUGIN=ml2
+Q_ML2_TENANT_NETWORK_TYPE=vlan
+Q_ML2_PLUGIN_MECHANISM_DRIVERS=ovn,genericswitch,baremetal
+Q_ML2_PLUGIN_TYPE_DRIVERS=vlan,flat,geneve
+ENABLE_TENANT_VLANS=True
+TENANT_VLAN_RANGE=103:105
+PHYSICAL_NETWORK=bmnet
+
+# Physical interface mapping
+# The second interface (trunk port) will be added to br-ex
+# trunk0 is matched by MAC address fa:16:9e:81:f6:21 and renamed by netplan
+PUBLIC_INTERFACE=trunk0
+OVS_PHYSICAL_BRIDGE=br-ex
+PUBLIC_BRIDGE=br-ex
+
+# OVN Configuration
+Q_USE_PROVIDERNET_FOR_PUBLIC=True
+OVN_L3_CREATE_PUBLIC_NETWORK=True
+OVN_BRIDGE_MAPPINGS=bmnet:br-ex
+
+# Enable networking-generic-switch plugin
+enable_plugin networking-generic-switch https://opendev.org/openstack/networking-generic-switch
+
+# Disable Swift (optional, not needed for this setup)
+disable_service s-proxy s-object s-container s-account
+
+# Disable Horizon dashboard
+disable_service horizon
+
+# ML2 Generic Switch Configuration
+# Physical switch configuration is done via Ansible after stack.sh completes
+# See roles/devstack_installer/tasks/main.yml for the switch configuration tasks

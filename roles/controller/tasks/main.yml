@@ -192,3 +192,7 @@
             [data_dir, 'ironic_nodes.yaml']
             | ansible.builtin.path_join
           }}
+
+    - name: Install OpenStack client
+      when: controller_install_openstack_client | bool
+      ansible.builtin.include_tasks: install_openstack_client.yml

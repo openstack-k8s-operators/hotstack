@@ -1,0 +1,98 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+# Prepare devstack node system
+# This task file handles system updates, package installation, network configuration, reboot, and verification
+# After this completes successfully, the system is fully prepared and ready for devstack installation
+
+- name: Update all packages to latest version
+  become: true
+  ansible.builtin.apt:
+    upgrade: dist
+    update_cache: true
+    cache_valid_time: 3600
+  when: devstack_update_packages | bool
+
+- name: Install required packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - git
+      - python3
+      - python3-pip
+    state: present
+    update_cache: true
+
+# Network configuration
+- name: Disable cloud-init network configuration
+  become: true
+  ansible.builtin.copy:
+    content: |
+      network: {config: disabled}
+    dest: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Remove cloud-init generated netplan config
+  become: true
+  ansible.builtin.file:
+    path: /etc/netplan/50-cloud-init.yaml
+    state: absent
+
+- name: Write custom netplan configuration from Heat stack output
+  become: true
+  ansible.builtin.copy:
+    content: "{{ devstack_netplan_config | to_nice_yaml }}"
+    dest: /etc/netplan/51-devstack.yaml
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Apply netplan configuration
+  become: true
+  ansible.builtin.command: netplan apply
+  changed_when: true
+
+- name: Wait for trunk interface to appear
+  ansible.builtin.command: ip link show {{ devstack_public_interface }}
+  register: trunk_check
+  retries: 10
+  delay: 2
+  until: trunk_check.rc == 0
+  changed_when: false
+
+- name: Bring up trunk interface if down
+  become: true
+  ansible.builtin.command: ip link set {{ devstack_public_interface }} up
+  when: "'UP' not in trunk_check.stdout"
+  changed_when: true
+
+- name: Reboot system to apply updates and network configuration
+  become: true
+  ansible.builtin.reboot:
+    msg: "Reboot initiated by Ansible for system updates and network configuration"
+    connect_timeout: 5
+    reboot_timeout: 300
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+    test_command: uptime
+
+- name: Verify trunk interface is up after reboot
+  ansible.builtin.command: ip link show {{ devstack_public_interface }}
+  register: interface_status
+  changed_when: false
+  failed_when: "'UP' not in interface_status.stdout"

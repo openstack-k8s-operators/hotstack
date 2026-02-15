@@ -1,0 +1,138 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Assert config is defined
+  ansible.builtin.assert:
+    that:
+      - devstack_ansible_host is defined
+      - devstack_ansible_host | length > 0
+      - devstack_netplan_config is defined
+      - devstack_netplan_config | length > 0
+    fail_msg: >-
+      Required configuration missing.
+      The following variables must be provided:
+      devstack_ansible_host, devstack_netplan_config
+
+- name: Add devstack to the Ansible inventory
+  ansible.builtin.add_host: "{{ devstack_ansible_host }}"
+
+- name: Block delegated to devstack
+  delegate_to: "{{ devstack_ansible_host.name }}"
+  block:
+    - name: Wait for devstack node to be ready
+      ansible.builtin.wait_for_connection:
+        sleep: 2
+        timeout: 300
+
+    - name: Prepare system (updates, packages, networking, reboot, and verify)
+      ansible.builtin.include_tasks: prepare_system.yml
+
+    - name: Ensure /opt/stack has correct ownership
+      become: true
+      ansible.builtin.file:
+        path: /opt/stack
+        state: directory
+        owner: stack
+        group: stack
+        mode: '0755'
+
+    - name: Create Ironic data directory
+      become: true
+      ansible.builtin.file:
+        path: /opt/stack/data/ironic
+        state: directory
+        owner: stack
+        group: stack
+        mode: '0755'
+
+    - name: Create empty hardware_info file (nodes enrolled separately)
+      become: true
+      ansible.builtin.file:
+        path: /opt/stack/data/ironic/hardware_info
+        state: touch
+        owner: stack
+        group: stack
+        mode: '0644'
+        modification_time: preserve
+        access_time: preserve
+
+    - name: Clone devstack repository
+      ansible.builtin.git:
+        repo: "{{ devstack_repo_url }}"
+        dest: /opt/stack/devstack
+        version: "{{ devstack_branch }}"
+        force: false
+
+    - name: Pre-create networking-generic-switch data directory
+      become: true
+      ansible.builtin.file:
+        path: /opt/stack/data/networking-generic-switch
+        state: directory
+        owner: stack
+        group: stack
+        mode: '0755'
+
+    - name: Render local.conf from template
+      ansible.builtin.include_tasks: render_local_conf.yml
+
+    - name: Run stack.sh (output logged to /opt/stack/stack.sh.log)
+      become: true
+      become_user: stack
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          ./stack.sh 2>&1 | tee /opt/stack/stack.sh.log
+        chdir: /opt/stack/devstack
+        creates: /opt/stack/devstack/.stack.sh.complete
+        executable: /bin/bash
+      environment:
+        HOME: /opt/stack
+      register: devstack_install
+      async: 3600
+      poll: 10
+
+    - name: Create completion marker
+      become: true
+      become_user: stack
+      ansible.builtin.file:
+        path: /opt/stack/devstack/.stack.sh.complete
+        state: touch
+        mode: '0644'
+      when: devstack_install.rc == 0
+
+    - name: Configure physical switches in networking-generic-switch
+      become: true
+      ansible.builtin.blockinfile:
+        path: /etc/neutron/plugins/ml2/ml2_conf_genericswitch.ini
+        block: "{{ devstack_genericswitch_config }}"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - Physical Switches"
+        mode: '0644'
+      when: devstack_genericswitch_config is defined and devstack_genericswitch_config | length > 0
+      register: switch_config
+
+    - name: Restart neutron-server to apply switch configuration
+      become: true
+      ansible.builtin.systemd:
+        name: devstack@neutron-api.service
+        state: restarted
+      when: switch_config is defined and switch_config.changed
+
+    - name: Copy clouds.yaml to controller
+      ansible.builtin.include_tasks: copy_clouds_yaml.yml
+
+    - name: Display completion summary
+      ansible.builtin.debug:
+        msg: "DevStack installation and configuration completed successfully!"
