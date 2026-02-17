@@ -19,53 +19,49 @@
   ansible.builtin.tempfile:
     state: directory
 
-- name: Sushy-emulator main block
+- name: Nova console recorder deployment block
   block:
-    - name: Install package requirements for agent installer
-      become: true
-      ansible.builtin.dnf:
-        name: httpd-tools
-        state: present
-
-    - name: Generate htpasswd
-      register: _htpasswd
-      ansible.builtin.command:
-        cmd: "htpasswd -nbB {{ redfish_username | quote }} {{ redfish_password | quote }}"
-
-    - name: Copy files to tempdir
+    - name: Copy namespace manifest
       ansible.builtin.copy:
-        src: "{{ item }}"
+        src: namespace.yaml
         dest: >-
           {{
             [
               _tempdir.path,
-              item
-            ] | ansible.builtin.path_join
-          }}
-      loop:
-        - namespace.yaml
-        - deployment.yaml
-        - service.yaml
-
-    - name: Template the ConfigMap
-      ansible.builtin.template:
-        src: config_map.yaml.j2
-        dest: >-
-          {{
-            [
-              _tempdir.path,
-              'config_map.yaml'
+              'namespace.yaml'
             ] | ansible.builtin.path_join
           }}
 
-    - name: Template the Route
+    - name: Template Console Recordings PVs
       ansible.builtin.template:
-        src: route.yaml.j2
+        src: console_recordings_pvs.yaml.j2
         dest: >-
           {{
             [
               _tempdir.path,
-              'route.yaml'
+              'console_recordings_pvs.yaml'
+            ] | ansible.builtin.path_join
+          }}
+
+    - name: Template Console Recordings PVC
+      ansible.builtin.template:
+        src: console_recordings_pvc.yaml.j2
+        dest: >-
+          {{
+            [
+              _tempdir.path,
+              'console_recordings_pvc.yaml'
+            ] | ansible.builtin.path_join
+          }}
+
+    - name: Template Console Recorder Deployment
+      ansible.builtin.template:
+        src: deployment.yaml.j2
+        dest: >-
+          {{
+            [
+              _tempdir.path,
+              'console_recorder_deployment.yaml'
             ] | ansible.builtin.path_join
           }}
 
@@ -81,24 +77,10 @@
           delegate_to: controller-0
           vars:
             work_dir: "{{ _tempdir.path }}"
-            manifests_dir: "{{ sushy_emulator_manifests }}"
+            manifests_dir: "{{ nova_console_recorder_manifests }}"
   always:
     - name: Clean up the tempdir
       when: _tempdir.path is defined
       ansible.builtin.file:
         path: "{{ _tempdir.path }}"
         state: absent
-
-- name: Include nova console poller
-  when:
-    - hotstack_enable_nova_console_poller | default(true) | bool
-    - instances_uuids | length > 0
-  ansible.builtin.include_role:
-    name: nova_console_poller
-
-- name: Include nova console recorder
-  when:
-    - hotstack_enable_nova_console_recorder | default(true) | bool
-    - instances_uuids | length > 0
-  ansible.builtin.include_role:
-    name: nova_console_recorder

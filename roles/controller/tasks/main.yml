@@ -50,6 +50,10 @@
         - "{{ data_dir }}"
         - "{{ bin_dir }}"
 
+    - name: Setup NFS server
+      when: nfs_server_enabled | default(false) | bool
+      ansible.builtin.include_tasks: setup_nfs.yml
+
     - name: Add common functions to the bin_dir
       ansible.builtin.copy:
         src: "{{ item }}"

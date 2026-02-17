@@ -37,17 +37,26 @@ For detailed information, see:
   a Heat template as input. See [README](roles/heat_stack/README.md).
 - **hot_snapset**: Create consistent snapshots of OpenStack instances for rapid
   deployment restoration. See [README](roles/hot_snapset/README.md).
-- **hotlogs**: Collect logs and data from the controller node for debugging
-  and troubleshooting purposes.
+- **hotlogs**: Collect logs, data, and console recordings from the controller
+  node for debugging and troubleshooting purposes.
+  See [README](roles/hotlogs/README.md).
 - **hotloop**: A simple "stages" loop, to run commands,
   apply kubernetes manifests and run wait conditions. See docs
   [README](roles/hotloop/README.md).
 - **ocp_agent_installer**: A role running the Openshift Agent installer.
   See [README](roles/ocp_agent_installer/README.md)
-- **controller**: A role to wait add the controller to the inventory, wait for
-  it to be reachable and bootstrap. See [README](roles/controller/README.md).
+- **controller**: A role to add the controller to the inventory, wait for it to
+  be reachable, bootstrap, and optionally configure NFS server for shared storage.
+  See [README](roles/controller/README.md).
 - **redfish_virtual_bmc**: Role to deploy sushy-emulator (RedFish Virtual BMC)
   service on the Openshift cluster. See [README](roles/redfish_virtual_bmc/README.md).
+- **nova_console_poller**: Poll and capture serial console output from Nova
+  instances for debugging boot issues and kernel panics. Deployed automatically
+  by redfish_virtual_bmc role. See [README](roles/nova_console_poller/README.md).
+- **nova_console_recorder**: Record VNC console sessions of Nova instances to MP4
+  video files for troubleshooting and auditing. Uses NFS-backed storage for
+  persistence. Deployed automatically by redfish_virtual_bmc role.
+  See [README](roles/nova_console_recorder/README.md).
 
 ## Scenarios
 

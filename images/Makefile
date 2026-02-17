@@ -1,7 +1,7 @@
 CONTROLLER_IMAGE_URL         ?= https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-x86_64-9-latest.x86_64.qcow2
 CONTROLLER_IMAGE_NAME        ?= controller.qcow2
 CONTROLLER_IMAGE_FORMAT      ?= raw
-CONTROLLER_INSTALL_PACKAGES  ?= git,dnsmasq,vim-enhanced,tmux,bind-utils,httpd,httpd-tools,podman,butane,bash-completion,haproxy,nmstate,tcpdump,make
+CONTROLLER_INSTALL_PACKAGES  ?= git,dnsmasq,vim-enhanced,tmux,bind-utils,httpd,httpd-tools,podman,butane,bash-completion,haproxy,nmstate,tcpdump,make,nfs-utils
 BLANK_IMAGE_NAME             ?= blank-image.qcow2
 BLANK_IMAGE_FORMAT           ?= raw
 BLANK_IMAGE_SIZE             ?= 1M

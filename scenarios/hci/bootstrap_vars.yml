@@ -26,6 +26,10 @@ ovn_k8s_gateway_config_host_routing: true
 enable_iscsi: false
 enable_multipath: false
 
+# Nova console recorder NFS settings
+nova_console_recorder_nfs_server: controller-0.openstack.lab
+nova_console_recorder_nfs_path: /export/nova-console-recordings
+
 stack_name: "hs-{{ scenario }}-{{ zuul.build[:8] | default('no-zuul') }}"
 stack_parameters:
   # On misconfigured clouds, uncomment these to avoid issues.

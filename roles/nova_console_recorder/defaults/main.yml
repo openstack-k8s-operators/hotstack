@@ -14,14 +14,14 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+hotstack_enable_nova_console_recorder: true
 sushy_emulator_os_cloud: default
-ingress_domain: apps.ocp.openstack.lab
-redfish_username: admin
-redfish_password: password
 instances_uuids: []
 cloud_config_dir: "/home/zuul/.hotcloud"
-sushy_emulator_manifests: /home/zuul/manifests/sushy_emulator_manifests
+nova_console_recorder_manifests: /home/zuul/manifests/nova_console_recorder_manifests
+nova_console_recorder_image: quay.io/rhn_gps_hjensas/nova-console-recorder:latest
 
-# Console tools
-hotstack_enable_nova_console_poller: true
-hotstack_enable_nova_console_recorder: true
+# Nova console recorder NFS settings
+nova_console_recorder_nfs_server: controller-0.openstack.lab
+nova_console_recorder_nfs_path: /export/nova-console-recordings
+nova_console_recorder_storage_size: 1Gi
