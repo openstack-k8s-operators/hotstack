@@ -33,3 +33,4 @@
       vars:
         instances_uuids: "{{ stack_outputs.sushy_emulator_uuids.values() }}"
         ingress_domain: "apps.{{ stack_outputs.ocp_install_config.metadata.name }}.{{ stack_outputs.ocp_install_config.baseDomain }}"
+        sushy_emulator_os_rescue_pxe_boot: "{{ stack_outputs.ironic_boot_interface | default('redfish-virtual-media') in ['pxe', 'ipxe'] }}"

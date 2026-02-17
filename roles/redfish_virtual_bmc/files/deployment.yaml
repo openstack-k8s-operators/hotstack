@@ -45,7 +45,7 @@ spec:
               path: cacert.pem
       containers:
       - name: sushy-emulator
-        image: quay.io/rhn_gps_hjensas/sushy-tools:dev-1761151453
+        image: quay.io/rhn_gps_hjensas/sushy-tools:dev-1771585490
         command: ["/usr/local/bin/sushy-emulator", "--debug", "--config", "/etc/sushy-emulator/config.conf"]
         ports:
         - containerPort: 8000

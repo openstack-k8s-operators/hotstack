@@ -80,6 +80,21 @@ sudo dnf install -y gcc xorriso make qemu-img syslinux-nonlinux xz-devel guestfs
      --property hw_machine_type=q35
    ```
 
+   ```shell
+   openstack image create --disk-format=raw --file ipxe-boot.img ipxe-rescue-uefi \
+     --property os_shutdown_timeout=5 \
+     --property hw_firmware_type=uefi \
+     --property hw_machine_type=q35 \
+     --tag hotstack
+   ```
+
+   ```shell
+   openstack image create --disk-format=raw --file ipxe-boot.img ipxe-rescue-bios \
+     --property os_shutdown_timeout=5 \
+     --tag hotstack
+   ```
+
+
 2. Upload the BIOS image to Glance:
 
    ```shell

@@ -5,7 +5,7 @@ os_router_external_network: public
 
 scenario: sno-2-bm
 scenario_dir: scenarios
-stack_template_path: "{{ scenario_dir }}/{{ scenario }}/heat_template.yaml"
+stack_template_path: "{{ scenario_dir }}/{{ scenario }}/heat_template_ipxe.yaml"
 automation_vars_file: "{{ scenario_dir }}/{{ scenario }}/automation-vars.yml"
 test_operator_automation_vars_file: "{{ scenario_dir }}/{{ scenario }}/test-operator/automation-vars.yml"
 
@@ -54,5 +54,4 @@ stack_parameters:
     flavor: hotstack.xxlarge
   ironic_params:
     image: CentOS-Stream-GenericCloud-9
-    cd_image: sushy-tools-blank-image
     flavor: hotstack.medium
