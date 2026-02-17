@@ -48,6 +48,7 @@ The [automation-vars.yml](./vars/automation-vars.yml) is used with the
 | `cloud_config_dir` | `/home/zuul/.hotcloud` | Directory containing clouds.yaml and cacert.pem |
 | `nova_console_recorder_manifests` | `/home/zuul/manifests/nova_console_recorder_manifests` | Manifest storage location |
 | `nova_console_recorder_image` | `quay.io/rhn_gps_hjensas/nova-console-recorder:latest` | Container image |
+| `nova_console_recorder_use_custom_ca` | `false` | Use custom CA certificate for VNC SSL verification (set to true for clouds with self-signed certs) |
 | `nova_console_recorder_nfs_server` | `controller-0.openstack.lab` | NFS server hostname |
 | `nova_console_recorder_nfs_path` | `/export/nova-console-recordings` | NFS export path |
 | `nova_console_recorder_storage_size` | `1Gi` | PVC storage size |
