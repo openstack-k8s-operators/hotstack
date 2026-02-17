@@ -517,18 +517,7 @@ resources:
     type: OS::Nova::Server
     properties:
       flavor: {get_param: [ironic_params, flavor]}
-      block_device_mapping_v2:
-        - device_type: disk
-          boot_index: 1
-          image_id: {get_param: [ironic_params, image]}
-          volume_size: 40
-          delete_on_termination: true
-        - device_type: cdrom
-          disk_bus: {get_param: cdrom_disk_bus}
-          boot_index: 0
-          image_id: {get_param: [ironic_params, cd_image]}
-          volume_size: 5
-          delete_on_termination: true
+      image: {get_param: [ironic_params, image]}
       networks:
         - port: {get_resource: ironic0-port}
 
@@ -542,18 +531,7 @@ resources:
     type: OS::Nova::Server
     properties:
       flavor: {get_param: [ironic_params, flavor]}
-      block_device_mapping_v2:
-        - device_type: disk
-          boot_index: 1
-          image_id: {get_param: [ironic_params, image]}
-          volume_size: 40
-          delete_on_termination: true
-        - device_type: cdrom
-          disk_bus: {get_param: cdrom_disk_bus}
-          boot_index: 0
-          image_id: {get_param: [ironic_params, cd_image]}
-          volume_size: 5
-          delete_on_termination: true
+      image: {get_param: [ironic_params, image]}
       networks:
         - port: {get_resource: ironic1-port}
 
@@ -565,7 +543,7 @@ outputs:
 
   ironic_boot_interface:
     description: Ironic boot interface configured for the redfish nodes
-    value: redfish-virtual-media
+    value: pxe
 
   sushy_emulator_uuids:
     description: UUIDs of instances to manage with sushy-tools - RedFish virtual BMC
@@ -580,7 +558,9 @@ outputs:
         - name: ironic0
           driver: redfish
           bios_interface: no-bios
-          boot_interface: redfish-virtual-media
+          boot_interface: pxe
+          properties:
+            capabilities: boot_mode:bios
           driver_info:
             redfish_address: http://sushy-emulator.apps.sno.openstack.lab
             redfish_system_id:
@@ -596,7 +576,9 @@ outputs:
         - name: ironic1
           driver: redfish
           bios_interface: no-bios
-          boot_interface: redfish-virtual-media
+          boot_interface: pxe
+          properties:
+            capabilities: boot_mode:bios
           driver_info:
             redfish_address: http://sushy-emulator.apps.sno.openstack.lab
             redfish_system_id:

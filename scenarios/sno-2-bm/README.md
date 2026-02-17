@@ -144,11 +144,23 @@ ansible-playbook -i inventory.yml 06-test-operator.yml \
   -e @~/cloud-secrets.yaml
 ```
 
+## Ironic Boot Interface
+
+Three boot interface modes are supported for the virtual Ironic nodes:
+
+- **`redfish-virtual-media`** (default): Virtual media boot via sushy-tools. Uses `heat_template.yaml`.
+- **`ipxe`**: Rescue-based iPXE network boot via sushy-tools Nova rescue mode. Uses `heat_template_ipxe.yaml`.
+- **`pxe`**: Traditional PXE boot with TFTP/shim (BIOS mode). Uses `heat_template_pxe.yaml`.
+
+To switch modes, set `stack_template_path` in `bootstrap_vars.yml` to point to the desired template.
+
 ## Configuration Files
 
-- `bootstrap_vars.yml`: Infrastructure and OpenShift configuration
+- `bootstrap_vars.yml`: Infrastructure and OpenShift configuration.
 - `automation-vars.yml`: Hotloop deployment stages
-- `heat_template.yaml`: OpenStack infrastructure template
+- `heat_template.yaml`: OpenStack infrastructure template (redfish-virtual-media)
+- `heat_template_ipxe.yaml`: OpenStack infrastructure template (iPXE boot)
+- `heat_template_pxe.yaml`: OpenStack infrastructure template (PXE boot, BIOS mode)
 - `manifests/control-plane/control-plane.yaml`: OpenStack service configuration
 - `test-operator/automation-vars.yml`: Comprehensive test automation
 - `test-operator/tempest-tests.yml`: Tempest test specifications

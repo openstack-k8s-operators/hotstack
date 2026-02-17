@@ -46,3 +46,12 @@ data:
     # It is useful in a tenant environment where only some instances represent
     # virtual baremetal.
     SUSHY_EMULATOR_ALLOWED_INSTANCES = {{ instances_uuids }}
+{% if sushy_emulator_os_rescue_pxe_boot | bool %}
+
+    # Enable rescue-based network boot via Nova rescue mode.
+    # When enabled, setting boot device to 'Pxe' triggers Nova rescue with an
+    # iPXE image; setting it to 'Hdd' exits rescue mode.
+    SUSHY_EMULATOR_OS_RESCUE_PXE_BOOT = True
+    SUSHY_EMULATOR_OS_RESCUE_PXE_IMAGE_BIOS = '{{ sushy_emulator_os_rescue_pxe_image_bios }}'
+    SUSHY_EMULATOR_OS_RESCUE_PXE_IMAGE_UEFI = '{{ sushy_emulator_os_rescue_pxe_image_uefi }}'
+{% endif %}

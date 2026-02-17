@@ -25,3 +25,11 @@ sushy_emulator_manifests: /home/zuul/manifests/sushy_emulator_manifests
 # Console tools
 hotstack_enable_nova_console_poller: true
 hotstack_enable_nova_console_recorder: true
+
+# Rescue-based PXE boot (SUSHY_EMULATOR_OS_RESCUE_PXE_BOOT)
+# When enabled, sushy-emulator uses Nova rescue mode for network boot instead
+# of the legacy libvirt metadata approach. Set to true when ironic_boot_interface
+# is 'pxe' or 'ipxe'. Requires iPXE rescue images in Glance.
+sushy_emulator_os_rescue_pxe_boot: false
+sushy_emulator_os_rescue_pxe_image_bios: ipxe-rescue-bios
+sushy_emulator_os_rescue_pxe_image_uefi: ipxe-rescue-uefi
