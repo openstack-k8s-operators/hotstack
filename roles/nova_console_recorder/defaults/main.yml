@@ -20,6 +20,7 @@ instances_uuids: []
 cloud_config_dir: "/home/zuul/.hotcloud"
 nova_console_recorder_manifests: /home/zuul/manifests/nova_console_recorder_manifests
 nova_console_recorder_image: quay.io/rhn_gps_hjensas/nova-console-recorder:latest
+nova_console_recorder_use_custom_ca: false
 
 # Nova console recorder NFS settings
 nova_console_recorder_nfs_server: controller-0.openstack.lab

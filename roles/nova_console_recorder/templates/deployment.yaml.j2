@@ -41,8 +41,10 @@ spec:
           value: "{{ instance_uuid }}"
         - name: OUTPUT_DIR
           value: /recordings
+{% if nova_console_recorder_use_custom_ca | bool %}
         - name: SSL_CERT_FILE
           value: /etc/openstack/cacert.pem
+{% endif %}
         volumeMounts:
         - name: os-client-config
           mountPath: /etc/openstack/
