@@ -14,14 +14,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-sushy_emulator_os_cloud: default
-ingress_domain: apps.ocp.openstack.lab
-redfish_username: admin
-redfish_password: password
-instances_uuids: []
-cloud_config_dir: "/home/zuul/.hotcloud"
-sushy_emulator_manifests: /home/zuul/manifests/sushy_emulator_manifests
-
-# Console tools
-hotstack_enable_nova_console_poller: true
-hotstack_enable_nova_console_recorder: true
+- name: Deploy nova console recorder
+  when:
+    - hotstack_enable_nova_console_recorder | default(true) | bool
+    - instances_uuids | length > 0
+  ansible.builtin.include_tasks: deploy.yml

@@ -35,6 +35,8 @@ hotlog_collect_paths:
     dest_dir: .
   - src: "{{ base_dir }}/logs/tempest/"
     dest_dir: .
+  - src: "{{ base_dir }}/nova-console-recordings/"
+    dest_dir: nova-console-recordings
 
 hotlogs_must_gather_enabled: true
 hotlogs_must_gather_additional_namespaces: sushy-emulator
@@ -44,3 +46,7 @@ hotlogs_must_gather_decompress: 0
 hotlogs_must_gather_sos_edpm: all
 hotlogs_must_gather_timeout: 10m
 hotlogs_must_gather_openstack_databases: "ALL"
+
+# Nova console recordings collection
+hotlogs_collect_nova_console_recordings: true
+nova_console_recorder_nfs_path: /export/nova-console-recordings

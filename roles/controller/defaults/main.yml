@@ -6,6 +6,17 @@ bin_dir: "{{ base_dir }}/bin"
 ssh_key_dir: "{{ base_dir }}/.ssh"
 data_dir: "{{ base_dir }}/data"
 cloud_config_dir: "{{ base_dir }}/.hotcloud"
+
+# Nova console recorder NFS settings
+nova_console_recorder_nfs_server: controller-0.openstack.lab
+nova_console_recorder_nfs_path: /export/nova-console-recordings
+
+# NFS server settings
+nfs_server_enabled: true
+nfs_exports:
+  - path: "{{ nova_console_recorder_nfs_path }}"
+    mode: '0777'  # World writable for container access
+
 hotstack_cloud_secrets:
   auth_url: http://cloud.example.com:5000
   application_credential_id: app_credential_id

@@ -1,0 +1,19 @@
+---
+stages:
+  - name: "Nova Console Poller : Namespace"
+    manifest: namespace.yaml
+    wait_conditions:
+      - "oc wait namespaces sushy-emulator --for jsonpath='{.status.phase}'=Active --timeout=300s"
+
+  - name: "Nova Console Poller : Openstack clouds secret"
+    shell: >-
+      oc create -n sushy-emulator secret generic os-client-config
+      --save-config --dry-run=client
+      --from-file=openstack-clouds-yaml={{ cloud_config_dir }}/clouds.yaml
+      --from-file=certificate-pem={{ cloud_config_dir }}/cacert.pem
+      --type=Opaque -o yaml | oc apply -f -
+
+  - name: "Nova Console Poller : Deployment"
+    manifest: console_poller_deployment.yaml
+    wait_conditions:
+      - "oc wait -n sushy-emulator pod -l app=nova-console-poller --for condition=Ready --timeout=300s"

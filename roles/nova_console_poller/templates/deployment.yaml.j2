@@ -36,7 +36,7 @@ spec:
       containers:
 {% for instance_uuid in instances_uuids %}
       - name: console-poller-{{ instance_uuid }}
-        image: quay.io/rhn_gps_hjensas/nova-console-poller:latest
+        image: {{ nova_console_poller_image }}
         env:
         - name: OS_CLOUD
           value: "{{ sushy_emulator_os_cloud }}"

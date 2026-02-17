@@ -1,0 +1,5 @@
+# NFS exports managed by Ansible - hotstack
+# This file is managed by the controller role
+{% for export in nfs_exports %}
+{{ export.path }} {{ export.options | default('*(rw,sync,no_root_squash,no_subtree_check)') }}
+{% endfor %}

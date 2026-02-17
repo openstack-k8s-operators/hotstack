@@ -1,0 +1,51 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nova-console-recorder
+  namespace: sushy-emulator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nova-console-recorder
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: nova-console-recorder
+        name: nova-console-recorder
+    spec:
+      volumes:
+      - name: os-client-config
+        secret:
+          secretName: os-client-config
+          defaultMode: 0644  # u=rw,g=r,o=r
+          items:
+            - key: openstack-clouds-yaml
+              path: clouds.yaml
+            - key: certificate-pem
+              path: cacert.pem
+      - name: recordings
+        persistentVolumeClaim:
+          claimName: nova-console-recordings-pvc
+      containers:
+{% for instance_uuid in instances_uuids %}
+      - name: console-recorder-{{ instance_uuid }}
+        image: {{ nova_console_recorder_image }}
+        env:
+        - name: OS_CLOUD
+          value: "{{ sushy_emulator_os_cloud }}"
+        - name: INSTANCE_UUID
+          value: "{{ instance_uuid }}"
+        - name: OUTPUT_DIR
+          value: /recordings
+        - name: SSL_CERT_FILE
+          value: /etc/openstack/cacert.pem
+        volumeMounts:
+        - name: os-client-config
+          mountPath: /etc/openstack/
+        - name: recordings
+          mountPath: /recordings
+{% endfor %}

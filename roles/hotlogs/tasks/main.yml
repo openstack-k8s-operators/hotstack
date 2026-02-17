@@ -90,6 +90,35 @@
   loop_control:
     label: "{{ item.item }}"
 
+- name: Collect nova console recordings from NFS export
+  when: hotlogs_collect_nova_console_recordings | bool
+  block:
+    - name: Create nova console recordings directory in base_dir on controller
+      delegate_to: controller-0
+      ansible.builtin.file:
+        path: "{{ base_dir }}/nova-console-recordings"
+        state: directory
+        mode: "0755"
+
+    - name: Copy nova console recordings from NFS export
+      delegate_to: controller-0
+      ansible.builtin.command:
+        cmd: rsync -av {{ nova_console_recorder_nfs_path }}/ {{ base_dir }}/nova-console-recordings/
+      changed_when: true
+      failed_when: false
+
+  rescue:
+    - name: Display nova console recordings collection failure
+      ansible.builtin.debug:
+        msg: >-
+          Nova console recordings collection failed:
+          {{ ansible_failed_result.msg | default('Unknown error') }}
+
+    - name: Track nova console recordings collection failure
+      ansible.builtin.set_fact:
+        hotlogs_collection_failed: true
+        hotlogs_failures: "{{ hotlogs_failures + ['Nova console recordings collection failed'] }}"
+
 - name: Collect hotstack data
   delegate_to: "{{ inventory_hostname }}"
   ansible.posix.synchronize:
@@ -157,6 +186,7 @@
     ! -name "*.gz"
     ! -name "*.xz"
     ! -name "*.html"
+    ! -name "*.mp4"
     -exec gzip {} \;
   register: gzip_result
   ignore_errors: true

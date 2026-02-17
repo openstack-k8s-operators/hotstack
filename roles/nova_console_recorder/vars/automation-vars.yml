@@ -1,0 +1,35 @@
+---
+stages:
+  - name: "Console Recorder : Namespace"
+    manifest: namespace.yaml
+    wait_conditions:
+      - "oc wait namespaces sushy-emulator --for jsonpath='{.status.phase}'=Active --timeout=300s"
+
+  - name: "Console Recorder : Openstack clouds secret"
+    shell: >-
+      oc create -n sushy-emulator secret generic os-client-config
+      --save-config --dry-run=client
+      --from-file=openstack-clouds-yaml={{ cloud_config_dir }}/clouds.yaml
+      --from-file=certificate-pem={{ cloud_config_dir }}/cacert.pem
+      --type=Opaque -o yaml | oc apply -f -
+
+  - name: "Console Recorder : Clean Released PV"
+    shell: |
+      if oc get pv nova-console-recordings-pv -o jsonpath='{.status.phase}' 2>/dev/null | grep -q Released; then
+        oc patch pv nova-console-recordings-pv -p '{"spec":{"claimRef": null}}'
+      fi
+
+  - name: "Console Recorder : PersistentVolume"
+    manifest: console_recordings_pvs.yaml
+    wait_conditions:
+      - "oc wait pv nova-console-recordings-pv --for jsonpath='{.status.phase}'=Available --timeout=60s"
+
+  - name: "Console Recorder : PersistentVolumeClaim"
+    manifest: console_recordings_pvc.yaml
+    wait_conditions:
+      - "oc wait -n sushy-emulator pvc nova-console-recordings-pvc --for jsonpath='{.status.phase}'=Bound --timeout=60s"
+
+  - name: "Console Recorder : Deployment"
+    manifest: console_recorder_deployment.yaml
+    wait_conditions:
+      - "oc wait -n sushy-emulator pod -l app=nova-console-recorder --for condition=Ready --timeout=300s"

@@ -51,6 +51,13 @@ must-gather operations to create comprehensive diagnostic archives.
 - `hotlogs_must_gather_sos_edpm`: SOS EDPM collection setting
   (defaults to: `all`)
 
+### Nova Console Recordings
+
+- `hotlogs_collect_nova_console_recordings`: Enable collection of VNC console
+  recordings (defaults to: `true`)
+- `nova_console_recorder_nfs_path`: Path to NFS export containing recordings
+  (defaults to: `/export/nova-console-recordings`)
+
 ## Example Playbook
 
 ```yaml
@@ -98,7 +105,10 @@ logs/
 ├── cluster-custom-config/       # Custom cluster configuration
 ├── data/                        # Deployment data files
 ├── manifests/                   # Kubernetes manifests
-└── must-gather/                 # Must-gather diagnostic data
+├── must-gather/                 # Must-gather diagnostic data
+└── nova-console-recordings/     # VNC console recordings (MP4 files)
+    ├── compute-0-20260216-143022.mp4
+    └── compute-0-20260216-144530.mp4
 ```
 
 ## Error Handling
