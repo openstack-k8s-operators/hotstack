@@ -1,0 +1,37 @@
+---
+apiVersion: test.openstack.org/v1beta1
+kind: Tempest
+metadata:
+  name: tempest-tests
+  namespace: openstack
+spec:
+  networkAttachments:
+    - ctlplane
+  privileged: true
+  workflow:
+    - stepName: ironic-scenario-testing
+      storageClass: lvms-local-storage
+      tempestconfRun:
+        create: true
+        overrides: |
+          auth.create_isolated_networks false
+          baremetal.available_nodes 2
+          baremetal.max_microversion 1.82
+          baremetal.use_provision_network true
+          compute-feature-enabled.disk_config false
+          compute-feature-enabled.interface_attach false
+          compute.fixed_network_name provisioning
+          compute.flavor_ref 123456789-1234-1234-1234-000000000001
+          compute.hypervisor_type ironic
+          compute.build_timeout 900
+          network.shared_physical_network true
+          service_available.ironic_inspector false
+          service_available.ironic true
+          service_available.murano false
+          validation.connect_method fixed
+          validation.network_for_ssh provisioning
+      tempestRun:
+        concurrency: 4
+        includeList: |
+          ^ironic_tempest_plugin.tests.scenario.test_baremetal_multitenancy.BaremetalMultitenancy.test_baremetal_multitenancy$
+          ^ironic_tempest_plugin.tests.scenario.test_baremetal_single_tenant.BaremetalSingleTenant.test_baremetal_single_tenant$
