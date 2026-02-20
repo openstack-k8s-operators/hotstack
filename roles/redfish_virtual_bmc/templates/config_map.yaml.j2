@@ -46,7 +46,9 @@ data:
     # It is useful in a tenant environment where only some instances represent
     # virtual baremetal.
     SUSHY_EMULATOR_ALLOWED_INSTANCES = {{ instances_uuids }}
-{% if sushy_emulator_os_rescue_pxe_boot | bool %}
+{% if sushy_emulator_os_rescue_pxe_boot | bool or
+      (stack_outputs.ironic_boot_interface | default('redfish-virtual-media')
+       in ['pxe', 'ipxe']) %}
 
     # Enable rescue-based network boot via Nova rescue mode.
     # When enabled, setting boot device to 'Pxe' triggers Nova rescue with an
