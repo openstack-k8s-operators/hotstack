@@ -16,8 +16,9 @@ deployments. The tasks are executed using the `make` utility.
   Redfish virtual BMC
 - **nat64**: A NAT64 appliance image built using ci-framework for IPv6-only
   environments
-- **switch-host** (experimental): A CentOS 9 Stream image with libvirt/qemu for
-  running virtual network switches using nested virtualization
+
+**Note**: Switch host images have been moved to `../switch-images/`. See
+`../switch-images/README.md` for building virtual network switch images.
 
 ## Variables
 
@@ -39,16 +40,6 @@ deployments. The tasks are executed using the `make` utility.
   `.ci-framework`).
 - `NAT64_BASEDIR`: Build directory for NAT64 appliance artifacts (default:
   `.nat64-build`).
-- `SWITCH_HOST_IMAGE_URL`: The URL to download the CentOS 9 Stream image for
-  switch host.
-- `SWITCH_HOST_IMAGE_NAME`: The name of the switch host image file.
-- `SWITCH_HOST_IMAGE_FORMAT`: The desired format for the switch host image
-  (default: `raw`). Set to `qcow2` to keep the original format.
-- `SWITCH_HOST_INSTALL_PACKAGES`: A list of packages to install on the switch
-  host image (includes libvirt, qemu-kvm, networking tools).
-- `FORCE10_10_IMAGE`: Path to Force10 OS10 image file (zip archive like
-  `OS10_Virtualization_10.6.0.2.74V.zip`). Will be copied to `/opt/force10_10/`
-  in the image. (Experimental support only)
 
 **Note**: Raw format is required for cloud backends using Ceph, as Ceph cannot
 directly use qcow2 images for VM disks.
@@ -80,18 +71,6 @@ directly use qcow2 images for VM disks.
   - `nat64_convert`: A target that converts the image to the format specified by
     `NAT64_IMAGE_FORMAT` (in-place conversion if `raw`).
   - `nat64_clean`: A target that removes the NAT64 image and build artifacts.
-- `switch-host` (experimental): A standalone target that depends on
-  `switch-host_download`, `switch-host_customize`, and `switch-host_convert`.
-  Not included in `all` or `clean` targets.
-  - `switch-host_download`: A target that downloads the base image from the
-    specified URL.
-  - `switch-host_customize`: A target that customizes the downloaded image by
-    installing packages (libvirt, qemu, networking tools), copying helper
-    scripts to `/usr/local/bin/`, installing the systemd service, and creating
-    necessary directories.
-  - `switch-host_convert`: A target that converts the image to the format
-    specified by `SWITCH_HOST_IMAGE_FORMAT` (in-place conversion if `raw`).
-  - `switch-host_clean`: A target that removes the switch-host image file.
 
 ## Examples
 
@@ -167,38 +146,8 @@ make clean
    environment is created at `~/test-python`. All of these can be cleaned up
    with `make nat64_clean`.
 
-### Building and uploading the switch-host image to glance
+## Switch Images
 
-1. Build the switch-host image:
-
-   ```shell
-   make switch-host
-   ```
-
-   Or with vendor switch images pre-installed:
-
-   ```shell
-   make switch-host \
-     FORCE10_10_IMAGE=/path/to/OS10_Virtualization_10.6.0.2.74V.zip
-   ```
-
-   This will:
-   - Download CentOS 9 Stream image
-   - Install libvirt, qemu-kvm, and networking tools
-   - Copy helper scripts to `/usr/local/bin/`
-   - Install systemd service for managing nested switch VMs
-   - Create directories for each switch model under `/opt/`
-   - Copy any provided vendor switch images to their respective directories
-
-2. Upload the switch-host image to Glance:
-
-   ```shell
-   openstack image create hotstack-switch-host \
-     --disk-format raw \
-     --file switch-host.qcow2 \
-     --property hw_firmware_type=uefi \
-     --property hw_machine_type=q35
-   ```
-
-   See `switch-host-scripts/README.md` for details on switch image requirements
-   and configuration.
+Switch host images have been moved to a separate directory for better
+organization and modularity. See `../switch-images/README.md` for complete
+documentation on building virtual network switch images.

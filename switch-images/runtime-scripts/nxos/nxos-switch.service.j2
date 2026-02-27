@@ -1,0 +1,51 @@
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+[Unit]
+Description=NXOS Virtual Switch
+After=network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+
+# Launch QEMU with macvtap passthrough
+ExecStart=/bin/bash -c '\
+QEMU_CMD="/usr/libexec/qemu-kvm \
+  -enable-kvm \
+  -cpu host \
+  -machine q35 \
+  -smbios type=0,uefi=on \
+  -drive if=pflash,format=raw,readonly=on,file={{ uefi_firmware }} \
+  -drive file={{ nxos_disk }},id=disk0,format=qcow2,if=none \
+  -device ahci,id=ahci \
+  -device ide-hd,drive=disk0,bus=ahci.0 \
+  -m 8096M \
+  -smp cpus=2 \
+  -display none \
+  -serial telnet:localhost:{{ console_port }},server,nowait"; \
+{% for i in range(num_data_interfaces) %}\
+TAP{{ i }}=$(cat /sys/class/net/macvtap{{ i }}/ifindex); \
+QEMU_CMD="$QEMU_CMD -netdev tap,fd={{ i + 3 }},id=hostnet{{ i }} {{ i + 3 }}<>/dev/tap$TAP{{ i }}"; \
+QEMU_CMD="$QEMU_CMD -device e1000,netdev=hostnet{{ i }},id=net{{ i }},mac={{ data_interface_macs[i] }}"; \
+{% endfor %}\
+exec $QEMU_CMD'
+
+# PID file for tracking
+PIDFile={{ work_dir }}/nxos-switch.pid
+
+[Install]
+WantedBy=multi-user.target
