@@ -57,28 +57,7 @@
       ansible.builtin.lineinfile:
         path: "{{ hotstack_os_dir }}/.env"
         regexp: '^BUILD_PARALLEL='
-        line: 'BUILD_PARALLEL=8'
-
-    - name: Verify apt-cacher-ng is running and accessible
-      ansible.builtin.uri:
-        url: http://localhost:3142/acng-report.html
-        status_code: 200
-      retries: 5
-      delay: 2
-      register: apt_cache_check
-
-    - name: Test apt-cacher-ng connectivity from container context
-      ansible.builtin.command:
-        cmd: >-
-          podman run --rm debian:bookworm-slim sh -c
-          "curl -f -s -o /dev/null http://host.containers.internal:3142/
-          && echo 'Proxy reachable' || echo 'Proxy NOT reachable'"
-      register: container_proxy_test
-      changed_when: false
-
-    - name: Display container proxy test result
-      ansible.builtin.debug:
-        msg: "{{ container_proxy_test.stdout }}"
+        line: 'BUILD_PARALLEL=1'
 
     - name: Build, setup, and start hotstack-os services
       become: true
@@ -90,6 +69,22 @@
           ansible.builtin.shell: |
             set -o pipefail
             make install-deps 2>&1 | tee {{ ansible_user_dir }}/zuul-output/logs/make_install-deps.log
+
+        - name: Test apt-cacher-ng connectivity from container context
+          ansible.builtin.command:
+            cmd: >-
+              podman run --rm docker.io/curlimages/curl:latest
+              curl -f -s -o /dev/null -w "%{http_code}"
+              http://host.containers.internal:3142/acng-report.html
+          register: container_proxy_test
+          changed_when: false
+          retries: 10
+          delay: 10
+          until: container_proxy_test.stdout == "200"
+
+        - name: Display container proxy test result
+          ansible.builtin.debug:
+            msg: "{{ container_proxy_test.stdout }}"
 
         - name: Build container images (with retry logic)
           args:
@@ -179,3 +174,40 @@
       ansible.builtin.shell: |
         set -o pipefail
         make smoke-test 2>&1 | tee {{ ansible_user_dir }}/zuul-output/logs/make_smoke-test.log
+
+    - name: Test service restart - Stop HotStack-OS services
+      become: true
+      ansible.builtin.systemd:
+        name: hotstack-os.target
+        state: stopped
+
+    # Wait for services to fully stop. All services have TimeoutStopSec=30,
+    # so we wait 60 seconds to account for the 30s graceful shutdown timeout
+    # plus additional buffer for cleanup and multiple services stopping.
+    - name: Wait for services to fully stop
+      ansible.builtin.pause:
+        seconds: 60
+
+    - name: Test service restart - Start HotStack-OS services
+      become: true
+      ansible.builtin.systemd:
+        name: hotstack-os.target
+        state: started
+
+    - name: Wait for all hotstack-os services to be active after restart
+      become: true
+      ansible.builtin.command:
+        cmd: systemctl is-active hotstack-os.target
+      register: target_status
+      until: target_status.rc == 0
+      retries: 60
+      delay: 5
+      changed_when: false
+
+    - name: Run smoke test after restart
+      args:
+        chdir: "{{ hotstack_os_dir }}"
+        executable: /bin/bash
+      ansible.builtin.shell: |
+        set -o pipefail
+        make smoke-test 2>&1 | tee {{ ansible_user_dir }}/zuul-output/logs/make_smoke-test-after-restart.log

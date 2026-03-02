@@ -255,6 +255,12 @@
               echo "Volume Services"
               echo "===================================="
               openstack volume service list
+              echo ""
+
+              echo "===================================="
+              echo "Routers"
+              echo "===================================="
+              openstack router list
             } 2>&1 | tee {{ log_dir }}/openstack-admin.log
       rescue:
         - name: Log OpenStack admin collection failure
@@ -285,12 +291,6 @@
               echo ""
 
               echo "===================================="
-              echo "Routers"
-              echo "===================================="
-              openstack router list
-              echo ""
-
-              echo "===================================="
               echo "Keypairs"
               echo "===================================="
               openstack keypair list
@@ -313,6 +313,13 @@
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
         recurse: true
+      failed_when: false
+
+    - name: Stop HotStack-OS services
+      become: true
+      ansible.builtin.systemd:
+        name: hotstack-os.target
+        state: stopped
       failed_when: false
 
     - name: Cleanup HotStack-OS environment

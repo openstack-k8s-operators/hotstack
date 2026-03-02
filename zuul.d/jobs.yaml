@@ -23,6 +23,9 @@
     post-run: ci/playbooks/post-hotstack-os.yml
     files:
       - ^devsetup/hotstack-os/.*
+      - ^ci/playbooks/pre-hotstack-os\.yml
+      - ^ci/playbooks/run-hotstack-os\.yml
+      - ^ci/playbooks/post-hotstack-os\.yml
 
 - job:
     name: vexxhost-hotstack-ipxe-image
