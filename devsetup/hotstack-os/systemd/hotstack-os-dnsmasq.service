@@ -22,8 +22,10 @@ PartOf=hotstack-os.target
 
 [Service]
 Type=simple
-Restart=always
+Restart=on-failure
 RestartSec=10
+TimeoutStopSec=30
+SuccessExitStatus=143
 
 ExecStartPre=-/usr/bin/podman rm -f hotstack-os-dnsmasq
 ExecStart=/usr/bin/podman run \
@@ -35,8 +37,8 @@ ExecStart=/usr/bin/podman run \
     localhost/hotstack-os_dnsmasq:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=/usr/local/bin/hotstack-healthcheck.sh hotstack-os-dnsmasq 10 5 3 0 nc -z 127.0.0.1 53
-ExecStop=/usr/bin/podman stop -t 10 hotstack-os-dnsmasq
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-dnsmasq 10 5 3 0 nc -z 127.0.0.1 53
+ExecStop=/usr/bin/podman stop -t 30 hotstack-os-dnsmasq
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-dnsmasq
 
 StandardOutput=journal

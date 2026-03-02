@@ -19,12 +19,17 @@ Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-mariadb.service hotstack-os-keystone.service hotstack-os-dnsmasq.service hotstack-os-haproxy.service
 Requires=hotstack-os-mariadb.service hotstack-os-keystone.service hotstack-os-dnsmasq.service hotstack-os-haproxy.service
 PartOf=hotstack-os.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
 
 [Service]
 Type=simple
-Restart=always
+Restart=on-failure
 RestartSec=10
+TimeoutStopSec=30
+SuccessExitStatus=143
 
+ExecStartPre=-/usr/bin/podman stop -t 2 hotstack-os-placement
 ExecStartPre=-/usr/bin/podman rm -f hotstack-os-placement
 ExecStart=/usr/bin/podman run \
     --pull=never \
@@ -40,8 +45,8 @@ ExecStart=/usr/bin/podman run \
     localhost/hotstack-os_placement:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=/usr/local/bin/hotstack-healthcheck.sh hotstack-os-placement 10 5 5 5 curl -f http://localhost:8778/
-ExecStop=/usr/bin/podman stop -t 10 hotstack-os-placement
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-placement 10 5 5 5 curl -f http://localhost:8778/
+ExecStop=/usr/bin/podman stop -t 30 hotstack-os-placement
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-placement
 
 StandardOutput=journal

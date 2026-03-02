@@ -22,9 +22,12 @@ PartOf=hotstack-os.target
 
 [Service]
 Type=simple
-Restart=always
+Restart=on-failure
 RestartSec=10
+TimeoutStopSec=30
+SuccessExitStatus=143
 
+ExecStartPre=-/usr/bin/podman stop -t 2 hotstack-os-heat-engine
 ExecStartPre=-/usr/bin/podman rm -f hotstack-os-heat-engine
 ExecStart=/usr/bin/podman run \
     --pull=never \
@@ -42,8 +45,8 @@ ExecStart=/usr/bin/podman run \
     localhost/hotstack-os-heat:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=/usr/local/bin/hotstack-healthcheck.sh hotstack-os-heat-engine 10 5 10 20 test -f /proc/1/exe
-ExecStop=/usr/bin/podman stop -t 10 hotstack-os-heat-engine
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-heat-engine 10 5 10 20 test -f /proc/1/exe
+ExecStop=/usr/bin/podman stop -t 30 hotstack-os-heat-engine
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-heat-engine
 
 StandardOutput=journal

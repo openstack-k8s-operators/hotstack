@@ -22,9 +22,12 @@ PartOf=hotstack-os.target
 
 [Service]
 Type=simple
-Restart=always
+Restart=on-failure
 RestartSec=10
+TimeoutStopSec=30
+SuccessExitStatus=143
 
+ExecStartPre=-/usr/bin/podman stop -t 2 hotstack-os-rabbitmq
 ExecStartPre=-/usr/bin/podman rm -f hotstack-os-rabbitmq
 ExecStart=/usr/bin/podman run \
     --name hotstack-os-rabbitmq \
@@ -38,8 +41,8 @@ ExecStart=/usr/bin/podman run \
     docker.io/library/rabbitmq:3.13
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=/usr/local/bin/hotstack-healthcheck.sh hotstack-os-rabbitmq 10 5 5 0 rabbitmq-diagnostics ping
-ExecStop=/usr/bin/podman stop -t 10 hotstack-os-rabbitmq
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-rabbitmq 10 5 5 0 rabbitmq-diagnostics ping
+ExecStop=/usr/bin/podman stop -t 30 hotstack-os-rabbitmq
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-rabbitmq
 
 StandardOutput=journal
