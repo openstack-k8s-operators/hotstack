@@ -16,15 +16,12 @@
 
 set -e
 
+# Source common functions
+# shellcheck disable=SC1091
+source /usr/local/lib/common.sh
+
 # Wait for Nova API
-echo "Waiting for Nova API..."
-for _ in {1..60}; do
-    if curl -f http://nova:8774/ &>/dev/null; then
-        echo "Nova API is ready!"
-        break
-    fi
-    sleep 2
-done
+wait_for_service 60 "http://nova.hotstack-os.local:8774/"
 
 # Start Nova NoVNC Proxy
 echo "Starting Nova NoVNC Proxy..."

@@ -106,6 +106,7 @@ All OpenStack service containers use static IPs within the `CONTAINER_NETWORK` r
 MARIADB_IP=172.31.0.3
 RABBITMQ_IP=172.31.0.4
 MEMCACHED_IP=172.31.0.5
+HAPROXY_IP=172.31.0.6
 ```
 
 #### Identity & Core Services

@@ -26,6 +26,7 @@ StartLimitBurst=5
 Type=simple
 Restart=on-failure
 RestartSec=10
+TimeoutStartSec=300
 TimeoutStopSec=30
 SuccessExitStatus=143
 

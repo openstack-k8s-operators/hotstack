@@ -17,7 +17,6 @@
 Description=HotStack-OS MariaDB Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-infra-setup.service
-Requires=hotstack-os-infra-setup.service
 PartOf=hotstack-os.target
 
 [Service]

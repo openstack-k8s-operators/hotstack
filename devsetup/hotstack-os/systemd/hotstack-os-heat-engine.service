@@ -17,7 +17,6 @@
 Description=HotStack-OS Heat Engine Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-heat-api.service
-Requires=hotstack-os-heat-api.service
 PartOf=hotstack-os.target
 
 [Service]
