@@ -22,9 +22,12 @@ PartOf=hotstack-os.target
 
 [Service]
 Type=simple
-Restart=always
+Restart=on-failure
 RestartSec=10
+TimeoutStopSec=30
+SuccessExitStatus=143
 
+ExecStartPre=-/usr/bin/podman stop -t 2 hotstack-os-memcached
 ExecStartPre=-/usr/bin/podman rm -f hotstack-os-memcached
 ExecStart=/usr/bin/podman run \
     --name hotstack-os-memcached \
@@ -34,8 +37,8 @@ ExecStart=/usr/bin/podman run \
     memcached -m 64
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=/usr/local/bin/hotstack-healthcheck.sh hotstack-os-memcached 10 5 3 0 nc -z localhost 11211
-ExecStop=/usr/bin/podman stop -t 10 hotstack-os-memcached
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-memcached 10 5 3 0 nc -z localhost 11211
+ExecStop=/usr/bin/podman stop -t 30 hotstack-os-memcached
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-memcached
 
 StandardOutput=journal

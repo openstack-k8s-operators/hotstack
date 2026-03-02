@@ -9,7 +9,7 @@ A minimal containerized OpenStack deployment designed for running HotStack scena
 - **Host integration**: Uses host libvirt (KVM), OpenvSwitch, and NFS
 - **HotStack-ready**: Supports Heat orchestration, trunk ports, VLANs, boot from volume, NoVNC console, and serial console logging
 - **Minimal dependencies**: Requires libvirt, OpenvSwitch, podman, NFS server, and nmap-ncat on host
-- **Production-like**: systemd service management with ordering, health checks, and automatic restart
+- **Production-like**: systemd service management with ordering, informational health checks, and automatic restart on failure
 
 > ⚠️ **Security Warning**: This environment uses default passwords, no encryption, and minimal access controls. It is intended ONLY for development and testing on trusted private networks.
 

@@ -22,9 +22,12 @@ PartOf=hotstack-os.target
 
 [Service]
 Type=simple
-Restart=always
+Restart=on-failure
 RestartSec=10
+TimeoutStopSec=30
+SuccessExitStatus=143
 
+ExecStartPre=-/usr/bin/podman stop -t 2 hotstack-os-cinder-scheduler
 ExecStartPre=-/usr/bin/podman rm -f hotstack-os-cinder-scheduler
 ExecStart=/usr/bin/podman run \
     --pull=never \
@@ -42,8 +45,8 @@ ExecStart=/usr/bin/podman run \
     localhost/hotstack-os-cinder:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=/usr/local/bin/hotstack-healthcheck.sh hotstack-os-cinder-scheduler 10 5 5 20 test -f /proc/1/exe
-ExecStop=/usr/bin/podman stop -t 10 hotstack-os-cinder-scheduler
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-cinder-scheduler 10 5 5 20 test -f /proc/1/exe
+ExecStop=/usr/bin/podman stop -t 30 hotstack-os-cinder-scheduler
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-cinder-scheduler
 
 StandardOutput=journal

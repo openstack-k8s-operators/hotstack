@@ -22,8 +22,10 @@ PartOf=hotstack-os.target
 
 [Service]
 Type=simple
-Restart=always
+Restart=on-failure
 RestartSec=10
+TimeoutStopSec=30
+SuccessExitStatus=143
 
 ExecStartPre=-/usr/bin/podman rm -f hotstack-os-ovn-controller
 ExecStart=/usr/bin/podman run \
@@ -42,8 +44,8 @@ ExecStart=/usr/bin/podman run \
     localhost/hotstack-os-ovn:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=/usr/local/bin/hotstack-healthcheck.sh hotstack-os-ovn-controller 10 5 5 20 sh -c "test -f /run/ovn/ovn-controller.pid && kill -0 $(cat /run/ovn/ovn-controller.pid)"
-ExecStop=/usr/bin/podman stop -t 10 hotstack-os-ovn-controller
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-ovn-controller 10 5 5 20 sh -c "test -f /run/ovn/ovn-controller.pid && kill -0 $(cat /run/ovn/ovn-controller.pid)"
+ExecStop=/usr/bin/podman stop -t 30 hotstack-os-ovn-controller
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-ovn-controller
 
 StandardOutput=journal

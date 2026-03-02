@@ -22,10 +22,13 @@ PartOf=hotstack-os.target
 
 [Service]
 Type=simple
-Restart=always
+Restart=on-failure
 RestartSec=10
 TimeoutStartSec=90
+TimeoutStopSec=30
+SuccessExitStatus=143
 
+ExecStartPre=-/usr/bin/podman stop -t 2 hotstack-os-nova-novncproxy
 ExecStartPre=-/usr/bin/podman rm -f hotstack-os-nova-novncproxy
 ExecStart=/usr/bin/podman run \
     --pull=never \
@@ -43,8 +46,8 @@ ExecStart=/usr/bin/podman run \
     localhost/hotstack-os-nova:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=/usr/local/bin/hotstack-healthcheck.sh hotstack-os-nova-novncproxy 10 5 5 20 sh -c "test -f /proc/1/exe && ss -tln | grep -q :6080"
-ExecStop=/usr/bin/podman stop -t 10 hotstack-os-nova-novncproxy
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-nova-novncproxy 10 5 5 20 sh -c "test -f /proc/1/exe && ss -tln | grep -q :6080"
+ExecStop=/usr/bin/podman stop -t 30 hotstack-os-nova-novncproxy
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-nova-novncproxy
 
 StandardOutput=journal

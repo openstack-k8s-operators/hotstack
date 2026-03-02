@@ -16,24 +16,6 @@ This directory contains systemd unit files and helper scripts for deploying HotS
 - `hotstack-os-*.service` - Individual container services (to be created)
 - `hotstack-os.target` - Target that groups all HotStack-OS services
 
-## Installation
-
-Use the Makefile targets:
-
-```bash
-# Install systemd services
-sudo make install
-
-# Enable and start services
-sudo systemctl enable --now hotstack-os.target
-
-# Check status
-sudo systemctl status hotstack-os.target
-
-# View logs
-sudo journalctl -u hotstack-os.target -f
-```
-
 ## Configuration
 
 Environment variables from `.env` are baked into the systemd service files during `make install`. To change configuration:
@@ -60,7 +42,8 @@ Services are organized in dependency layers:
 ## Design Principles
 
 - **Idempotent**: All scripts can be run multiple times safely
-- **Health Checks**: Services wait for dependencies to be healthy before starting
+- **Health Checks**: Informational health checks log service readiness without blocking startup (non-fatal)
 - **Proper Ordering**: Dependencies enforced via After/Requires directives
+- **Restart Policy**: Services restart on failure with rate limiting to prevent infinite loops
 - **Journal Logging**: All output goes to systemd journal
-- **Graceful Shutdown**: 10-second stop timeout for clean container shutdown
+- **Graceful Shutdown**: 30-second stop timeout for clean container shutdown; services that fail to stop gracefully will be marked as failed

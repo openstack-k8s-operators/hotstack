@@ -22,9 +22,12 @@ PartOf=hotstack-os.target
 
 [Service]
 Type=simple
-Restart=always
+Restart=on-failure
 RestartSec=10
+TimeoutStopSec=30
+SuccessExitStatus=143
 
+ExecStartPre=-/usr/bin/podman stop -t 2 hotstack-os-ovn-northd
 ExecStartPre=-/usr/bin/podman rm -f hotstack-os-ovn-northd
 ExecStart=/usr/bin/podman run \
     --pull=never \
@@ -39,8 +42,8 @@ ExecStart=/usr/bin/podman run \
     localhost/hotstack-os-ovn:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=/usr/local/bin/hotstack-healthcheck.sh hotstack-os-ovn-northd 10 5 5 20 sh -c "test -f /run/ovn/ovn-northd.pid && kill -0 $(cat /run/ovn/ovn-northd.pid) && ss -tln | grep -q :6641 && ss -tln | grep -q :6642"
-ExecStop=/usr/bin/podman stop -t 10 hotstack-os-ovn-northd
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-ovn-northd 10 5 5 20 sh -c "test -f /run/ovn/ovn-northd.pid && kill -0 $(cat /run/ovn/ovn-northd.pid) && ss -tln | grep -q :6641 && ss -tln | grep -q :6642"
+ExecStop=/usr/bin/podman stop -t 30 hotstack-os-ovn-northd
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-ovn-northd
 
 StandardOutput=journal
