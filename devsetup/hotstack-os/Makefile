@@ -83,7 +83,7 @@ post-setup:
 	@echo "This will use admin credentials to create shared resources."
 	@echo "Images will be downloaded from GitHub releases."
 	@echo ""
-	./scripts/post-setup.py
+	./scripts/post-setup.py --cloud-secret-path ../../cloud-secret.yaml
 
 clean:
 	$(call require-root,clean)
