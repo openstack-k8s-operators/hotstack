@@ -22,9 +22,11 @@ import sys
 from pathlib import Path
 import urllib.request
 import urllib.error
+from datetime import datetime
 
 import openstack
 from openstack import exceptions
+import yaml
 
 
 # ANSI color codes
@@ -249,6 +251,37 @@ def handle_openstack_error(error, context):
     """Handle OpenStack errors with consistent messaging"""
     print_error(f"Failed to {context}: {error}")
     sys.exit(1)
+
+
+def backup_file(file_path):
+    """Create a timestamped backup of a file if it exists
+
+    Args:
+        file_path: Path object or string path to the file to backup
+
+    Returns:
+        Path object of the backup file, or None if file doesn't exist
+    """
+    file_path = Path(file_path)
+
+    if not file_path.exists():
+        return None
+
+    # Get all suffixes (e.g., ['.yaml'] or ['.tar', '.gz'])
+    suffixes = "".join(file_path.suffixes)
+    # Get the stem (filename without suffixes)
+    stem = file_path.name[: -len(suffixes)] if suffixes else file_path.name
+
+    # Create backup filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_name = f"{stem}.{timestamp}{suffixes}.bak"
+    backup_path = file_path.parent / backup_name
+
+    # Rename original file to backup
+    file_path.rename(backup_path)
+    print_success(f"Backed up existing file to {backup_path}")
+
+    return backup_path
 
 
 def create_hotstack_project_and_user(admin_conn):
@@ -631,6 +664,83 @@ def setup_ssh_keypair(conn, keypair_name="hotstack", public_key_path=None):
         return None
 
 
+def create_application_credential(conn, cred_name="hotstack-cred"):
+    """Create application credential for the hotstack project
+
+    Args:
+        conn: OpenStack connection object (must be connected as hotstack user)
+        cred_name: Name for the application credential (default: hotstack-cred)
+
+    Returns:
+        Application credential object or None if creation fails
+    """
+    try:
+        # Check if application credential already exists
+        existing_cred = conn.identity.find_application_credential(
+            conn.current_user_id, cred_name, ignore_missing=True
+        )
+        if existing_cred:
+            print_warning(
+                f"Application credential '{cred_name}' already exists but secret cannot be retrieved"
+            )
+            print_warning("To create a new one, delete the existing credential first:")
+            print_warning(f"  openstack application credential delete {cred_name}")
+            return None
+
+        # Create new application credential (unrestricted)
+        app_cred = conn.identity.create_application_credential(
+            user=conn.current_user_id,
+            name=cred_name,
+            unrestricted=True,
+        )
+        print_success(f"Created application credential '{cred_name}'")
+        return app_cred
+    except Exception as e:
+        print_warning(f"Failed to create application credential: {e}")
+        return None
+
+
+def write_cloud_secret_file(app_cred, auth_url, output_path):
+    """Write cloud-secret.yaml file with application credential
+
+    Args:
+        app_cred: Application credential object
+        auth_url: Keystone auth URL
+        output_path: Path to write the file
+
+    Returns:
+        Path object of the written file or None if write fails
+    """
+    output_path = Path(output_path)
+
+    try:
+        # Create backup if file already exists
+        backup_file(output_path)
+
+        cloud_secret_data = {
+            "hotstack_cloud_secrets": {
+                "auth_url": auth_url,
+                "application_credential_id": app_cred.id,
+                "application_credential_secret": app_cred.secret,
+                "region_name": "RegionOne",
+                "interface": "internal",
+                "identity_api_version": 3,
+                "auth_type": "v3applicationcredential",
+            }
+        }
+
+        with open(output_path, "w") as f:
+            yaml.safe_dump(
+                cloud_secret_data, f, default_flow_style=False, sort_keys=False
+            )
+
+        print_success(f"Created {output_path}")
+        return output_path
+    except Exception as e:
+        print_warning(f"Failed to write cloud-secret.yaml: {e}")
+        return None
+
+
 def setup_networking(conn, args):
     """Set up all networking components (networks, router, security groups)"""
     # Create default network (shared)
@@ -685,42 +795,26 @@ def _progress_callback(image_name):
     return show_progress
 
 
-def download_images(
-    conn,
-    cirros_url=None,
-    centos_stream_9_url=None,
-    controller_image_url=None,
-    blank_image_url=None,
-    nat64_image_url=None,
-    ipxe_bios_url=None,
-    ipxe_efi_url=None,
-    only_test_image=False,
-):
-    """Download images from provided URLs and return list of images ready to upload"""
+def download_images(conn, image_urls):
+    """Download images from provided URLs and return list of images ready to upload
+
+    Args:
+        conn: OpenStack connection object
+        image_urls: Dictionary mapping url_param names to URLs
+
+    Returns:
+        List of images ready to upload
+    """
     # Ensure cache directory exists
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Map URL parameters to their values
-    url_params = {
-        "cirros_url": cirros_url,
-        "centos_stream_9_url": centos_stream_9_url,
-        "controller_image_url": controller_image_url,
-        "blank_image_url": blank_image_url,
-        "nat64_image_url": nat64_image_url,
-        "ipxe_bios_url": ipxe_bios_url,
-        "ipxe_efi_url": ipxe_efi_url,
-    }
 
     # Check which images need to be downloaded and download them
     print("Checking existing images and downloading...")
     images_to_upload = []
 
     for spec in IMAGE_SPECS:
-        # If only_test_image, skip non-test images
-        if only_test_image and not spec.get("is_test_image", False):
-            continue
         # Get URL for this image
-        image_url = url_params.get(spec["url_param"])
+        image_url = image_urls.get(spec["url_param"])
 
         # Skip if URL not provided
         if not image_url:
@@ -817,6 +911,117 @@ def upload_images(conn, images_to_upload):
             print_success(f"Uploaded {spec['name']} to Glance")
         except Exception as e:
             print_warning(f"Failed to upload {spec['name']}: {e}")
+
+
+def setup_admin_connection(args):
+    """Set up OpenStack connection with admin privileges
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        OpenStack connection with admin privileges or exits on failure
+    """
+    # Set cloud to use (OS_CLOUD environment variable)
+    if "OS_CLOUD" not in os.environ:
+        os.environ["OS_CLOUD"] = args.admin_cloud
+
+    # Connect to OpenStack as admin
+    try:
+        admin_conn = openstack.connect(cloud=args.admin_cloud)
+        print_success("Connected to OpenStack as admin")
+        return admin_conn
+    except Exception as e:
+        print_error(f"Failed to connect to OpenStack as admin: {e}")
+        sys.exit(1)
+
+
+def setup_hotstack_connection(args):
+    """Set up OpenStack connection as hotstack user
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        OpenStack connection as hotstack user or exits on failure
+    """
+    try:
+        hotstack_conn = openstack.connect(cloud=args.cloud)
+        print_success("Connected to OpenStack as hotstack user")
+        return hotstack_conn
+    except Exception as e:
+        print_error(f"Failed to connect to OpenStack as hotstack user: {e}")
+        sys.exit(1)
+
+
+def setup_application_credential(conn, cred_name, output_path):
+    """Create application credential and write cloud-secret.yaml file
+
+    Args:
+        conn: OpenStack connection object (hotstack user)
+        cred_name: Name for the application credential
+        output_path: Path to write cloud-secret.yaml file
+
+    Returns:
+        Path to created cloud-secret.yaml file, or None if creation failed
+    """
+    app_cred = create_application_credential(conn, cred_name=cred_name)
+    if not app_cred:
+        return None
+
+    # Get auth URL from connection
+    auth_url = conn.auth.get("auth_url", "http://keystone.hotstack-os.local:5000")
+
+    return write_cloud_secret_file(app_cred, auth_url, output_path=output_path)
+
+
+def print_completion_message(args, cloud_secret_path, external_network):
+    """Print completion message with next steps
+
+    Args:
+        args: Parsed command-line arguments
+        cloud_secret_path: Path to created cloud-secret.yaml file (or None)
+        external_network: External network object (or None)
+    """
+    print()
+    print(f"{GREEN}✓ Post-setup complete!{NC}")
+    print()
+    print("Cloud configurations:")
+    print(f"  • Admin: --os-cloud {args.admin_cloud}")
+    print(f"  • User:  --os-cloud {args.cloud}")
+    print()
+
+    if not args.skip_keypair:
+        print(f"SSH keypair '{args.ssh_keypair_name}' configured for VM access")
+        print()
+
+    if cloud_secret_path:
+        print(f"Application credential created and saved to: {cloud_secret_path}")
+        print("You can now run HotStack scenarios with this credential")
+        print()
+
+    if not args.skip_images:
+        print(f"Downloaded images cached in: {CACHE_DIR}")
+        print()
+
+    print("You can now:")
+    print("  - Run smoke test: make smoke-test")
+    print(
+        f"  - Test VM creation: openstack --os-cloud {args.cloud} server create "
+        f"--flavor hotstack.small --image cirros --network private test-vm"
+    )
+
+    if external_network:
+        print(
+            f"  - Create floating IP: openstack --os-cloud {args.cloud} "
+            f"floating ip create external"
+        )
+        print(
+            f"  - Attach floating IP: openstack --os-cloud {args.cloud} "
+            f"server add floating ip <server> <floating-ip>"
+        )
+
+    print("  - Use with HotStack scenarios")
 
 
 def parse_arguments():
@@ -958,6 +1163,23 @@ def parse_arguments():
         help="Skip SSH keypair setup",
     )
 
+    # Application credential configuration
+    parser.add_argument(
+        "--app-credential-name",
+        default="hotstack-cred",
+        help="Name for the application credential to create (default: hotstack-cred)",
+    )
+    parser.add_argument(
+        "--cloud-secret-path",
+        default="cloud-secret.yaml",
+        help="Path to write cloud-secret.yaml file (default: cloud-secret.yaml in current directory)",
+    )
+    parser.add_argument(
+        "--skip-app-credential",
+        action="store_true",
+        help="Skip application credential creation and cloud-secret.yaml generation",
+    )
+
     args = parser.parse_args()
 
     # Post-process arguments
@@ -1002,30 +1224,16 @@ def parse_arguments():
     return args
 
 
-def main():
-    """Main execution function"""
-    args = parse_arguments()
+def setup_admin_resources(admin_conn, args):
+    """Set up admin-level resources (project, quotas, flavors, networking, images)
 
-    print("=== HotStack-OS Post-Setup ===")
+    Args:
+        admin_conn: OpenStack connection with admin privileges
+        args: Parsed command-line arguments
 
-    # Check if running as root (not recommended)
-    if os.geteuid() == 0:
-        print_error("Do not run this script as root or with sudo!")
-        print_error("Run without sudo: make post-setup")
-        sys.exit(1)
-
-    # Set cloud to use (OS_CLOUD environment variable)
-    if "OS_CLOUD" not in os.environ:
-        os.environ["OS_CLOUD"] = args.admin_cloud
-
-    # Connect to OpenStack as admin
-    try:
-        admin_conn = openstack.connect(cloud=args.admin_cloud)
-        print_success("Connected to OpenStack")
-    except Exception as e:
-        print_error(f"Failed to connect to OpenStack as admin: {e}")
-        sys.exit(1)
-
+    Returns:
+        External network object (or None if not created)
+    """
     # Create hotstack project and user
     project, user = create_hotstack_project_and_user(admin_conn)
 
@@ -1038,62 +1246,87 @@ def main():
     # Set up networking (networks, router, security groups)
     external_network = setup_networking(admin_conn, args)
 
-    # Setup SSH keypair for hotstack user (for smoke test and VM access)
-    if not args.skip_keypair:
-        try:
-            hotstack_conn = openstack.connect(cloud=args.cloud)
-            setup_ssh_keypair(
-                hotstack_conn,
-                keypair_name=args.ssh_keypair_name,
-                public_key_path=args.ssh_public_key,
-            )
-        except Exception as e:
-            print_warning(f"Failed to setup SSH keypair: {e}")
-
     # Download and upload images
     if not args.skip_images:
-        images_to_upload = download_images(
-            admin_conn,
-            args.cirros_url,
-            args.centos_stream_9_url,
-            args.controller_image_url,
-            args.blank_image_url,
-            args.nat64_image_url,
-            args.ipxe_bios_url,
-            args.ipxe_efi_url,
-            args.only_test_image,
-        )
+        # Always include test image
+        image_urls = {"cirros_url": args.cirros_url}
+
+        # Add production images unless only_test_image is set
+        if not args.only_test_image:
+            image_urls["centos_stream_9_url"] = args.centos_stream_9_url
+            image_urls["controller_image_url"] = args.controller_image_url
+            image_urls["blank_image_url"] = args.blank_image_url
+            image_urls["nat64_image_url"] = args.nat64_image_url
+            image_urls["ipxe_bios_url"] = args.ipxe_bios_url
+            image_urls["ipxe_efi_url"] = args.ipxe_efi_url
+
+        images_to_upload = download_images(admin_conn, image_urls)
         upload_images(admin_conn, images_to_upload)
 
-    # Print completion message
-    print()
-    print(f"{GREEN}✓ Post-setup complete!{NC}")
-    print()
-    print("Cloud configurations:")
-    print(f"  • Admin: --os-cloud {args.admin_cloud}")
-    print(f"  • User:  --os-cloud {args.cloud}")
-    print()
+    return external_network
+
+
+def setup_project_resources(args):
+    """Set up project-level resources (application credential, SSH keypair)
+
+    This function creates a connection as the hotstack user and sets up
+    project-level resources. If both keypair and app credential are skipped,
+    this function does nothing.
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        Path to created cloud-secret.yaml file, or None
+    """
+    # Skip if both keypair and app credential are disabled
+    if args.skip_keypair and args.skip_app_credential:
+        return None
+
+    # Set up hotstack user connection (after project/user are created)
+    hotstack_conn = setup_hotstack_connection(args)
+
+    # Create application credential and cloud-secret.yaml
+    cloud_secret_path = None
+    if not args.skip_app_credential:
+        cloud_secret_path = setup_application_credential(
+            hotstack_conn, args.app_credential_name, args.cloud_secret_path
+        )
+
+    # Setup SSH keypair for hotstack user (for smoke test and VM access)
     if not args.skip_keypair:
-        print(f"SSH keypair '{args.ssh_keypair_name}' configured for VM access")
-        print()
-    if not args.skip_images:
-        print(f"Downloaded images cached in: {CACHE_DIR}")
-        print()
-    print("You can now:")
-    print("  1. Run smoke test: make smoke-test")
-    print(
-        f"  2. Test VM creation: openstack --os-cloud {args.cloud} server create --flavor hotstack.small --image cirros --network private test-vm"
-    )
-    if external_network:
-        print(
-            f"  3. Create floating IP: openstack --os-cloud {args.cloud} floating ip create external"
+        setup_ssh_keypair(
+            hotstack_conn,
+            keypair_name=args.ssh_keypair_name,
+            public_key_path=args.ssh_public_key,
         )
-        print(
-            f"  4. Attach floating IP: openstack --os-cloud {args.cloud} server add floating ip <server> <floating-ip>"
-        )
-        print("  5. Use with HotStack scenarios")
-    else:
-        print("  3. Use with HotStack scenarios")
+
+    return cloud_secret_path
+
+
+def main():
+    """Main execution function"""
+    args = parse_arguments()
+
+    print("=== HotStack-OS Post-Setup ===")
+
+    # Check if running as root (not recommended)
+    if os.geteuid() == 0:
+        print_error("Do not run this script as root or with sudo!")
+        print_error("Run without sudo: make post-setup")
+        sys.exit(1)
+
+    # Set up admin connection
+    admin_conn = setup_admin_connection(args)
+
+    # Set up admin resources (project, quotas, flavors, networking, images)
+    external_network = setup_admin_resources(admin_conn, args)
+
+    # Set up project resources (application credential, SSH keypair)
+    cloud_secret_path = setup_project_resources(args)
+
+    # Print completion message
+    print_completion_message(args, cloud_secret_path, external_network)
 
 
 if __name__ == "__main__":

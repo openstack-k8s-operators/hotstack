@@ -1,3 +1,5 @@
 **/__pycache__/
 .ansible/*
 .venv/*
+cloud-secret.yaml
+cloud-secret.*.yaml.bak

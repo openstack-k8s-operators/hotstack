@@ -38,6 +38,8 @@ This creates resources needed by HotStack scenarios:
 - Security group rules (SSH, ICMP) for both admin and hotstack projects
 - Test image (Cirros) - public
 - HotStack images (controller, blank, nat64, iPXE) - downloaded from GitHub releases and uploaded
+- Application credential (hotstack-cred) for the hotstack project
+- `cloud-secret.yaml` file in the repository root (ready for use with HotStack scenarios)
 
 **Note**: Images are downloaded from the latest GitHub releases. If an image is not found, you may need to run the GitHub workflow to build and publish it first.
 
@@ -51,34 +53,12 @@ export OS_CLOUD=hotstack-os
 openstack network list
 openstack flavor list
 openstack image list
+
+# Verify cloud-secret.yaml was created
+ls -l ../../cloud-secret.yaml
 ```
 
-### 4. Create Application Credential
-
-```bash
-# Use the hotstack user for regular operations
-export OS_CLOUD=hotstack-os
-openstack application credential create hotstack-cred --unrestricted
-```
-
-Save the `id` and `secret` from the output.
-
-### 5. Create Cloud Secret File
-
-```bash
-cat > ~/cloud-secret.yaml <<EOF
-hotstack_cloud_secrets:
-  auth_url: http://keystone.hotstack-os.local:5000
-  application_credential_id: <ID_FROM_ABOVE>
-  application_credential_secret: <SECRET_FROM_ABOVE>
-  region_name: RegionOne
-  interface: internal
-  identity_api_version: 3
-  auth_type: v3applicationcredential
-EOF
-```
-
-### 6. Install Ansible and Collections
+### 4. Install Ansible and Collections
 
 ```bash
 cd ../../  # Back to hotstack root
@@ -91,14 +71,16 @@ sudo dnf install ansible-core
 ansible-galaxy collection install -r requirements.yml
 ```
 
-### 7. Run HotStack Scenario
+### 5. Run HotStack Scenario
 
 ```bash
 # Run any HotStack scenario
 ansible-playbook bootstrap.yml \
   -e @scenarios/sno-2-bm/bootstrap_vars.yml \
-  -e @~/cloud-secret.yaml
+  -e @cloud-secret.yaml
 ```
+
+**Note**: The `cloud-secret.yaml` file is automatically created in the repository root by `make post-setup`. If you need to recreate it, simply re-run `make post-setup` or see the [main README](../../README.md#cloud-secret) for manual credential creation.
 
 ## Additional Resources
 
