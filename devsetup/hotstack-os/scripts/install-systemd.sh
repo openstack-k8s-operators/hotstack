@@ -119,6 +119,7 @@ process_config_files "$tmpdir" "systemd units" \
     "__MARIADB_IP__" "$MARIADB_IP" \
     "__RABBITMQ_IP__" "$RABBITMQ_IP" \
     "__MEMCACHED_IP__" "$MEMCACHED_IP" \
+    "__HAPROXY_IP__" "$HAPROXY_IP" \
     "__KEYSTONE_IP__" "$KEYSTONE_IP" \
     "__GLANCE_IP__" "$GLANCE_IP" \
     "__PLACEMENT_IP__" "$PLACEMENT_IP" \

@@ -39,27 +39,21 @@ if [ "${OS_BOOTSTRAP:-true}" = "true" ]; then
     # Wait for Keystone
     wait_for_keystone
 
-    echo "  Creating glance user and assigning admin role..."
-    if ! openstack user show glance >/dev/null 2>&1; then
-        openstack user create --domain default --password "${SERVICE_PASSWORD}" glance
-    fi
-    openstack role add --project service --user glance admin 2>/dev/null || true
-    openstack role add --project service --user glance service 2>/dev/null || true
+    # Bootstrap Keystone resources using Python (much faster than multiple openstack CLI calls)
+    echo "  Bootstrapping Keystone resources..."
+    BOOTSTRAP_OUTPUT=$(python3 /usr/local/bin/keystone-bootstrap.py \
+        --service-name glance \
+        --service-type image \
+        --service-description "OpenStack Image" \
+        --username glance \
+        --password "${SERVICE_PASSWORD}" \
+        --region "${REGION_NAME}" \
+        --endpoint-url "http://glance.hotstack-os.local:9292" \
+        --project-role-assignment glance admin service \
+        --project-role-assignment glance service service)
 
-    echo "  Creating glance service..."
-    if ! openstack service show glance >/dev/null 2>&1; then
-        openstack service create --name glance --description "OpenStack Image" image
-    fi
-
-    echo "  Creating glance endpoints..."
-    GLANCE_SERVICE_ID=$(openstack service show glance -f value -c id)
-    for endpoint_type in public internal admin; do
-        if ! openstack endpoint list --service glance --interface ${endpoint_type} --region "${REGION_NAME}" -f value -c ID | grep -q .; then
-            openstack endpoint create --region "${REGION_NAME}" "${GLANCE_SERVICE_ID}" ${endpoint_type} http://glance.hotstack-os.local:9292
-        fi
-    done
-
-    echo "Glance service registered!"
+    GLANCE_SERVICE_ID=$(get_service_id_from_bootstrap_json "$BOOTSTRAP_OUTPUT")
+    echo "Glance service registered! (Service ID: ${GLANCE_SERVICE_ID})"
 fi
 
 # Start Glance API

@@ -39,28 +39,22 @@ if [ "${OS_BOOTSTRAP:-true}" = "true" ]; then
     # Wait for Keystone
     wait_for_keystone
 
-    echo "  Creating cinder user and assigning admin role..."
-    if ! openstack user show cinder >/dev/null 2>&1; then
-        openstack user create --domain default --password "${SERVICE_PASSWORD}" cinder
-    fi
-    openstack role add --project service --user cinder admin 2>/dev/null || true
-    openstack role add --project service --user cinder service 2>/dev/null || true
+    # Bootstrap Keystone resources using Python (much faster than multiple openstack CLI calls)
+    echo "  Bootstrapping Keystone resources..."
+    # shellcheck disable=SC2016
+    BOOTSTRAP_OUTPUT=$(python3 /usr/local/bin/keystone-bootstrap.py \
+        --service-name cinderv3 \
+        --service-type volumev3 \
+        --service-description "OpenStack Block Storage" \
+        --username cinder \
+        --password "${SERVICE_PASSWORD}" \
+        --region "${REGION_NAME}" \
+        --endpoint-url 'http://cinder.hotstack-os.local:8776/v3/$(project_id)s' \
+        --project-role-assignment cinder admin service \
+        --project-role-assignment cinder service service)
 
-    echo "  Creating cinder service..."
-    if ! openstack service show cinderv3 >/dev/null 2>&1; then
-        openstack service create --name cinderv3 --description "OpenStack Block Storage" volumev3
-    fi
-
-    echo "  Creating cinder endpoints..."
-    CINDER_SERVICE_ID=$(openstack service show cinderv3 -f value -c id)
-    for endpoint_type in public internal admin; do
-        if ! openstack endpoint list --service cinderv3 --interface ${endpoint_type} --region "${REGION_NAME}" -f value -c ID | grep -q .; then
-            # shellcheck disable=SC2016
-            openstack endpoint create --region "${REGION_NAME}" "${CINDER_SERVICE_ID}" ${endpoint_type} 'http://cinder.hotstack-os.local:8776/v3/$(project_id)s'
-        fi
-    done
-
-    echo "Cinder service registered!"
+    CINDER_SERVICE_ID=$(get_service_id_from_bootstrap_json "$BOOTSTRAP_OUTPUT")
+    echo "Cinder service registered! (Service ID: ${CINDER_SERVICE_ID})"
 fi
 
 # Start Cinder API

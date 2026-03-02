@@ -39,27 +39,21 @@ if [ "${OS_BOOTSTRAP:-true}" = "true" ]; then
     # Wait for Keystone
     wait_for_keystone
 
-    echo "  Creating placement user and assigning admin role..."
-    if ! openstack user show placement >/dev/null 2>&1; then
-        openstack user create --domain default --password "${SERVICE_PASSWORD}" placement
-    fi
-    openstack role add --project service --user placement admin 2>/dev/null || true
-    openstack role add --project service --user placement service 2>/dev/null || true
+    # Bootstrap Keystone resources using Python (much faster than multiple openstack CLI calls)
+    echo "  Bootstrapping Keystone resources..."
+    BOOTSTRAP_OUTPUT=$(python3 /usr/local/bin/keystone-bootstrap.py \
+        --service-name placement \
+        --service-type placement \
+        --service-description "Placement API" \
+        --username placement \
+        --password "${SERVICE_PASSWORD}" \
+        --region "${REGION_NAME}" \
+        --endpoint-url "http://placement.hotstack-os.local:8778" \
+        --project-role-assignment placement admin service \
+        --project-role-assignment placement service service)
 
-    echo "  Creating placement service..."
-    if ! openstack service show placement >/dev/null 2>&1; then
-        openstack service create --name placement --description "Placement API" placement
-    fi
-
-    echo "  Creating placement endpoints..."
-    PLACEMENT_SERVICE_ID=$(openstack service show placement -f value -c id)
-    for endpoint_type in public internal admin; do
-        if ! openstack endpoint list --service placement --interface ${endpoint_type} --region "${REGION_NAME}" -f value -c ID | grep -q .; then
-            openstack endpoint create --region "${REGION_NAME}" "${PLACEMENT_SERVICE_ID}" ${endpoint_type} http://placement.hotstack-os.local:8778
-        fi
-    done
-
-    echo "Placement service registered!"
+    PLACEMENT_SERVICE_ID=$(get_service_id_from_bootstrap_json "$BOOTSTRAP_OUTPUT")
+    echo "Placement service registered! (Service ID: ${PLACEMENT_SERVICE_ID})"
 fi
 
 # Verify files exist

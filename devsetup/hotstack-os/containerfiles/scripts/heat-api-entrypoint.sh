@@ -39,43 +39,27 @@ if [ "${OS_BOOTSTRAP:-true}" = "true" ]; then
     # Wait for Keystone
     wait_for_keystone
 
-    echo "  Creating heat user and assigning admin role..."
-    if ! openstack user show heat >/dev/null 2>&1; then
-        openstack user create --domain default --password "${SERVICE_PASSWORD}" heat
-    fi
-    openstack role add --project service --user heat admin 2>/dev/null || true
-    openstack role add --project service --user heat service 2>/dev/null || true
+    # Bootstrap Keystone resources using Python (much faster than multiple openstack CLI calls)
+    echo "  Bootstrapping Keystone resources..."
+    # shellcheck disable=SC2016
+    BOOTSTRAP_OUTPUT=$(python3 /usr/local/bin/keystone-bootstrap.py \
+        --service-name heat \
+        --service-type orchestration \
+        --service-description "Orchestration" \
+        --username heat \
+        --password "${SERVICE_PASSWORD}" \
+        --region "${REGION_NAME}" \
+        --endpoint-url 'http://heat.hotstack-os.local:8004/v1/$(project_id)s' \
+        --extra-domain heat "Stack projects and users" \
+        --extra-user heat_domain_admin "${SERVICE_PASSWORD}" heat \
+        --extra-role heat_stack_owner \
+        --extra-role heat_stack_user \
+        --project-role-assignment heat admin service \
+        --project-role-assignment heat service service \
+        --domain-role-assignment-with-user-domain heat_domain_admin admin heat heat)
 
-    echo "  Creating heat domain..."
-    if ! openstack domain show heat >/dev/null 2>&1; then
-        openstack domain create --description "Stack projects and users" heat
-    fi
-
-    echo "  Creating heat_domain_admin user..."
-    if ! openstack user show --domain heat heat_domain_admin >/dev/null 2>&1; then
-        openstack user create --domain heat --password "${SERVICE_PASSWORD}" heat_domain_admin
-    fi
-    openstack role add --domain heat --user heat_domain_admin admin 2>/dev/null || true
-
-    echo "  Creating heat roles..."
-    openstack role show heat_stack_owner >/dev/null 2>&1 || openstack role create heat_stack_owner
-    openstack role show heat_stack_user >/dev/null 2>&1 || openstack role create heat_stack_user
-
-    echo "  Creating heat service..."
-    if ! openstack service show heat >/dev/null 2>&1; then
-        openstack service create --name heat --description "Orchestration" orchestration
-    fi
-
-    echo "  Creating heat endpoints..."
-    HEAT_SERVICE_ID=$(openstack service show heat -f value -c id)
-    for endpoint_type in public internal admin; do
-        if ! openstack endpoint list --service heat --interface ${endpoint_type} --region "${REGION_NAME}" -f value -c ID | grep -q .; then
-            # shellcheck disable=SC2016
-            openstack endpoint create --region "${REGION_NAME}" "${HEAT_SERVICE_ID}" ${endpoint_type} 'http://heat.hotstack-os.local:8004/v1/$(project_id)s'
-        fi
-    done
-
-    echo "Heat service registered!"
+    HEAT_SERVICE_ID=$(get_service_id_from_bootstrap_json "$BOOTSTRAP_OUTPUT")
+    echo "Heat service registered! (Service ID: ${HEAT_SERVICE_ID})"
 fi
 
 # Start Heat API

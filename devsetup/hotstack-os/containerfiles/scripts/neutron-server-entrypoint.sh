@@ -39,27 +39,21 @@ if [ "${OS_BOOTSTRAP:-true}" = "true" ]; then
     # Wait for Keystone
     wait_for_keystone
 
-    echo "  Creating neutron user and assigning admin role..."
-    if ! openstack user show neutron >/dev/null 2>&1; then
-        openstack user create --domain default --password "${SERVICE_PASSWORD}" neutron
-    fi
-    openstack role add --project service --user neutron admin 2>/dev/null || true
-    openstack role add --project service --user neutron service 2>/dev/null || true
+    # Bootstrap Keystone resources using Python (much faster than multiple openstack CLI calls)
+    echo "  Bootstrapping Keystone resources..."
+    BOOTSTRAP_OUTPUT=$(python3 /usr/local/bin/keystone-bootstrap.py \
+        --service-name neutron \
+        --service-type network \
+        --service-description "OpenStack Networking" \
+        --username neutron \
+        --password "${SERVICE_PASSWORD}" \
+        --region "${REGION_NAME}" \
+        --endpoint-url "http://neutron.hotstack-os.local:9696" \
+        --project-role-assignment neutron admin service \
+        --project-role-assignment neutron service service)
 
-    echo "  Creating neutron service..."
-    if ! openstack service show neutron >/dev/null 2>&1; then
-        openstack service create --name neutron --description "OpenStack Networking" network
-    fi
-
-    echo "  Creating neutron endpoints..."
-    NEUTRON_SERVICE_ID=$(openstack service show neutron -f value -c id)
-    for endpoint_type in public internal admin; do
-        if ! openstack endpoint list --service neutron --interface ${endpoint_type} --region "${REGION_NAME}" -f value -c ID | grep -q .; then
-            openstack endpoint create --region "${REGION_NAME}" "${NEUTRON_SERVICE_ID}" ${endpoint_type} http://neutron.hotstack-os.local:9696
-        fi
-    done
-
-    echo "Neutron service registered!"
+    NEUTRON_SERVICE_ID=$(get_service_id_from_bootstrap_json "$BOOTSTRAP_OUTPUT")
+    echo "Neutron service registered! (Service ID: ${NEUTRON_SERVICE_ID})"
 fi
 
 # Start Neutron Server

@@ -42,30 +42,25 @@ if [ "${OS_BOOTSTRAP:-true}" = "true" ]; then
     wait_for_keystone
     wait_for_service "Placement" "http://placement:8778/"
 
-    echo "  Creating nova user and assigning admin role..."
-    if ! openstack user show nova >/dev/null 2>&1; then
-        openstack user create --domain default --password "${SERVICE_PASSWORD}" nova
-    fi
-    openstack role add --project service --user nova admin 2>/dev/null || true
-    openstack role add --project service --user nova service 2>/dev/null || true
+    # Bootstrap Keystone resources using Python (much faster than multiple openstack CLI calls)
+    echo "  Bootstrapping Keystone resources..."
+    BOOTSTRAP_OUTPUT=$(python3 /usr/local/bin/keystone-bootstrap.py \
+        --service-name nova \
+        --service-type compute \
+        --service-description "OpenStack Compute" \
+        --username nova \
+        --password "${SERVICE_PASSWORD}" \
+        --region "${REGION_NAME}" \
+        --endpoint-url "http://nova.hotstack-os.local:8774/v2.1" \
+        --project-role-assignment nova admin service \
+        --project-role-assignment nova service service)
 
-    echo "  Creating nova service..."
-    if ! openstack service show nova >/dev/null 2>&1; then
-        openstack service create --name nova --description "OpenStack Compute" compute
-    fi
-
-    echo "  Creating nova endpoints..."
-    NOVA_SERVICE_ID=$(openstack service show nova -f value -c id)
-    for endpoint_type in public internal admin; do
-        if ! openstack endpoint list --service nova --interface ${endpoint_type} --region "${REGION_NAME}" -f value -c ID | grep -q .; then
-            openstack endpoint create --region "${REGION_NAME}" "${NOVA_SERVICE_ID}" ${endpoint_type} http://nova.hotstack-os.local:8774/v2.1
-        fi
-    done
+    NOVA_SERVICE_ID=$(get_service_id_from_bootstrap_json "$BOOTSTRAP_OUTPUT")
 
     echo "  Creating Nova cell1..."
     nova-manage cell_v2 create_cell --name=cell1 --verbose || true
 
-    echo "Nova service registered!"
+    echo "Nova service registered! (Service ID: ${NOVA_SERVICE_ID})"
 fi
 
 # Start Nova API

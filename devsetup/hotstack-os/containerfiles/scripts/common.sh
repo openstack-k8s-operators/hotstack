@@ -238,3 +238,314 @@ setup_os_admin_credentials() {
     export OS_AUTH_URL=http://keystone:5000/v3
     export OS_IDENTITY_API_VERSION=3
 }
+
+# Extracts service_id from keystone-bootstrap.py JSON output.
+#
+# Parameters:
+#   $1 - JSON string from keystone-bootstrap.py
+#
+# Returns:
+#   Outputs the service_id to stdout
+#   Exits with error code 1 if JSON parsing fails
+#
+# Example:
+#   JSON_OUTPUT=$(python3 /usr/local/bin/keystone-bootstrap.py ...)
+#   SERVICE_ID=$(get_service_id_from_bootstrap_json "$JSON_OUTPUT")
+get_service_id_from_bootstrap_json() {
+    local json_output="$1"
+
+    if [ -z "$json_output" ]; then
+        echo "ERROR: Empty JSON output from keystone-bootstrap.py" >&2
+        return 1
+    fi
+
+    # Use python to parse JSON (more reliable than jq which may not be installed)
+    echo "$json_output" | python3 -c "import sys, json; data = json.load(sys.stdin); print(data['service_id'])" 2>/dev/null || {
+        echo "ERROR: Failed to parse JSON output from keystone-bootstrap.py" >&2
+        echo "Output was: $json_output" >&2
+        return 1
+    }
+}
+
+# Ensures a Keystone service exists, creating it if necessary.
+# Handles transient Keystone failures and duplicate service entries gracefully.
+#
+# Parameters:
+#   $1 - Service name (e.g., "placement", "nova", "heat")
+#   $2 - Service type (e.g., "placement", "compute", "orchestration")
+#   $3 - Service description (e.g., "Placement API", "OpenStack Compute")
+#   $4 - Maximum retry attempts (optional, default: 5)
+#
+# Returns:
+#   0 if service exists or was created successfully
+#   1 if unable to verify or create service after retries (also exits the script)
+#
+# Example:
+#   ensure_keystone_service "placement" "placement" "Placement API"
+ensure_keystone_service() {
+    local service_name="$1"
+    local service_type="$2"
+    local service_description="$3"
+    local max_retries="${4:-5}"
+
+    echo "  Ensuring ${service_name} service exists..."
+
+    local service_exists=false
+    local retry_count=0
+
+    while [ $retry_count -lt "$max_retries" ]; do
+        if openstack service list --name "$service_name" -f value -c ID 2>/dev/null | grep -q .; then
+            echo "    Service already exists"
+            service_exists=true
+            break
+        fi
+
+        retry_count=$((retry_count + 1))
+        if [ $retry_count -lt "$max_retries" ]; then
+            echo "    Service check attempt $retry_count failed, retrying..."
+            sleep 2
+        fi
+    done
+
+    if [ "$service_exists" = "false" ]; then
+        echo "    Creating ${service_name} service..."
+        if ! openstack service create --name "$service_name" --description "$service_description" "$service_type" >/dev/null; then
+            echo "ERROR: Failed to create ${service_name} service"
+            exit 1
+        fi
+        echo "    Service created successfully"
+    fi
+}
+
+# Gets the ID of a Keystone service with retry logic.
+# Handles transient Keystone failures and duplicate service entries gracefully.
+#
+# Parameters:
+#   $1 - Service name (e.g., "placement", "nova", "heat")
+#   $2 - Maximum retry attempts (optional, default: 5)
+#
+# Returns:
+#   Outputs the service ID to stdout
+#   Exits with error code 1 if unable to retrieve ID after retries
+#
+# Example:
+#   SERVICE_ID=$(get_keystone_service_id "placement")
+get_keystone_service_id() {
+    local service_name="$1"
+    local max_retries="${2:-5}"
+
+    local service_id=""
+    local retry_count=0
+
+    while [ $retry_count -lt "$max_retries" ]; do
+        service_id=$(openstack service list --name "$service_name" -f value -c ID 2>/dev/null | head -n1)
+        if [ -n "$service_id" ]; then
+            echo "$service_id"
+            return 0
+        fi
+
+        retry_count=$((retry_count + 1))
+        if [ $retry_count -lt "$max_retries" ]; then
+            echo "    Failed to get ${service_name} service ID, retrying ($retry_count/$max_retries)..." >&2
+            sleep 2
+        fi
+    done
+
+    echo "ERROR: Could not retrieve ${service_name} service ID after $max_retries attempts" >&2
+    exit 1
+}
+
+# Ensures a Keystone user exists, creating it if necessary.
+# Handles transient Keystone failures gracefully.
+#
+# Parameters:
+#   $1 - Username
+#   $2 - Password
+#   $3 - Domain (optional, default: "default")
+#   $4 - Maximum retry attempts (optional, default: 5)
+#
+# Returns:
+#   0 if user exists or was created successfully
+#   1 if unable to verify or create user after retries (also exits the script)
+#
+# Example:
+#   ensure_keystone_user "placement" "${SERVICE_PASSWORD}"
+ensure_keystone_user() {
+    local username="$1"
+    local password="$2"
+    local domain="${3:-default}"
+    local max_retries="${4:-5}"
+
+    echo "  Ensuring ${username} user exists..."
+
+    local user_exists=false
+    local retry_count=0
+
+    while [ $retry_count -lt "$max_retries" ]; do
+        if openstack user show "$username" --domain "$domain" >/dev/null 2>&1; then
+            echo "    User already exists"
+            user_exists=true
+            break
+        fi
+
+        retry_count=$((retry_count + 1))
+        if [ $retry_count -lt "$max_retries" ]; then
+            echo "    User check attempt $retry_count failed, retrying..."
+            sleep 2
+        fi
+    done
+
+    if [ "$user_exists" = "false" ]; then
+        echo "    Creating ${username} user..."
+        if ! openstack user create --domain "$domain" --password "$password" "$username" >/dev/null; then
+            echo "ERROR: Failed to create ${username} user"
+            exit 1
+        fi
+        echo "    User created successfully"
+    fi
+}
+
+# Ensures a Keystone domain exists, creating it if necessary.
+# Handles transient Keystone failures gracefully.
+#
+# Parameters:
+#   $1 - Domain name
+#   $2 - Description
+#   $3 - Maximum retry attempts (optional, default: 5)
+#
+# Returns:
+#   0 if domain exists or was created successfully
+#   1 if unable to verify or create domain after retries (also exits the script)
+#
+# Example:
+#   ensure_keystone_domain "heat" "Stack projects and users"
+ensure_keystone_domain() {
+    local domain_name="$1"
+    local description="$2"
+    local max_retries="${3:-5}"
+
+    echo "  Ensuring ${domain_name} domain exists..."
+
+    local domain_exists=false
+    local retry_count=0
+
+    while [ $retry_count -lt "$max_retries" ]; do
+        if openstack domain show "$domain_name" >/dev/null 2>&1; then
+            echo "    Domain already exists"
+            domain_exists=true
+            break
+        fi
+
+        retry_count=$((retry_count + 1))
+        if [ $retry_count -lt "$max_retries" ]; then
+            echo "    Domain check attempt $retry_count failed, retrying..."
+            sleep 2
+        fi
+    done
+
+    if [ "$domain_exists" = "false" ]; then
+        echo "    Creating ${domain_name} domain..."
+        if ! openstack domain create --description "$description" "$domain_name" >/dev/null; then
+            echo "ERROR: Failed to create ${domain_name} domain"
+            exit 1
+        fi
+        echo "    Domain created successfully"
+    fi
+}
+
+# Ensures a Keystone role exists, creating it if necessary.
+# Handles transient Keystone failures gracefully.
+#
+# Parameters:
+#   $1 - Role name
+#   $2 - Maximum retry attempts (optional, default: 5)
+#
+# Returns:
+#   0 if role exists or was created successfully
+#   1 if unable to verify or create role after retries (also exits the script)
+#
+# Example:
+#   ensure_keystone_role "heat_stack_owner"
+ensure_keystone_role() {
+    local role_name="$1"
+    local max_retries="${2:-5}"
+
+    local role_exists=false
+    local retry_count=0
+
+    while [ $retry_count -lt "$max_retries" ]; do
+        if openstack role show "$role_name" >/dev/null 2>&1; then
+            role_exists=true
+            break
+        fi
+
+        retry_count=$((retry_count + 1))
+        if [ $retry_count -lt "$max_retries" ]; then
+            sleep 2
+        fi
+    done
+
+    if [ "$role_exists" = "false" ]; then
+        if ! openstack role create "$role_name" >/dev/null; then
+            echo "ERROR: Failed to create ${role_name} role"
+            exit 1
+        fi
+    fi
+}
+
+# Ensures a Keystone endpoint exists for a service, creating it if necessary.
+# Handles transient Keystone failures gracefully.
+#
+# Parameters:
+#   $1 - Service name (e.g., "placement", "nova", "heat")
+#   $2 - Service ID (UUID)
+#   $3 - Interface type (public, internal, or admin)
+#   $4 - Region name
+#   $5 - Endpoint URL
+#   $6 - Maximum retry attempts (optional, default: 5)
+#
+# Returns:
+#   0 if endpoint exists or was created successfully
+#   1 if unable to verify or create endpoint after retries (also exits the script)
+#
+# Example:
+#   ensure_keystone_endpoint "placement" "$SERVICE_ID" "public" "RegionOne" "http://placement.hotstack-os.local:8778"
+ensure_keystone_endpoint() {
+    local service_name="$1"
+    local service_id="$2"
+    local interface="$3"
+    local region="$4"
+    local url="$5"
+    local max_retries="${6:-5}"
+
+    local endpoint_exists=false
+    local retry_count=0
+
+    while [ $retry_count -lt "$max_retries" ]; do
+        if openstack endpoint list --service "$service_name" --interface "$interface" --region "$region" -f value -c ID 2>/dev/null | grep -q .; then
+            endpoint_exists=true
+            break
+        fi
+
+        retry_count=$((retry_count + 1))
+        if [ $retry_count -lt "$max_retries" ]; then
+            sleep 2
+        fi
+    done
+
+    if [ "$endpoint_exists" = "false" ]; then
+        local create_retry=0
+        while [ $create_retry -lt 3 ]; do
+            if openstack endpoint create --region "$region" "$service_id" "$interface" "$url" >/dev/null 2>&1; then
+                return 0
+            fi
+            create_retry=$((create_retry + 1))
+            if [ $create_retry -lt 3 ]; then
+                echo "    Failed to create $interface endpoint, retrying ($create_retry/3)..." >&2
+                sleep 2
+            fi
+        done
+        echo "ERROR: Failed to create ${service_name} ${interface} endpoint after 3 attempts" >&2
+        exit 1
+    fi
+}
