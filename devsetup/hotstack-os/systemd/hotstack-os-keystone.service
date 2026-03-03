@@ -47,7 +47,7 @@ ExecStart=/usr/bin/podman run \
     --volume __HOTSTACK_DATA_DIR__/keystone/fernet-keys:/etc/keystone/fernet-keys:z \
     --volume __HOTSTACK_DATA_DIR__/keystone/credential-keys:/etc/keystone/credential-keys:z \
     --volume __HOTSTACK_DATA_DIR__/runtime/scripts/common.sh:/usr/local/lib/common.sh:ro,z \
-    localhost/hotstack-os_keystone:latest
+    localhost/hotstack-os-keystone:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
 ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-keystone 5 5 5 15 /usr/local/bin/keystone-healthcheck.sh

@@ -62,6 +62,6 @@ if exit_with_error_summary; then
     exit 0
 else
     echo -e "${RED}✗ $ERRORS service(s) unhealthy${NC}"
-    echo "View logs: podman-compose logs -f <service>"
+    echo "View logs: sudo journalctl -u hotstack-os-<service> -f"
     exit 1
 fi

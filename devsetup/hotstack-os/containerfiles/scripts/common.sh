@@ -40,7 +40,7 @@ validate_required_env() {
 
     if [ $missing -gt 0 ]; then
         echo "ERROR: $missing required environment variable(s) missing"
-        echo "       Check your .env file and podman-compose.yml"
+        echo "       Check your .env file and systemd service definitions"
         exit 1
     fi
 }

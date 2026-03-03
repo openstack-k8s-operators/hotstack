@@ -4,7 +4,7 @@
   vars:
     hotstack_os_dir: "{{ ansible_user_dir }}/{{ zuul.project.src_dir }}/devsetup/hotstack-os"
     log_dir: "{{ ansible_user_dir }}/zuul-output/logs"
-    hotstack_deployment_method: "{{ deployment_method | default('podman-compose') }}"
+    hotstack_deployment_method: "{{ deployment_method | default('systemd') }}"
   tasks:
 
     - name: Collect container logs

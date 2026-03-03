@@ -2,7 +2,7 @@
 
 Common issues and their solutions.
 
-**Note**: HotStack-OS uses rootful podman (requires sudo). All `podman` and `podman-compose` commands should be run with `sudo`.
+**Note**: HotStack-OS uses rootful podman (requires sudo). All `podman` commands should be run with `sudo`.
 
 ## Quick Diagnostics
 
@@ -209,7 +209,7 @@ sudo make setup
 
 ## SELinux Issues
 
-SELinux is handled automatically with `:z` volume labels in `podman-compose.yml`. If you encounter AVC denials:
+SELinux is handled automatically with `:z` volume labels in systemd service definitions. If you encounter AVC denials:
 
 ```bash
 # Check recent denials
@@ -224,9 +224,9 @@ sudo restorecon -Rv /var/lib/hotstack-os
 
 ## Cleanup and Reset
 
-### Remove Containers (Keep Data)
+### Stop Services (Keep Data)
 ```bash
-sudo podman-compose down
+sudo systemctl stop hotstack-os.target
 # Data in /var/lib/hotstack-os is preserved
 ```
 
@@ -243,8 +243,8 @@ This removes:
 
 ### Manual Cleanup (If make clean fails)
 ```bash
-# Stop containers
-sudo podman-compose down
+# Stop services
+sudo systemctl stop hotstack-os.target
 
 # Remove containers
 sudo podman rm -af
@@ -256,12 +256,9 @@ sudo exportfs -u 127.0.0.1:/var/lib/hotstack-os/cinder-nfs
 sudo rm -rf /var/lib/hotstack-os
 
 # Remove networks
-sudo podman network rm openstack_openstack
+sudo podman network rm hotstack-os
 
-# Rebuild from scratch (podman-compose)
-sudo make build && sudo make setup && sudo make start
-
-# Rebuild from scratch (systemd)
+# Rebuild from scratch
 sudo make build && sudo make install && sudo systemctl restart hotstack-os.target
 ```
 

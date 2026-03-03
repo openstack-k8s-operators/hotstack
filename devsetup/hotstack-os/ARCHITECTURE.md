@@ -4,7 +4,7 @@
 
 HotStack-OS uses a hybrid architecture where the OpenStack control plane runs in containers (22-23 total) while integrating with host services for compute and networking:
 
-- **Control plane**: All OpenStack services containerized with podman-compose
+- **Control plane**: All OpenStack services containerized and managed via systemd
 - **Compute**: Integrates with host libvirt/KVM for VM management
 - **Networking**: Uses host OpenvSwitch with OVN for SDN (Geneve overlays, VLAN trunking)
 - **Storage**: NFS-based block storage exported from host
