@@ -95,7 +95,7 @@ HotStack-OS uses a dedicated `172.31.0.0/24` address space split into two subnet
 | `PROVIDER_NETWORK` | `172.31.0.128/25` | OVS hot-ex bridge for VM connectivity (.128-.255) |
 | `BREX_IP` | `172.31.0.129` | IP address for hot-ex bridge (host connectivity) |
 
-**Important**: Only change these if the default range conflicts with existing networks on your machine. If changed, you must also update the `networks` section in `podman-compose.yml` to match.
+**Important**: Only change these if the default range conflicts with existing networks on your machine.
 
 ### Service IP Addresses
 

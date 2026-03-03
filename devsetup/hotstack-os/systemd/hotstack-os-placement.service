@@ -43,7 +43,7 @@ ExecStart=/usr/bin/podman run \
     --env KEYSTONE_ADMIN_PASSWORD=__KEYSTONE_ADMIN_PASSWORD__ \
     --env REGION_NAME=__REGION_NAME__ \
     --volume __HOTSTACK_DATA_DIR__/runtime/config/placement/placement.conf:/etc/placement/placement.conf:ro,z \
-    localhost/hotstack-os_placement:latest
+    localhost/hotstack-os-placement:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
 ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-placement 10 5 5 5 curl -f http://localhost:8778/

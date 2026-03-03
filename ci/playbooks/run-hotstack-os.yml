@@ -16,7 +16,6 @@
       ansible.builtin.dnf:
         name:
           - podman
-          - podman-compose
           - make
           - apt-cacher-ng
         state: present
@@ -57,7 +56,7 @@
       ansible.builtin.lineinfile:
         path: "{{ hotstack_os_dir }}/.env"
         regexp: '^BUILD_PARALLEL='
-        line: 'BUILD_PARALLEL=1'
+        line: 'BUILD_PARALLEL=10'
 
     - name: Build, setup, and start hotstack-os services
       become: true
@@ -93,33 +92,26 @@
           ansible.builtin.shell: |
             set -o pipefail
 
-            # Try up to 3 times: first 2 without cleanup, then cleanup and try once more
+            # Try up to 3 times with cleanup before each retry
             for attempt in 1 2 3; do
               echo "=== Build attempt $attempt of 3 ==="
 
-              if make build 2>&1 | tee {{ ansible_user_dir }}/zuul-output/logs/make_build_attempt_${attempt}.log; then
+              if make build VERBOSE=1 2>&1 | tee {{ ansible_user_dir }}/zuul-output/logs/make_build_attempt_${attempt}.log; then
                 echo "=== Build succeeded on attempt $attempt ==="
                 exit 0
               fi
 
               echo "=== Build attempt $attempt failed ==="
 
-              # Only cleanup after second failure (before third attempt)
-              if [ $attempt -eq 2 ]; then
-                echo "=== Cleaning up podman state before final retry ==="
-                podman rm -af 2>&1 | tee -a {{ ansible_user_dir }}/zuul-output/logs/podman_cleanup.log || true
-                podman rmi -af 2>&1 | tee -a {{ ansible_user_dir }}/zuul-output/logs/podman_cleanup.log || true
-                podman system prune -af --volumes 2>&1 | tee -a {{ ansible_user_dir }}/zuul-output/logs/podman_cleanup.log || true
+              echo "=== Cleaning up podman state ==="
+              podman rm -af 2>&1 | tee -a {{ ansible_user_dir }}/zuul-output/logs/podman_cleanup_attempt_${attempt}.log || true
+              podman rmi -af 2>&1 | tee -a {{ ansible_user_dir }}/zuul-output/logs/podman_cleanup_attempt_${attempt}.log || true
+              podman system prune -af --volumes 2>&1 | tee -a {{ ansible_user_dir }}/zuul-output/logs/podman_cleanup_attempt_${attempt}.log || true
 
-                # Random delay between 30-60 seconds
-                delay=$((30 + RANDOM % 31))
-                echo "=== Waiting ${delay} seconds before final retry ==="
-                sleep $delay
-              elif [ $attempt -eq 1 ]; then
-                # Short delay between first and second attempt
-                echo "=== Waiting 10 seconds before retry ==="
-                sleep 10
-              fi
+              # Random delay between 30-60 seconds
+              delay=$((30 + RANDOM % 31))
+              echo "=== Waiting ${delay} seconds ==="
+              sleep $delay
             done
 
             echo "=== All 3 build attempts failed ==="

@@ -22,6 +22,8 @@ help:
 	@echo "Setup:"
 	@echo "  sudo make install-deps        - Install system dependencies (packages and services)"
 	@echo "  sudo make build               - Build all container images"
+	@echo "  sudo make build PARALLEL=N    - Build with N parallel jobs"
+	@echo "  sudo make build VERBOSE=1     - Build with verbose output"
 	@echo "  sudo make install             - Install HotStack-OS as systemd services"
 	@echo ""
 	@echo "Post-Installation:"
@@ -38,7 +40,14 @@ help:
 
 build:
 	$(call require-root,build)
-	@./scripts/build.sh
+	@if [ ! -f .env ]; then \
+		echo "Creating .env from .env.example..."; \
+		cp .env.example .env; \
+	fi
+	@ARGS="--env-file .env"; \
+	[ "$(VERBOSE)" = "1" ] && ARGS="$$ARGS --verbose"; \
+	[ -n "$(PARALLEL)" ] && ARGS="$$ARGS --parallel $(PARALLEL)"; \
+	./scripts/build.py $$ARGS
 
 config:
 	$(call require-root,config)

@@ -45,7 +45,6 @@ SCRIPTS_RUNTIME_DIR="${HOTSTACK_DATA_DIR}/runtime/scripts"
 
 # Initialize variables with defaults from .env.example
 # These will be overridden when .env file is sourced
-# Note: podman-compose reads these directly from .env file
 DB_PASSWORD="openstack"
 KEYSTONE_ADMIN_PASSWORD="admin"
 SERVICE_PASSWORD="openstack"
@@ -445,72 +444,6 @@ exit_with_error_summary() {
     fi
 }
 
-# ============================================================================
-# Container Build Functions
-# ============================================================================
-
-# Build base OpenStack builder container image
-# Usage: build_base_builder_image
-build_base_builder_image() {
-    echo -n "Building base builder image... "
-
-    # Optional build argument for apt caching proxy
-    local build_args=""
-    [ -n "${APT_PROXY:-}" ] && build_args="$build_args --build-arg APT_PROXY=$APT_PROXY"
-
-    # shellcheck disable=SC2086
-    if ! podman build --target=builder \
-        -t localhost/hotstack-os-base-builder:latest \
-        -f containerfiles/base-openstack.containerfile \
-        $build_args \
-        containerfiles/ &>/dev/null; then
-        echo -e "${RED}✗${NC}"
-        return 1
-    fi
-    echo -e "${GREEN}✓${NC}"
-}
-
-# Build base OpenStack runtime container image
-# Usage: build_base_runtime_image
-build_base_runtime_image() {
-    echo -n "Building base runtime image... "
-
-    # Optional build argument for apt caching proxy
-    local build_args=""
-    [ -n "${APT_PROXY:-}" ] && build_args="$build_args --build-arg APT_PROXY=$APT_PROXY"
-
-    # shellcheck disable=SC2086
-    if ! podman build --target=runtime \
-        -t localhost/hotstack-os-base:latest \
-        -f containerfiles/base-openstack.containerfile \
-        $build_args \
-        containerfiles/ &>/dev/null; then
-        echo -e "${RED}✗${NC}"
-        return 1
-    fi
-    echo -e "${GREEN}✓${NC}"
-}
-
-# Build all OpenStack service container images using podman-compose
-# Usage: build_service_images
-build_service_images() {
-    echo "Building service container images (this will take ~8 minutes)..."
-
-    # Use BUILD_PARALLEL environment variable to control concurrency (default: 1 for serial builds)
-    # IMPORTANT: podman-compose defaults to UNLIMITED parallelism (sys.maxsize) which can cause
-    # storage layer corruption. We default to 1 for stability.
-    # Set BUILD_PARALLEL=4 (or higher) in .env to build faster with more parallelism
-    local parallel_jobs=${BUILD_PARALLEL:-1}
-
-    if ! podman-compose --parallel "$parallel_jobs" build; then
-        echo -e "${RED}Build failed!${NC}"
-        echo "If you see permission errors, try: podman system reset -f"
-        echo "If you see storage/layer errors, try reducing BUILD_PARALLEL in .env (current: $parallel_jobs)"
-        return 1
-    fi
-
-    echo -e "${GREEN}✓${NC} All service images built successfully"
-}
 
 # ============================================================================
 # Configuration Generation Functions

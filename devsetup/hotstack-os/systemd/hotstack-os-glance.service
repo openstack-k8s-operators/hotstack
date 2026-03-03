@@ -44,7 +44,7 @@ ExecStart=/usr/bin/podman run \
     --env REGION_NAME=__REGION_NAME__ \
     --volume __HOTSTACK_DATA_DIR__/runtime/config/glance/glance-api.conf:/etc/glance/glance-api.conf:ro,z \
     --volume __HOTSTACK_DATA_DIR__/glance/images:/var/lib/glance/images:U,z \
-    localhost/hotstack-os_glance:latest
+    localhost/hotstack-os-glance:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
 ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-glance 10 5 5 5 curl -f http://localhost:9292/
