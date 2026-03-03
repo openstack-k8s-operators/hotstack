@@ -85,7 +85,9 @@ source "$PROJECT_DIR/.env"
 
 # Set defaults for derived variables
 if [ -z "${CHASSIS_HOSTNAME:-}" ]; then
-    CHASSIS_HOSTNAME=$(hostname)
+    # Must match COMPUTE_HOSTNAME logic for OVN port binding to work
+    # If hostname changes (e.g., DHCP transient hostname), set CHASSIS_HOSTNAME in .env
+    CHASSIS_HOSTNAME=$(hostname -f 2>/dev/null || hostname)
 fi
 HOTSTACK_DATA_DIR=${HOTSTACK_DATA_DIR:-/var/lib/hotstack-os}
 NOVA_INSTANCES_PATH=${NOVA_INSTANCES_PATH:-${HOTSTACK_DATA_DIR}/nova-instances}
@@ -99,6 +101,107 @@ install -m 755 "$PROJECT_DIR/systemd/hotstack-os-infra-setup.sh" /usr/local/bin/
 install -m 755 "$PROJECT_DIR/systemd/hotstack-os-infra-cleanup.sh" /usr/local/bin/
 install -m 755 "$PROJECT_DIR/systemd/hotstack-healthcheck.sh" /usr/local/bin/
 echo "  ✓ Installed scripts to /usr/local/bin/"
+echo ""
+
+# Run infra-setup to ensure hotstack user exists
+echo "Running infrastructure setup..."
+/usr/local/bin/hotstack-os-infra-setup.sh
+echo "  ✓ Infrastructure setup complete"
+echo ""
+
+# Detect hotstack user UID for session libvirt
+if ! id hotstack &>/dev/null; then
+    echo "Error: hotstack user not found after infra-setup" >&2
+    exit 1
+fi
+HOTSTACK_UID=$(id -u hotstack)
+echo "Detected hotstack user UID: $HOTSTACK_UID"
+echo ""
+
+# Setup libvirt session for hotstack user
+echo "Setting up libvirt session for hotstack user..."
+
+# Create libvirt config directory
+LIBVIRT_CONFIG_DIR="/var/lib/hotstack/.config/libvirt"
+echo "  Creating libvirt config directory..."
+mkdir -p "$LIBVIRT_CONFIG_DIR"
+chown hotstack:hotstack "$LIBVIRT_CONFIG_DIR"
+
+# Install libvirtd.conf
+echo "  Installing libvirt session configuration..."
+cp "$PROJECT_DIR/configs/libvirt/libvirtd.conf" "$LIBVIRT_CONFIG_DIR/libvirtd.conf"
+chown hotstack:hotstack "$LIBVIRT_CONFIG_DIR/libvirtd.conf"
+chmod 644 "$LIBVIRT_CONFIG_DIR/libvirtd.conf"
+
+# Create systemd user service directory
+USER_SYSTEMD_DIR="/var/lib/hotstack/.config/systemd/user"
+echo "  Creating systemd user service directory..."
+mkdir -p "$USER_SYSTEMD_DIR"
+chown -R hotstack:hotstack "/var/lib/hotstack/.config/systemd"
+
+# Install libvirtd user service
+echo "  Installing libvirtd user service..."
+cp "$PROJECT_DIR/systemd/hotstack-os-libvirtd-session.service" "$USER_SYSTEMD_DIR/hotstack-os-libvirtd-session.service"
+chown hotstack:hotstack "$USER_SYSTEMD_DIR/hotstack-os-libvirtd-session.service"
+
+# Verify /dev/kvm is accessible
+if [ -c /dev/kvm ]; then
+    if groups hotstack | grep -q '\bkvm\b'; then
+        echo "  ✓ hotstack user has access to /dev/kvm"
+    else
+        echo "ERROR: hotstack user not in kvm group" >&2
+        exit 1
+    fi
+else
+    echo "  WARNING: /dev/kvm not found - KVM acceleration may not be available"
+fi
+
+# Grant CAP_NET_ADMIN to libvirtd for TAP device creation
+# Required for session libvirt to create network interfaces (tap devices)
+# This is acceptable for dev/test environments
+echo "  Granting CAP_NET_ADMIN capability to libvirtd..."
+setcap cap_net_admin+ep /usr/sbin/libvirtd
+echo "  ✓ libvirtd capabilities configured"
+
+# Enable and start the libvirtd user service
+echo "  Enabling and starting libvirtd user service..."
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
+    systemctl --user daemon-reload
+
+# Reset failed state if service is in failed state
+# This ensures a clean start if previous attempts failed
+# Only resets if actually failed - won't interrupt running VMs
+if sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
+    systemctl --user is-failed hotstack-os-libvirtd-session.service &>/dev/null; then
+    echo "  Resetting failed libvirtd session state..."
+    sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
+        systemctl --user stop hotstack-os-libvirtd-session.service 2>/dev/null || true
+    sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
+        systemctl --user reset-failed 2>/dev/null || true
+fi
+
+# Enable the service
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
+    systemctl --user enable hotstack-os-libvirtd-session.service
+
+# Start the service
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
+    systemctl --user start hotstack-os-libvirtd-session.service
+
+# Wait for socket to be created
+SOCKET_PATH="/run/user/$HOTSTACK_UID/libvirt/libvirt-sock"
+echo "  Waiting for libvirt socket at $SOCKET_PATH..."
+if timeout 10 bash -c "while [ ! -S '$SOCKET_PATH' ]; do sleep 0.5; done"; then
+    echo "  ✓ libvirt socket created"
+else
+    echo "ERROR: Timeout waiting for libvirt socket" >&2
+    echo "  Checking service status:" >&2
+    sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
+        systemctl --user status hotstack-os-libvirtd-session.service --no-pager || true
+    exit 1
+fi
+
+echo "  ✓ Libvirt session setup complete"
 echo ""
 
 # Process and install systemd units
@@ -116,6 +219,7 @@ process_config_files "$tmpdir" "systemd units" \
     "__NOVA_INSTANCES_PATH__" "$NOVA_INSTANCES_PATH" \
     "__NOVA_NFS_MOUNT_POINT_BASE__" "$NOVA_NFS_MOUNT_POINT_BASE" \
     "__CINDER_NFS_EXPORT_DIR__" "$CINDER_NFS_EXPORT_DIR" \
+    "__HOTSTACK_UID__" "$HOTSTACK_UID" \
     "__MARIADB_IP__" "$MARIADB_IP" \
     "__RABBITMQ_IP__" "$RABBITMQ_IP" \
     "__MEMCACHED_IP__" "$MEMCACHED_IP" \

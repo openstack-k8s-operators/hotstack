@@ -58,17 +58,56 @@
         regexp: '^BUILD_PARALLEL='
         line: 'BUILD_PARALLEL=10'
 
+    - name: Install dependencies (includes libvirt for isolation test)
+      become: true
+      args:
+        chdir: "{{ hotstack_os_dir }}"
+        executable: /bin/bash
+      ansible.builtin.shell: |
+        set -o pipefail
+        make install-deps 2>&1 | tee {{ ansible_user_dir }}/zuul-output/logs/make_install-deps.log
+
+    - name: Create test VM in system libvirt to verify isolation
+      become: true
+      block:
+        - name: Create minimal test VM XML definition
+          ansible.builtin.copy:
+            dest: /tmp/test-vm.xml
+            content: |
+              <domain type='kvm'>
+                <name>ci-test-isolation-vm</name>
+                <memory unit='KiB'>131072</memory>
+                <vcpu placement='static'>1</vcpu>
+                <os>
+                  <type arch='x86_64'>hvm</type>
+                </os>
+                <devices>
+                  <emulator>/usr/libexec/qemu-kvm</emulator>
+                </devices>
+              </domain>
+            mode: '0644'
+
+        - name: Define test VM in system libvirt
+          ansible.builtin.command:
+            cmd: virsh define /tmp/test-vm.xml
+          changed_when: true
+
+        - name: Verify test VM exists in system libvirt
+          ansible.builtin.command:
+            cmd: virsh list --all --name
+          register: system_vms
+          changed_when: false
+
+        - name: Verify ci-test-isolation-vm is present
+          ansible.builtin.assert:
+            that:
+              - "'ci-test-isolation-vm' in system_vms.stdout"
+            fail_msg: "Test VM not found in system libvirt"
+            success_msg: "Test VM successfully created in system libvirt"
+
     - name: Build, setup, and start hotstack-os services
       become: true
       block:
-        - name: Install dependencies
-          args:
-            chdir: "{{ hotstack_os_dir }}"
-            executable: /bin/bash
-          ansible.builtin.shell: |
-            set -o pipefail
-            make install-deps 2>&1 | tee {{ ansible_user_dir }}/zuul-output/logs/make_install-deps.log
-
         - name: Test apt-cacher-ng connectivity from container context
           ansible.builtin.command:
             cmd: >-
@@ -167,6 +206,16 @@
         set -o pipefail
         make smoke-test 2>&1 | tee {{ ansible_user_dir }}/zuul-output/logs/make_smoke-test.log
 
+    # Smoke test passing proves isolation works - Nova would have failed
+    # with InvalidConfiguration error if it saw the system VM
+
+    - name: Get hotstack user UID for restart tests
+      become: true
+      ansible.builtin.command:
+        cmd: id -u hotstack
+      register: hotstack_uid
+      changed_when: false
+
     - name: Test service restart - Stop HotStack-OS services
       become: true
       ansible.builtin.systemd:
@@ -179,6 +228,24 @@
     - name: Wait for services to fully stop
       ansible.builtin.pause:
         seconds: 60
+
+    - name: Verify libvirt session still running after service stop
+      become: true
+      become_user: hotstack
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ hotstack_uid.stdout }}"
+      ansible.builtin.command:
+        cmd: systemctl --user is-active hotstack-os-libvirtd-session.service
+      register: libvirt_session_status
+      changed_when: false
+      failed_when: false
+
+    - name: Verify libvirt session persistence
+      ansible.builtin.assert:
+        that:
+          - libvirt_session_status.stdout == "active"
+        fail_msg: "Libvirt session stopped - should remain running"
+        success_msg: "✓ Libvirt session persisted across service stop"
 
     - name: Test service restart - Start HotStack-OS services
       become: true

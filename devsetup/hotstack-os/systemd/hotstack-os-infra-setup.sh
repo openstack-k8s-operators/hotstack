@@ -55,6 +55,14 @@ SERVICE_DATA_DIRS=(
 
 echo "=== HotStack-OS Infrastructure Setup ==="
 
+# Verify hotstack user exists (should be created by create-hotstack-user.sh)
+if ! id hotstack &>/dev/null; then
+    echo "ERROR: hotstack user does not exist"
+    echo "This should have been created by the install process"
+    exit 1
+fi
+echo "✓ hotstack user verified (UID: $(id -u hotstack))"
+
 # Create Podman network for containers
 echo "Setting up Podman network..."
 if podman network exists hotstack-os 2>/dev/null; then
@@ -134,12 +142,15 @@ echo "✓ /etc/hosts updated with OpenStack service FQDNs"
 echo "Configuring NFS exports for Cinder..."
 
 # Create export directory if it doesn't exist
+# Use kvm group ownership with setgid so cinder-volume (root) creates files
+# that libvirt session (hotstack user in kvm group) can access
 if [ ! -d "$CINDER_NFS_EXPORT_DIR" ]; then
     echo "  Creating NFS export directory..."
     mkdir -p "$CINDER_NFS_EXPORT_DIR"
-    chown root:root "$CINDER_NFS_EXPORT_DIR"
-    chmod 0755 "$CINDER_NFS_EXPORT_DIR"
 fi
+chown root:kvm "$CINDER_NFS_EXPORT_DIR"
+# Set setgid bit and group-writable so files inherit kvm group
+chmod 2775 "$CINDER_NFS_EXPORT_DIR"
 
 # Remove old exports if they exist
 if grep -q "$NFS_EXPORTS_BEGIN_MARKER" "$NFS_EXPORTS_FILE" 2>/dev/null; then
@@ -179,10 +190,15 @@ done
 chown root:root "$HOTSTACK_DATA_DIR"
 chmod 755 "$HOTSTACK_DATA_DIR"
 
-# Nova instances directory needs special handling for libvirt access
-echo "Configuring Nova instances directory for libvirt..."
-chown qemu:qemu "$NOVA_INSTANCES_PATH"
-# Set setgid bit and group-writable so nova-compute can create subdirs that qemu can access
+# Nova instances directory needs special handling for libvirt session access
+# Since we use libvirt session mode (running as hotstack user), the directory
+# must be owned by hotstack:kvm so both Nova (root) and libvirt (hotstack) can access
+# The hotstack user is in the kvm group, so group permissions provide access
+# The qemu-img wrapper ensures disk files are created with 0664 (group-writable)
+echo "Configuring Nova instances directory for libvirt session..."
+chown hotstack:kvm "$NOVA_INSTANCES_PATH"
+# Set setgid bit and group-writable so nova-compute (root) can create files
+# that libvirt session (hotstack user) can manage via group permissions
 chmod 2775 "$NOVA_INSTANCES_PATH"
 
 # Set SELinux context for libvirt access
@@ -192,9 +208,12 @@ if command -v semanage >/dev/null 2>&1; then
     restorecon -R "$NOVA_INSTANCES_PATH" 2>/dev/null || true
 fi
 
-# Nova mount directory for NFS volume attachments (needs root:root for mounting)
-chown root:root "$NOVA_NFS_MOUNT_POINT_BASE"
-chmod 755 "$NOVA_NFS_MOUNT_POINT_BASE"
+# Nova mount directory for NFS volume attachments
+# Use kvm group ownership with setgid so mounted volumes are accessible
+# to libvirt session (hotstack user in kvm group)
+chown root:kvm "$NOVA_NFS_MOUNT_POINT_BASE"
+# Set setgid bit and group-writable for kvm group access
+chmod 2775 "$NOVA_NFS_MOUNT_POINT_BASE"
 
 # Set SELinux context for libvirt access to mounted volumes
 if command -v semanage >/dev/null 2>&1; then

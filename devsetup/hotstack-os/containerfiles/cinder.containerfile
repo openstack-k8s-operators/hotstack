@@ -49,6 +49,16 @@ COPY --chmod=755 scripts/cinder-api-entrypoint.sh /usr/local/bin/cinder-api-entr
 COPY --chmod=755 scripts/cinder-scheduler-entrypoint.sh /usr/local/bin/cinder-scheduler-entrypoint.sh
 COPY --chmod=755 scripts/cinder-volume-entrypoint.sh /usr/local/bin/cinder-volume-entrypoint.sh
 
+# Install qemu-img wrapper to fix permissions for libvirt session access
+# This wrapper ensures volume files are created with 0664 instead of 0644
+# so that QEMU running as hotstack user can access them via group permissions
+# The wrapper is installed in /usr/local/bin which takes precedence over /usr/bin
+COPY --chmod=755 scripts/qemu-img-wrapper.py /usr/local/bin/qemu-img
+
+# Test the wrapper to ensure it works correctly (fails build if broken)
+COPY --chmod=755 scripts/test-qemu-img-wrapper.sh /tmp/test-qemu-img-wrapper.sh
+RUN /tmp/test-qemu-img-wrapper.sh && rm /tmp/test-qemu-img-wrapper.sh
+
 USER cinder
 WORKDIR /var/lib/cinder
 

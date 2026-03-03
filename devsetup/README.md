@@ -19,6 +19,7 @@ images.
 - **Quick development and testing** (~10 minutes first-time setup, ~3 minutes to start)
 - Users who want reproducible, self-contained environments
 - Limited resources (no dedicated machine needed)
+- Coexistence with other libvirt VMs (isolation via session mode)
 
 **Getting Started:**
 

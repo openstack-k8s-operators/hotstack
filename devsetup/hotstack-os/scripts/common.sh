@@ -521,6 +521,16 @@ prepare_all_configs() {
     local compute_hostname
     compute_hostname=$(hostname -f 2>/dev/null || hostname)
 
+    # Get hotstack user UID (must exist before config generation)
+    if ! id hotstack &>/dev/null; then
+        echo "ERROR: hotstack user does not exist"
+        echo "Run 'sudo make create-user' first or use 'sudo make install' which handles this automatically"
+        exit 1
+    fi
+    local hotstack_uid
+    hotstack_uid=$(id -u hotstack)
+    echo "Using hotstack user UID: $hotstack_uid"
+
     # Process ALL config files in one pass
     process_config_files \
         "$CONFIGS_RUNTIME_DIR" \
@@ -545,6 +555,7 @@ prepare_all_configs() {
         "CINDER_STORAGE_BACKEND" "nfs" \
         "NOVA_INSTANCES_PATH" "$NOVA_INSTANCES_PATH" \
         "NOVA_NFS_MOUNT_POINT_BASE" "$NOVA_NFS_MOUNT_POINT_BASE" \
+        "__HOTSTACK_UID__" "$hotstack_uid" \
         "# UPSTREAM_DNS_SERVERS" "$upstream_dns" \
         "MARIADB_IP" "$MARIADB_IP" \
         "RABBITMQ_IP" "$RABBITMQ_IP" \
@@ -579,20 +590,28 @@ prepare_all_configs() {
 
 # Remove libvirt VMs matching HotStack naming pattern
 # Usage: remove_libvirt_vms
-# Returns: 0 on success, 1 if virsh not available
+# Returns: 0 on success, 1 if virsh not available or hotstack user doesn't exist
 remove_libvirt_vms() {
     if ! command -v virsh &> /dev/null; then
         return 1
     fi
 
+    # Check if hotstack user exists (VMs are in session libvirt)
+    if ! id hotstack &>/dev/null; then
+        return 0  # No hotstack user, no VMs to clean
+    fi
+
+    HOTSTACK_UID=$(id -u hotstack)
+    local CONNECT_URI="qemu:///session?socket=/run/user/$HOTSTACK_UID/libvirt/libvirt-sock"
+
     # WARNING: This will destroy ALL libvirt VMs matching the pattern "notapet-<uuid>"
     # This is HotStack's custom Nova naming (cattle not pets!), but could affect:
-    # - VMs from other deployments using the same naming pattern
-    # - Any manually created VMs following this naming pattern
+    # - VMs from other HotStack deployments using the same naming pattern
+    # - Any manually created VMs in the session following this naming pattern
     # Pattern matches full UUID format: 8-4-4-4-12 hex digits (e.g., notapet-9995eda6-9999-4d2e-afaf-bf7be0d981de)
-    for vm in $(virsh list --all --name 2>/dev/null | grep -E "^notapet-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" || true); do
-        virsh destroy "$vm" &>/dev/null || true
-        virsh undefine "$vm" --nvram &>/dev/null || true
+    for vm in $(virsh -c "$CONNECT_URI" list --all --name 2>/dev/null | grep -E "^notapet-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" || true); do
+        virsh -c "$CONNECT_URI" destroy "$vm" &>/dev/null || true
+        virsh -c "$CONNECT_URI" undefine "$vm" --nvram &>/dev/null || true
     done
     return 0
 }

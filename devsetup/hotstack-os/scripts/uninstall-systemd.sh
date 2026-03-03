@@ -28,8 +28,48 @@ echo ""
 # Stop and disable target
 echo "Stopping services..."
 systemctl stop hotstack-os.target 2>/dev/null || true
+
+# Wait for all services to fully stop (not just deactivating)
+echo "  Waiting for services to fully stop..."
+MAX_WAIT=90
+ELAPSED=0
+while [ $ELAPSED -lt $MAX_WAIT ]; do
+    # Check if any hotstack-os services are still active or deactivating
+    # We need to wait for both states to clear before removing unit files
+    ACTIVE_COUNT=$(systemctl list-units 'hotstack-os-*.service' --state=active,deactivating --no-legend 2>/dev/null | wc -l)
+
+    if [ "$ACTIVE_COUNT" -eq 0 ]; then
+        break
+    fi
+
+    # Show progress every 10 seconds
+    if [ $((ELAPSED % 10)) -eq 0 ] && [ $ELAPSED -gt 0 ]; then
+        echo "  Still waiting... ($ACTIVE_COUNT services stopping)"
+    fi
+
+    sleep 1
+    ELAPSED=$((ELAPSED + 1))
+done
+
+if [ $ELAPSED -ge $MAX_WAIT ]; then
+    echo "  ⚠ Warning: Some services did not stop within ${MAX_WAIT}s"
+    echo "  Services still active or deactivating:"
+    systemctl list-units 'hotstack-os-*.service' --state=active,deactivating --no-legend 2>/dev/null || true
+    echo ""
+    echo "  Containers still running:"
+    podman ps --filter "name=hotstack-os-" --format "{{.Names}}" 2>/dev/null || true
+    echo ""
+    echo "  You may need to manually stop containers: podman stop <container-name>"
+fi
+
 systemctl disable hotstack-os.target 2>/dev/null || true
 echo "  ✓ Services stopped"
+echo ""
+
+# Note: Libvirt session is NOT stopped during uninstall to preserve running VMs
+# To clean up the libvirt session and VMs, run: sudo make clean
+echo "Libvirt session preserved (VMs will continue running)"
+echo "  To stop libvirt session and clean VMs: sudo make clean"
 echo ""
 
 # Remove systemd units

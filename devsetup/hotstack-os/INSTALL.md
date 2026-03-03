@@ -47,7 +47,8 @@ The `make install` command:
    - `hotstack-healthcheck.sh` - Health check polling
 5. Installs systemd service units to `/etc/systemd/system/`:
    - `hotstack-os-infra-setup.service` - Infrastructure setup (oneshot)
-   - `hotstack-os-*.service` - All 22 OpenStack service units
+   - `hotstack-os-libvirtd-session.service` - Libvirt session daemon (user service)
+   - `hotstack-os-*.service` - All 22 OpenStack/infrastructure service units
    - `hotstack-os.target` - Target grouping all services
 6. Substitutes environment variables from `.env` into service files
 7. Reloads systemd daemon
@@ -78,16 +79,17 @@ sudo make uninstall
 ```
 
 This:
-- Stops all HotStack-OS services
-- Disables automatic startup
+- Stops all HotStack-OS services (via `systemctl stop hotstack-os.target`)
+- Disables automatic startup (via `systemctl disable hotstack-os.target`)
 - Removes systemd service units from `/etc/systemd/system/`
 - Removes helper scripts from `/usr/local/bin/`
 - Reloads systemd daemon
 
 **Note**: This does NOT remove:
-- Container images
-- Persistent data in `${HOTSTACK_DATA_DIR}`
-- Podman network and volumes
+- Container images (use `sudo podman rmi` to remove)
+- Persistent data in `${HOTSTACK_DATA_DIR}` (use `sudo rm -rf` to remove)
+- Podman network `hotstack-os` (use `sudo podman network rm hotstack-os` to remove)
+- Libvirt session and VMs (intentionally preserved to keep VMs running)
 
 ## Complete Data Cleanup
 
@@ -101,7 +103,8 @@ sudo make clean
 - All HotStack-OS containers and images
 - All persistent data (databases, images, volumes)
 - All libvirt VMs with pattern `notapet-<uuid>`
-- Podman network and volumes
+- Libvirt session service and hotstack user
+- Podman network (`hotstack-os`)
 - NFS exports
 - OVS bridges
 
@@ -127,4 +130,6 @@ sudo journalctl -u hotstack-os-keystone.service -n 100
 - [README.md](README.md) - Overview and quick start
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Architecture details
 - [CONFIGURATION.md](CONFIGURATION.md) - Configuration options
+- [QUICKSTART.md](QUICKSTART.md) - Quick start guide for HotStack scenarios
+- [SMOKE_TEST.md](SMOKE_TEST.md) - Validation tests
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common problems and solutions

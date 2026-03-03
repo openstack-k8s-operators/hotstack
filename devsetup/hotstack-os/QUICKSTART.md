@@ -36,8 +36,8 @@ This creates resources needed by HotStack scenarios:
 - Provider network (172.31.0.128/25) - shared, for floating IPs
 - Router connecting private and external networks
 - Security group rules (SSH, ICMP) for both admin and hotstack projects
-- Test image (Cirros) - public
-- HotStack images (controller, blank, nat64, iPXE) - downloaded from GitHub releases and uploaded
+- Test images (Cirros, CentOS Stream 9) - public
+- HotStack images (controller, blank, nat64, iPXE BIOS/EFI) - downloaded from GitHub releases and uploaded
 - Application credential (hotstack-cred) for the hotstack project
 - `cloud-secret.yaml` file in the repository root (ready for use with HotStack scenarios)
 
@@ -86,5 +86,7 @@ ansible-playbook bootstrap.yml \
 
 - [README.md](README.md) - Overview and management commands
 - [INSTALL.md](INSTALL.md) - Installation guide
-- [CONFIGURATION.md](CONFIGURATION.md) - Configuration options
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Architecture details
+- [CONFIGURATION.md](CONFIGURATION.md) - Configuration options
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common problems and solutions
+- [SMOKE_TEST.md](SMOKE_TEST.md) - Validation tests
