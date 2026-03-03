@@ -26,54 +26,76 @@ wait_for_service 60 "http://nova.hotstack-os.local:8774/"
 # Wait for Placement
 wait_for_service 30 "http://placement.hotstack-os.local:8778/"
 
-# Verify libvirt connection
-echo "Testing libvirt connection..."
+# Verify libvirt connection (session mode)
+echo "Testing libvirt connection (session mode)..."
 echo "Debug info:"
 echo "  Current user: $(whoami) (UID: $(id -u))"
 echo "  Groups: $(groups)"
-echo "  Checking libvirt sockets..."
+echo "  XDG_RUNTIME_DIR: ${XDG_RUNTIME_DIR:-not set}"
 
-# List all libvirt sockets
-if [ -d /var/run/libvirt ]; then
-    # Use find to list socket files
-    if find /var/run/libvirt -maxdepth 1 -name "*sock*" -print -quit 2>/dev/null | grep -q .; then
-        find /var/run/libvirt -maxdepth 1 -name "*sock*" -ls 2>/dev/null | sed 's/^/    /'
+# Extract connection URI from nova.conf
+echo "  Extracting connection_uri from /etc/nova/nova.conf..."
+echo "  Raw line from config:"
+grep -E '^\s*connection_uri\s*=' /etc/nova/nova.conf | sed 's/^/    /'
+LIBVIRT_URI=$(grep -E '^\s*connection_uri\s*=' /etc/nova/nova.conf | head -1 | cut -d'=' -f2- | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+echo "  Extracted URI: $LIBVIRT_URI"
+
+# Check if placeholder wasn't substituted
+if [[ "$LIBVIRT_URI" == *"__HOTSTACK_UID__"* ]]; then
+    echo ""
+    echo "=========================================="
+    echo "ERROR: Configuration not properly generated"
+    echo "=========================================="
+    echo ""
+    echo "The __HOTSTACK_UID__ placeholder was not substituted in nova.conf"
+    echo "This means the configuration was not processed during installation."
+    echo ""
+    echo "Fix: Run 'sudo make install' to regenerate configs with actual UID"
+    echo "=========================================="
+    exit 1
+fi
+
+# Check if session socket directory exists
+if [[ "$LIBVIRT_URI" =~ /run/user/([0-9]+)/libvirt ]]; then
+    HOTSTACK_UID="${BASH_REMATCH[1]}"
+    echo "  Session socket path: /run/user/$HOTSTACK_UID/libvirt/libvirt-sock"
+
+    if [ -d "/run/user/$HOTSTACK_UID/libvirt" ]; then
+        echo "  ✓ Session libvirt directory exists"
+        ls -la "/run/user/$HOTSTACK_UID/libvirt/" 2>/dev/null | sed 's/^/    /' || true
     else
-        echo "    No socket files found in /var/run/libvirt"
+        echo "  ✗ Session libvirt directory not found"
     fi
-else
-    echo "    ✗ /var/run/libvirt directory not found"
 fi
 
 # Try the connection
-if ! virsh -c qemu:///system list &>/dev/null; then
+if ! virsh -c "$LIBVIRT_URI" list &>/dev/null; then
     echo ""
     echo "=========================================="
-    echo "ERROR: Cannot connect to libvirt on host"
+    echo "ERROR: Cannot connect to libvirt session"
     echo "=========================================="
     echo ""
     echo "Connection test output:"
-    virsh -c qemu:///system list 2>&1 | sed 's/^/  /' | head -10
+    virsh -c "$LIBVIRT_URI" list 2>&1 | sed 's/^/  /' | head -10
     echo ""
     echo "Possible causes:"
-    echo "  1. virtqemud.socket is not running on host"
-    echo "     Fix: sudo systemctl start virtqemud.socket"
+    echo "  1. hotstack-os-libvirtd-session.service (user service) is not running"
+    echo "     Check: sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID systemctl --user status hotstack-os-libvirtd-session.service"
+    echo "     Fix: sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID systemctl --user start hotstack-os-libvirtd-session.service"
     echo ""
-    echo "  2. Permission denied - nova user cannot access socket"
-    echo "     Check: ls -la /var/run/libvirt/libvirt-sock"
-    echo "     Fix: User running containers needs to be in 'libvirt' group"
-    echo "          sudo usermod -aG libvirt \$USER && newgrp libvirt"
+    echo "  2. Session socket not created for hotstack user"
+    echo "     Check: ls -la /run/user/$HOTSTACK_UID/libvirt/libvirt-sock"
+    echo "     Fix: sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID systemctl --user restart hotstack-os-libvirtd-session.service"
     echo ""
-    echo "  3. Wrong socket path for modular libvirt"
-    echo "     Modular uses: /run/libvirt/virtqemud-sock"
-    echo "     Legacy uses: /var/run/libvirt/libvirt-sock"
+    echo "  3. XDG_RUNTIME_DIR not set in container"
+    echo "     Check: echo \$XDG_RUNTIME_DIR (should be /run/user/$HOTSTACK_UID)"
     echo ""
     echo "Container will retry in 60 seconds..."
     echo "=========================================="
     sleep 60
     exit 1
 fi
-echo "✓ Libvirt connection OK!"
+echo "✓ Libvirt session connection OK!"
 
 # Verify NFS server accessibility
 echo "Checking NFS server accessibility..."

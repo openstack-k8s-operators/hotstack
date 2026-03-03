@@ -7,11 +7,12 @@ A minimal containerized OpenStack deployment designed for running HotStack scena
 - **Fast setup**: ~10 minutes from zero to working OpenStack (first-time build)
 - **Self-contained**: All services in containers with file-backed storage
 - **Host integration**: Uses host libvirt (KVM), OpenvSwitch, and NFS
+- **Isolated virtualization**: Uses libvirt session mode with dedicated user for complete isolation from system VMs
 - **HotStack-ready**: Supports Heat orchestration, trunk ports, VLANs, boot from volume, NoVNC console, and serial console logging
 - **Minimal dependencies**: Requires libvirt, OpenvSwitch, podman, NFS server, and nmap-ncat on host
 - **Production-like**: systemd service management with ordering, informational health checks, and automatic restart on failure
 
-> ⚠️ **Security Warning**: This environment uses default passwords, no encryption, and minimal access controls. It is intended ONLY for development and testing on trusted private networks.
+> ⚠️ **Security Warning**: This environment uses default passwords, no encryption, and minimal access controls. It grants `CAP_NET_ADMIN` capability to libvirtd for network device creation (required for session libvirt). Services are exposed on the provider network bridge (default: 172.31.0.129) which should be a host-only or private network. Intended ONLY for development and testing on trusted private networks, not for internet-facing deployments.
 
 ## Quick Start
 
@@ -46,10 +47,13 @@ The default configuration works for most development environments. If you need t
 HotStack-OS is designed to coexist safely with other podman containers and workloads. The setup uses project-scoped resources and explicit naming to avoid conflicts.
 
 **⚠️ WARNING about `make clean`:**
-- `make clean` removes hotstack-os containers and data
-- **Also destroys ALL libvirt VMs matching pattern `notapet-<uuid>`**
+- Removes all HotStack-OS containers, images, and persistent data
+- **Destroys ALL libvirt VMs matching pattern `notapet-<uuid>` in the session**
 - **Removes ALL network namespaces matching pattern `netns-*`**
-- Review `virsh list --all` and `ip netns list` before running if you have other deployments
+- Removes libvirt session service and hotstack user
+- Removes podman network and NFS exports
+- Removes OVS bridges
+- To review VMs before cleanup: Check session VMs with `virsh -c qemu:///session?socket=/run/user/$(id -u hotstack)/libvirt/libvirt-sock list --all`
 
 ## Known Limitations
 
@@ -91,7 +95,7 @@ sudo systemctl status hotstack-os.target       # Check detailed status
 sudo journalctl -u 'hotstack-os*' -f           # View logs from all services
 
 # Cleanup
-sudo make clean           # Complete reset (WARNING: destroys ALL libvirt VMs with pattern 'notapet-<uuid>')
+sudo make clean           # Complete reset (WARNING: destroys ALL data, VMs, and infrastructure)
 ```
 
 ## Documentation
@@ -99,6 +103,7 @@ sudo make clean           # Complete reset (WARNING: destroys ALL libvirt VMs wi
 - **[INSTALL.md](INSTALL.md)** - Complete installation guide
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Architecture and design details
 - **[CONFIGURATION.md](CONFIGURATION.md)** - Configuration options
+- **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide for HotStack scenarios
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common problems and solutions
 - **[SMOKE_TEST.md](SMOKE_TEST.md)** - Validation tests
 

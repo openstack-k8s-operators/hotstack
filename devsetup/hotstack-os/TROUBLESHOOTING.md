@@ -13,23 +13,15 @@ sudo make status
 # Check which containers are running/failed
 sudo podman ps -a --format "table {{.Names}}\t{{.Status}}"
 
-# View logs for a service
+# View logs for a specific service
 sudo podman logs hotstack-os-<service-name>
 
-# Follow logs for all services
-sudo make logs
+# Follow logs for a specific service
+sudo podman logs -f hotstack-os-<service-name>
+
+# View systemd service logs
+sudo journalctl -u hotstack-os-<service-name>.service -n 50
 ```
-
-## Expected Behaviors
-
-### "No Container Found" on First Start
-
-When running `make start` for the first time, you'll see errors like:
-```
-Error: no container with name or ID "hotstack-os-neutron-server" found: no such container
-```
-
-**This is normal!** Podman-compose checks for existing containers before creating them. After these errors, you'll see container IDs being created successfully. All 24 containers should be `Up` or `Up (healthy)` within 2-5 minutes.
 
 ## Build Issues
 
@@ -111,19 +103,215 @@ nc -zv localhost 6642  # SB database
 sudo podman exec hotstack-os-ovn-northd ovn-nbctl show
 ```
 
+### Neutron Port Binding Failures (No OVN Chassis)
+
+**Error**: `Refusing to bind port ... due to no OVN chassis for host: <hostname>`
+
+**Cause**: Hostname mismatch between Nova compute and OVN chassis registration. This commonly occurs when:
+- System has no static hostname set (only transient hostname from DHCP)
+- `hostname` returns different value than `hostname -f`
+- Network changes cause hostname to change
+
+**Diagnosis:**
+```bash
+# Check current hostname configuration
+hostnamectl
+
+# Check what Nova is reporting
+sudo podman logs hotstack-os-nova-compute | grep -i "compute node"
+
+# Check what OVN chassis is registered as
+sudo podman exec hotstack-os-ovn-northd ovn-sbctl show | grep -A2 Chassis
+```
+
+**Solution 1: Set Static Hostname (Recommended)**
+```bash
+# Set a static hostname that won't change
+sudo hostnamectl set-hostname your-hostname.example.com
+
+# Verify
+hostnamectl
+
+# Reinstall to regenerate configs with correct hostname
+cd devsetup/hotstack-os
+sudo make uninstall
+sudo make install
+```
+
+**Solution 2: Override Hostname in .env**
+```bash
+# Add to devsetup/hotstack-os/.env
+CHASSIS_HOSTNAME=your-desired-hostname
+
+# Reinstall to apply
+sudo make uninstall
+sudo make install
+```
+
 ### Nova Compute / Libvirt Issues
+
+HotStack-OS uses libvirt session mode with a dedicated `hotstack` user for complete isolation from system VMs.
+
+For libvirt session-related issues, see the detailed sections below:
+- [Session Service Not Starting](#session-service-not-starting)
+- [Nova Cannot Connect to Session Libvirt](#nova-cannot-connect-to-session-libvirt)
+- [Session Not Persisting After Reboot](#session-not-persisting-after-reboot)
+- [TAP Device Creation Fails After Libvirt Update](#tap-device-creation-fails-after-libvirt-update)
+- [Checking Session vs System VMs](#checking-session-vs-system-vms)
+
+## Libvirt Session Isolation Issues
+
+HotStack-OS uses libvirt session mode with a dedicated `hotstack` user to isolate Nova VMs from system VMs.
+
+### Session Service Not Starting
+
+**Error**: `hotstack-os-libvirtd-session.service` (user service) fails to start
 
 **Debug:**
 ```bash
-# Check libvirt on host
-systemctl status virtqemud.socket  # Modern
-systemctl status libvirtd         # Legacy
+# Check service logs (runs as user service)
+HOTSTACK_UID=$(id -u hotstack)
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID \
+    journalctl --user -u hotstack-os-libvirtd-session.service -n 50
 
-# Test from nova-compute container
-sudo podman exec hotstack-os-nova-compute virsh -c qemu:///system version
+# Check service status
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID \
+    systemctl --user status hotstack-os-libvirtd-session.service
 
-# List VMs
+# Check if hotstack user exists
+id hotstack
+
+# Check if user is in kvm group
+groups hotstack | grep kvm
+
+# Check if socket exists
+ls -l /run/user/$HOTSTACK_UID/libvirt/libvirt-sock
+```
+
+**Solution:**
+```bash
+# If service is in failed state with "service-start-limit-hit", reset it first
+HOTSTACK_UID=$(id -u hotstack)
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID \
+    systemctl --user stop hotstack-os-libvirtd-session.service
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID \
+    systemctl --user reset-failed
+
+# Then restart the service
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID \
+    systemctl --user restart hotstack-os-libvirtd-session.service
+
+# Verify service is running
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID \
+    systemctl --user status hotstack-os-libvirtd-session.service
+
+# If user doesn't exist, run infra setup
+sudo systemctl restart hotstack-os-infra-setup.service
+```
+
+### Nova Cannot Connect to Session Libvirt
+
+**Error**: Nova logs show connection failures to libvirt
+
+**Debug:**
+```bash
+# Check nova-compute service depends on libvirt-session
+systemctl show hotstack-os-nova-compute.service | grep -i after
+
+# Verify XDG_RUNTIME_DIR is set in container
+sudo podman exec hotstack-os-nova-compute env | grep XDG_RUNTIME_DIR
+
+# Verify socket mount is present
+sudo podman inspect hotstack-os-nova-compute | grep -A3 "/run/user"
+
+# Test connection from container
+sudo podman exec hotstack-os-nova-compute virsh version
+```
+
+**Solution:**
+```bash
+# Restart nova-compute (will restart libvirt-session first due to dependency)
+sudo systemctl restart hotstack-os-nova-compute.service
+
+# If still failing, check nova.conf has correct connection URI
+HOTSTACK_UID=$(id -u hotstack)
+grep connection_uri /etc/hotstack-os/nova/nova.conf
+# Should show: qemu:///session?socket=/run/user/$HOTSTACK_UID/libvirt/libvirt-sock
+```
+
+### Session Not Persisting After Reboot
+
+**Error**: After reboot, libvirt session is not available
+
+**Debug:**
+```bash
+# Check if lingering is enabled for hotstack user
+loginctl show-user hotstack | grep Linger
+# Should show: Linger=yes
+
+# Check user session status
+loginctl user-status hotstack
+
+# Check if libvirt session service is enabled
+HOTSTACK_UID=$(id -u hotstack)
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID \
+    systemctl --user is-enabled hotstack-os-libvirtd-session.service
+```
+
+**Solution:**
+```bash
+# Enable lingering
+sudo loginctl enable-linger hotstack
+
+# Restart libvirt-session service (user service)
+HOTSTACK_UID=$(id -u hotstack)
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID \
+    systemctl --user restart hotstack-os-libvirtd-session.service
+```
+
+### TAP Device Creation Fails After Libvirt Update
+
+**Error**: After updating libvirt package, VMs fail to start with TAP device errors
+
+**Cause**: Package updates replace the `/usr/sbin/libvirtd` binary, removing the `CAP_NET_ADMIN` capability that was set via `setcap`.
+
+**Debug:**
+```bash
+# Check if capability is still present
+getcap /usr/sbin/libvirtd
+# Should show: /usr/sbin/libvirtd cap_net_admin=ep
+
+# Check libvirt logs for permission errors
+HOTSTACK_UID=$(id -u hotstack)
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID \
+    journalctl --user -u hotstack-os-libvirtd-session.service -n 50
+```
+
+**Solution:**
+```bash
+# Re-grant the capability after libvirt updates
+sudo setcap cap_net_admin+ep /usr/sbin/libvirtd
+
+# Restart the libvirt session service
+HOTSTACK_UID=$(id -u hotstack)
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID \
+    systemctl --user restart hotstack-os-libvirtd-session.service
+```
+
+**Note**: File capabilities persist across reboots but are lost when the binary is replaced by package updates. If you regularly update libvirt, consider adding the `setcap` command to a post-update hook.
+
+### Checking Session vs System VMs
+
+```bash
+HOTSTACK_UID=$(id -u hotstack)
+
+# List Nova's VMs (in session mode)
+virsh -c "qemu:///session?socket=/run/user/$HOTSTACK_UID/libvirt/libvirt-sock" list --all
+
+# List system VMs (should be empty or contain only non-Nova VMs)
 sudo virsh list --all
+
+# These two lists should be completely separate
 ```
 
 ## Storage Issues
@@ -151,61 +339,10 @@ sudo podman exec hotstack-os-cinder-volume ls -lh /var/lib/cinder/mnt
 ```
 
 **Common fixes:**
-- If NFS not exported: Run `sudo make setup` to configure NFS server
+- If NFS not exported: Run `sudo systemctl restart hotstack-os-infra-setup.service` to configure NFS server
 - If volume service crashes: Check logs and verify NFS export is accessible
 - If mount fails: Check NFS server status and firewall rules
 - To reset NFS: Use `sudo make clean` (removes everything) or manually remove export directory
-
-### Volume Attachment Failures
-
-**Error**: `Cannot access storage file '/var/lib/hotstack-os/nova-mnt/.../volume-xxx': No such file or directory`
-
-**Cause**: Nova cannot access NFS-mounted Cinder volumes because the mount directory isn't shared between the container and host libvirt.
-
-**Solution**:
-```bash
-# 1. Run setup to create the directory (recommended)
-sudo make setup
-
-# OR manually create it (using default path):
-sudo mkdir -p /var/lib/hotstack-os/nova-mnt
-sudo chmod 755 /var/lib/hotstack-os/nova-mnt
-sudo semanage fcontext -a -t virt_var_lib_t "/var/lib/hotstack-os/nova-mnt(/.*)?"
-sudo restorecon -R /var/lib/hotstack-os/nova-mnt
-
-# 2. Restart nova-compute to pick up the bind mount
-sudo podman restart hotstack-os-nova-compute
-
-# 3. Verify NFS mount appears in nova-compute container after attaching a volume
-sudo podman exec hotstack-os-nova-compute mount | grep nfs
-```
-
-**Note**: The mount directory path (`NOVA_NFS_MOUNT_POINT_BASE`) must be identical in both the host and container for libvirt compatibility. This is configured in `.env` and defaults to `${HOTSTACK_DATA_DIR}/nova-mnt` (typically `/var/lib/hotstack-os/nova-mnt`).
-
-**Debug**:
-```bash
-# Check if Cinder has mounted the NFS share
-sudo podman exec hotstack-os-cinder-volume mount | grep nfs
-
-# Check if Nova has mounted the NFS share
-sudo podman exec hotstack-os-nova-compute mount | grep nfs
-
-# Check volume files exist in Cinder
-sudo podman exec hotstack-os-cinder-volume ls -lh /var/lib/cinder/mnt/*/
-```
-
-### Custom Storage Paths
-
-To use different storage locations (e.g., for larger partitions), configure in `.env` before first start:
-
-```bash
-# Example: Move Nova instances and Cinder NFS export to /mnt/storage
-echo "NOVA_INSTANCES_PATH=/mnt/storage/nova/instances" >> .env
-echo "CINDER_NFS_EXPORT_DIR=/mnt/storage/cinder-nfs" >> .env
-
-# Run setup - it will create directories with correct ownership/SELinux context
-sudo make setup
-```
 
 ## SELinux Issues
 
@@ -224,42 +361,42 @@ sudo restorecon -Rv /var/lib/hotstack-os
 
 ## Cleanup and Reset
 
-### Stop Services (Keep Data)
-```bash
-sudo systemctl stop hotstack-os.target
-# Data in /var/lib/hotstack-os is preserved
-```
-
-### Complete Reset
-```bash
-sudo make clean  # Interactive - removes everything
-```
-
-This removes:
-- All containers and volumes
-- All data (databases, images, VMs, logs)
-- NFS export directory
-- Host network infrastructure (OVS bridges)
-
 ### Manual Cleanup (If make clean fails)
 ```bash
 # Stop services
 sudo systemctl stop hotstack-os.target
 
-# Remove containers
+# Stop and disable libvirt session service
+HOTSTACK_UID=$(id -u hotstack)
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID \
+    systemctl --user stop hotstack-os-libvirtd-session.service
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID \
+    systemctl --user disable hotstack-os-libvirtd-session.service
+
+# Remove CAP_NET_ADMIN capability
+sudo setcap -r /usr/sbin/libvirtd
+
+# Remove containers and images
 sudo podman rm -af
+sudo podman rmi -f $(sudo podman images -q --filter "reference=localhost/hotstack-os-*")
+
+# Unmount any NFS volumes
+sudo umount /var/lib/hotstack-os/nova-mnt/* 2>/dev/null || true
 
 # Remove NFS export
 sudo exportfs -u 127.0.0.1:/var/lib/hotstack-os/cinder-nfs
 
 # Remove data
 sudo rm -rf /var/lib/hotstack-os
+sudo rm -f clouds.yaml
 
-# Remove networks
-sudo podman network rm hotstack-os
+# Remove networks and volumes
+sudo podman network rm hotstack-os-network
+sudo podman volume rm hotstack-os-mariadb hotstack-os-rabbitmq hotstack-os-ovn
 
-# Rebuild from scratch
-sudo make build && sudo make install && sudo systemctl restart hotstack-os.target
+# Disable lingering and remove hotstack user
+sudo loginctl disable-linger hotstack
+sudo userdel -r hotstack
 ```
 
 ## Service-Specific Debugging
@@ -333,52 +470,21 @@ getenforce
 sudo ausearch -m avc -ts recent | tail -20
 ```
 
-## Build Performance Optimization
-
-### APT Package Caching
-
-If you're rebuilding frequently, you can speed up builds by caching Debian packages with apt-cacher-ng.
-
-**Setup:**
-```bash
-# Install apt-cacher-ng
-sudo dnf install -y apt-cacher-ng
-sudo systemctl start apt-cacher-ng
-sudo systemctl enable apt-cacher-ng
-
-# Configure in .env (use host.containers.internal to reach host from container)
-echo "APT_PROXY=http://host.containers.internal:3142" >> .env
-
-# Build (first time populates cache)
-sudo make build
-```
-
-**Benefits:**
-- Caches all `.deb` files from `deb.debian.org`
-- Shared cache across all containers during build
-- First build: normal speed, populates cache
-- Subsequent builds: 20-30% faster for apt operations
-
-**Verify it's working:**
-```bash
-# Watch cache activity during build (in another terminal)
-sudo tail -f /var/log/apt-cacher-ng/apt-cacher.log | grep MISS  # First build
-sudo tail -f /var/log/apt-cacher-ng/apt-cacher.log | grep HIT   # Subsequent builds
-```
-
 ## Common Quick Fixes
 
 | Issue | Quick Fix |
 |-------|-----------|
 | Container exited unexpectedly | Check logs: `sudo podman logs hotstack-os-<service>` |
-| Service unhealthy | Check logs, then: `sudo make restart` |
+| Service unhealthy | Check logs, then: `sudo systemctl restart hotstack-os-<service>.service` |
 | Network issues | Check OVS: `sudo ovs-vsctl show` |
 | Database issues | Check MariaDB: `sudo podman exec hotstack-os-mariadb healthcheck.sh --connect` |
 | Port conflict | Find process: `sudo ss -tulpn \| grep :<port>` |
-| Stale state | Full reset: `sudo make clean && sudo make build && sudo make start` |
+| Stale state | Full reset: `sudo make uninstall && sudo make clean && sudo make build && sudo make install && sudo systemctl start hotstack-os.target` |
 
 ## See Also
 
-- [README.md](README.md) - Architecture and features
+- [README.md](README.md) - Overview and features
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Detailed architecture and design
+- [INSTALL.md](INSTALL.md) - Installation instructions
 - [QUICKSTART.md](QUICKSTART.md) - Step-by-step setup guide
 - [SMOKE_TEST.md](SMOKE_TEST.md) - Automated testing

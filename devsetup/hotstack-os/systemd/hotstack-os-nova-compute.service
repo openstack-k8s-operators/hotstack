@@ -16,8 +16,8 @@
 [Unit]
 Description=HotStack-OS Nova Compute Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
-After=hotstack-os-nova-api.service hotstack-os-nova-conductor.service hotstack-os-neutron-server.service
-Requires=hotstack-os-nova-api.service hotstack-os-nova-conductor.service hotstack-os-neutron-server.service
+After=hotstack-os-nova-api.service hotstack-os-nova-conductor.service hotstack-os-neutron-server.service hotstack-os-infra-setup.service
+Requires=hotstack-os-nova-api.service hotstack-os-nova-conductor.service hotstack-os-neutron-server.service hotstack-os-infra-setup.service
 PartOf=hotstack-os.target
 
 [Service]
@@ -46,8 +46,10 @@ ExecStart=/usr/bin/podman run \
     --env RABBITMQ_PASS=__RABBITMQ_DEFAULT_PASS__ \
     --env REGION_NAME=__REGION_NAME__ \
     --env METADATA_SECRET=__SERVICE_PASSWORD__ \
+    --env XDG_RUNTIME_DIR=/run/user/__HOTSTACK_UID__ \
     --volume __HOTSTACK_DATA_DIR__/runtime/config/nova/nova.conf:/etc/nova/nova.conf:ro,z \
-    --volume /var/run/libvirt:/var/run/libvirt \
+    --volume /run/user/__HOTSTACK_UID__:/run/user/__HOTSTACK_UID__:ro \
+    --volume /var/run/libvirt:/var/run/libvirt:ro \
     --volume /etc/iscsi:/etc/iscsi:z \
     --volume /var/lib/iscsi:/var/lib/iscsi:z \
     --volume /run/openvswitch:/run/openvswitch \

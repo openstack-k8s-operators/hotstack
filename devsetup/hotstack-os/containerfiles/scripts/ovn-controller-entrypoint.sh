@@ -18,7 +18,7 @@ set -e
 
 # Use environment variable or default
 OVN_ENCAP_IP=${OVN_ENCAP_IP:-172.31.0.31}
-CHASSIS_HOSTNAME=${CHASSIS_HOSTNAME:-$(hostname)}
+CHASSIS_HOSTNAME=${CHASSIS_HOSTNAME:-$(hostname -f 2>/dev/null || hostname)}
 
 # Create required directories if they don't exist
 mkdir -p /run/ovn /run/openvswitch /var/run/openvswitch
@@ -39,6 +39,7 @@ ovs-vsctl set open_vswitch . \
     external-ids:ovn-encap-type=geneve \
     external-ids:ovn-encap-ip="${OVN_ENCAP_IP}" \
     external-ids:system-id="${CHASSIS_HOSTNAME}" \
+    external-ids:hostname="${CHASSIS_HOSTNAME}" \
     external-ids:ovn-bridge=hot-int \
     external-ids:ovn-bridge-mappings=provider:hot-ex \
     external-ids:ovn-cms-options=enable-chassis-as-gw

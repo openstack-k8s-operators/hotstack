@@ -13,16 +13,19 @@ All configuration is managed through the `.env` file in the `devsetup/hotstack-o
 
 2. Edit `.env` to customize settings (optional - defaults work for most users)
 
-3. Apply changes by restarting services:
+3. Re-install to apply changes:
    ```bash
-   sudo make restart
+   sudo make install
+   ```
+
+   Then restart services:
+   ```bash
+   sudo systemctl restart hotstack-os.target
    ```
 
 ## Messaging Backend
 
 HotStack-OS uses **RabbitMQ** for oslo.messaging (RPC and notifications).
-
-
 
 RabbitMQ credentials can be configured in `.env`:
 ```bash
@@ -164,7 +167,7 @@ This directory contains:
 - Service logs
 - RabbitMQ data
 
-The `make setup` command creates this directory with your user ownership.
+The `make install` command creates this directory structure automatically.
 
 **Custom location example**:
 ```bash
@@ -179,7 +182,7 @@ HOTSTACK_DATA_DIR=/home/myuser/hotstack-data
 
 This directory is used for VM disk images and instance state:
 - Maps directly to Nova's `instances_path` configuration option
-- Created automatically by `make setup` with qemu:qemu ownership
+- Created automatically by `make install` with `hotstack:kvm` ownership
 - Bind-mounted into the nova-compute container with `shared` propagation
 - **CRITICAL**: Must use identical path in both host and container for libvirt compatibility
 - Requires libvirt access and proper SELinux context
@@ -199,7 +202,7 @@ sudo restorecon -Rv /custom/path
 
 This directory is used by Nova to mount NFS-based Cinder volumes when attaching them to instances:
 - Maps directly to Nova's `libvirt.nfs_mount_point_base` configuration option
-- Created automatically by `make setup`
+- Created automatically by `make install`
 - Bind-mounted into the nova-compute container with `shared` propagation
 - **CRITICAL**: Must use identical path in both host and container for libvirt compatibility
 - Accessible to libvirt on the host for VM disk access
@@ -222,7 +225,7 @@ This directory is:
 - Mounted by `cinder-volume` container for volume management
 - Mounted by `nova-compute` container for attaching volumes to VMs
 
-The `make setup` command configures the NFS export automatically.
+The `make install` command configures the NFS export automatically.
 
 ## HotStack Project Quotas
 
@@ -294,30 +297,53 @@ HOTSTACK_NAT64_IMAGE_URL=https://github.com/openstack-k8s-operators/openstack-k8
 |---------|---------|-------------|
 | `CHASSIS_HOSTNAME` | (auto-detected) | OVN chassis hostname for Neutron agent registration |
 
-Normally auto-detected at runtime. Override only if you need to force a specific hostname:
+**Important**: This must match the hostname Nova compute reports for port binding to work.
+
+By default, auto-detected using `hostname -f` (FQDN) with fallback to `hostname` (short name). This matches Nova's hostname detection logic.
+
+**Override if**:
+- System has no static hostname (only DHCP transient hostname)
+- You see "Refusing to bind port due to no OVN chassis" errors
+- Hostname changes between reboots or network changes
+
 ```bash
+# Set to a stable hostname
 CHASSIS_HOSTNAME=my-custom-hostname.example.com
+```
+
+**Recommended**: Set a static hostname on your system instead:
+```bash
+sudo hostnamectl set-hostname your-hostname.example.com
 ```
 
 ## Configuration Changes
 
 After modifying `.env`:
 
-1. **For most changes** (passwords, IPs, quotas):
+1. **For most changes** (passwords, IPs, network settings):
    ```bash
-   sudo make restart
+   sudo make install              # Re-generate configs with new values
+   sudo systemctl restart hotstack-os.target
    ```
 
 2. **For OpenStack branch changes**:
    ```bash
-   sudo make build
-   sudo make restart
-   make post-setup  # Recreate resources if needed
+   sudo make build                # Rebuild images with new branch
+   sudo make install              # Re-install with new configs
+   sudo systemctl restart hotstack-os.target
+   make post-setup                # Recreate resources if needed
+   ```
+
+3. **For quota changes only**:
+   ```bash
+   make post-setup                # Quotas are applied during post-setup
    ```
 
 ## See Also
 
 - [README.md](README.md) - Overview and quick start
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Detailed architecture and design
+- [INSTALL.md](INSTALL.md) - Installation instructions
 - [QUICKSTART.md](QUICKSTART.md) - Step-by-step setup instructions
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common problems and solutions
 - [SMOKE_TEST.md](SMOKE_TEST.md) - Validation and testing

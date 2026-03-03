@@ -44,12 +44,41 @@ echo -e "${GREEN}✓${NC}"
 echo -n "Cleaning libvirt VMs... "
 remove_libvirt_vms 2>/dev/null && echo -e "${GREEN}✓${NC}" || echo -e "${YELLOW}⚠${NC}"
 
+echo -n "Stopping libvirt session for hotstack user... "
+if id hotstack &>/dev/null; then
+    HOTSTACK_UID=$(id -u hotstack)
+    # Stop the user service
+    sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
+        systemctl --user stop hotstack-os-libvirtd-session.service 2>/dev/null || true
+    sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
+        systemctl --user disable hotstack-os-libvirtd-session.service 2>/dev/null || true
+    # Kill any remaining libvirtd processes
+    pkill -u hotstack libvirtd 2>/dev/null || true
+    # Remove configs
+    rm -rf /var/lib/hotstack/.config 2>/dev/null || true
+    # Remove CAP_NET_ADMIN capability from libvirtd
+    setcap -r /usr/sbin/libvirtd 2>/dev/null || true
+    echo -e "${GREEN}✓${NC}"
+else
+    echo -e "${YELLOW}⚠${NC} (no hotstack user)"
+fi
+
 echo -n "Removing podman network... "
-podman network rm hotstack-os-network 2>/dev/null || true
+podman network rm hotstack-os 2>/dev/null || true
 echo -e "${GREEN}✓${NC}"
 
 echo -n "Removing podman volumes... "
 podman volume rm hotstack-os-mariadb hotstack-os-rabbitmq hotstack-os-ovn 2>/dev/null || true
+echo -e "${GREEN}✓${NC}"
+
+echo -n "Unmounting NFS volumes... "
+# Unmount any NFS mounts in nova-mnt before cleaning
+if [ -d "$HOTSTACK_DATA_DIR/nova-mnt" ]; then
+    # Find and unmount all NFS mounts under nova-mnt
+    mount | grep "$HOTSTACK_DATA_DIR/nova-mnt" | awk '{print $3}' | while read -r mountpoint; do
+        umount "$mountpoint" 2>/dev/null || true
+    done
+fi
 echo -e "${GREEN}✓${NC}"
 
 echo -n "Cleaning data directories... "

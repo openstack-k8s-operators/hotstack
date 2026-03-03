@@ -2,10 +2,10 @@
 
 ## Overview
 
-HotStack-OS uses a hybrid architecture where the OpenStack control plane runs in containers (22-23 total) while integrating with host services for compute and networking:
+HotStack-OS uses a hybrid architecture where the OpenStack control plane runs in containers (22 total) while integrating with host services for compute and networking:
 
 - **Control plane**: All OpenStack services containerized and managed via systemd
-- **Compute**: Integrates with host libvirt/KVM for VM management
+- **Compute**: Integrates with host libvirt/KVM for VM management via isolated session mode
 - **Networking**: Uses host OpenvSwitch with OVN for SDN (Geneve overlays, VLAN trunking)
 - **Storage**: NFS-based block storage exported from host
 - **Access**: Unified DNS + load balancer at 172.31.0.129 for all services
@@ -109,6 +109,18 @@ All persistent data is stored under `${HOTSTACK_DATA_DIR}` (default: `/var/lib/h
 - `keystone/credential-keys/` - Keystone credential keys
 - `cinder/` - Cinder state files
 - `nova/` - Nova state files
+- `nova-instances/` - VM instance disk images and metadata
+- `cinder-nfs/` - Cinder volume files (NFS exported)
+- `nova-mnt/` - NFS mount points for attached Cinder volumes
+
+**Storage Directory Permissions:**
+
+For libvirt session isolation, storage directories use kvm group ownership with setgid:
+- `nova-instances/`: `hotstack:kvm` with mode `2775`
+- `cinder-nfs/`: `root:kvm` with mode `2775`
+- `nova-mnt/`: `root:kvm` with mode `2775`
+
+The setgid bit ensures new files/directories inherit the kvm group. The hotstack user (running libvirtd) is a member of the kvm group, providing access via group permissions. Root in the Nova container is added to the kvm group for socket access.
 
 VM instance files are stored in `${NOVA_INSTANCES_PATH}` (default: `${HOTSTACK_DATA_DIR}/nova-instances`). This path is configured in Nova's `instances_path` option.
 
@@ -122,6 +134,121 @@ All Nova paths default to isolated locations under `HOTSTACK_DATA_DIR` to avoid 
 - Only identical paths ensure both refer to the same files
 
 The bind mounts use the syntax `${PATH}:${PATH}:shared` (same path twice) to maintain this requirement.
+
+## Libvirt Session Isolation
+
+HotStack-OS uses libvirt's session mode with a dedicated `hotstack` system user to provide complete isolation from system libvirt VMs. This approach ensures Nova's sanity checks don't fail when other VMs exist on the system.
+
+### Architecture
+
+```
+Host Machine
+├── hotstack user (system user, no login)
+│   ├── User session (lingering enabled)
+│   └── libvirtd.socket (/run/user/<UID>/libvirt/libvirt-sock)
+└── nova-compute container
+    ├── Connects via: qemu:///session?socket=/run/user/<UID>/libvirt/libvirt-sock
+    └── XDG_RUNTIME_DIR=/run/user/<UID>
+```
+
+### Components
+
+1. **hotstack-os-libvirtd-session.service** (user service): Persistent libvirt daemon
+   - Runs as systemd user service for the `hotstack` user
+   - Started during `make install` and runs continuously (--timeout 0)
+   - Automatically restarts on failure (Restart=always)
+   - Independent of system services (runs in user session)
+   - Stopped during `make uninstall` or `make clean`
+
+2. **User Configuration**:
+   - System user: `hotstack` (no login shell)
+   - Groups: `kvm` (for /dev/kvm access and storage)
+   - Lingering enabled (keeps user session active)
+   - Session socket: `/run/user/<UID>/libvirt/libvirt-sock` (created by libvirtd)
+   - Configs:
+     - `/var/lib/hotstack/.config/libvirt/libvirtd.conf` (socket and keepalive settings)
+     - `/var/lib/hotstack/.config/libvirt/qemu.conf` (QEMU user/group and security driver)
+   - Capabilities: `CAP_NET_ADMIN` granted to `/usr/sbin/libvirtd` for TAP device creation
+
+3. **Permissions**:
+   - Storage directories: `kvm` group with `2775` (setgid + group writable)
+     - `nova-instances/`: `hotstack:kvm`
+     - `cinder-nfs/`: `root:kvm`
+     - `nova-mnt/`: `root:kvm`
+   - Access model: Via kvm group membership (hotstack user and root in containers)
+   - qemu-img wrapper: Fixes disk file permissions to `0664` for group access
+   - Socket permissions: `0770` (owner + kvm group, root in containers can access via kvm group membership)
+
+4. **qemu-img Wrapper**:
+   - Installed in Nova and Cinder containers at `/usr/local/bin/qemu-img`
+   - Intercepts `qemu-img create` commands and fixes file permissions
+   - Changes mode from `0644` (qemu-img default) to `0664` (group writable)
+   - Required because qemu-img hardcodes `0644`, ignoring process umask
+   - Tested during container build to ensure functionality
+   - See `containerfiles/scripts/qemu-img-wrapper.py` for implementation details
+
+5. **Nova Integration**:
+   - Connection URI: `qemu+unix:///session?socket=/run/user/<UID>/libvirt/libvirt-sock`
+   - Environment: `XDG_RUNTIME_DIR=/run/user/<UID>`
+   - Volume mount: `/run/user/<UID>:/run/user/<UID>:ro`
+
+### Requirements
+
+- **CAP_NET_ADMIN capability**: Required for libvirtd to create TAP devices in session mode
+  - Granted during `make install` via `setcap cap_net_admin+ep /usr/sbin/libvirtd`
+  - Removed during `make clean`
+  - Acceptable security trade-off for development/test environments
+
+- **kvm group membership**: Required for storage and socket access
+  - hotstack user added to kvm group for libvirt and storage access
+  - root in Nova container added to kvm group for socket access
+  - Enables group-based permissions without ACLs
+
+### Benefits
+
+- **Complete isolation**: Nova sees only its own VMs, never system VMs
+- **Standard libvirt**: Uses well-supported session mode (no custom virtqemud instances)
+- **No Nova patches**: Works with unmodified Nova
+- **Persistent VMs**: VMs survive service restarts (libvirt session stays running)
+- **Clean lifecycle**: Installed once, runs continuously, cleaned up only on explicit cleanup
+
+### Service Dependencies
+
+```
+hotstack-os-infra-setup.service (creates hotstack user, enables lingering)
+    ↓
+make install (installs and starts hotstack-os-libvirtd-session.service as user service)
+    ↓
+hotstack-os-nova-compute.service (connects to running libvirt session)
+    ↓
+(Nova can create VMs in isolated session)
+```
+
+### Debugging Session Libvirt
+
+```bash
+# Check libvirt session service status (runs as user service)
+HOTSTACK_UID=$(id -u hotstack)
+sudo -u hotstack XDG_RUNTIME_DIR=/run/user/$HOTSTACK_UID \
+    systemctl --user status hotstack-os-libvirtd-session.service
+
+# Get hotstack user UID
+id -u hotstack
+
+# Test connection from host
+HOTSTACK_UID=$(id -u hotstack)
+virsh -c "qemu:///session?socket=/run/user/$HOTSTACK_UID/libvirt/libvirt-sock" list
+
+# Test from nova-compute container
+sudo podman exec hotstack-os-nova-compute virsh list
+
+# Check session socket exists
+HOTSTACK_UID=$(id -u hotstack)
+ls -l /run/user/$HOTSTACK_UID/libvirt/libvirt-sock
+
+# Check user session is active
+loginctl show-user hotstack
+```
 
 ## See Also
 

@@ -100,9 +100,12 @@ clean:
 	@echo -e "\033[0;31mWARNING: Complete data cleanup\033[0m"
 	@echo "This will remove:"
 	@echo "  • All container images"
-	@echo "  • All data (databases, images, VMs, logs)"
+	@echo "  • All persistent data (databases, images, volumes, logs)"
 	@echo -e "  • \033[1;33mAll libvirt VMs matching pattern 'notapet-<uuid>'\033[0m"
-	@echo "  • Podman network and volumes"
+	@echo "  • Libvirt session service and hotstack user"
+	@echo "  • Podman network (hotstack-os)"
+	@echo "  • NFS exports"
+	@echo "  • OVS bridges"
 	@echo ""
 	@echo "Run 'sudo make uninstall' first to stop and remove systemd services."
 	@echo ""
@@ -149,7 +152,11 @@ install-deps:
 	$(call require-root,install-deps)
 	@$(SCRIPT_DIR)/install-deps.sh
 
-install: install-deps config
+create-user:
+	$(call require-root,create-user)
+	@$(SCRIPT_DIR)/create-hotstack-user.sh
+
+install: install-deps create-user config
 	$(call require-root,install)
 	@$(SCRIPT_DIR)/install-systemd.sh
 

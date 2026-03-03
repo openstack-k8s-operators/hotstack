@@ -32,6 +32,9 @@ NFS_EXPORTS_END_MARKER="# END hotstack-os managed exports"
 
 echo "=== HotStack-OS Infrastructure Cleanup ==="
 
+# Note: Libvirt session cleanup is handled by 'make clean' to preserve VMs
+# during service restarts. The libvirt session remains running.
+
 # Remove /etc/hosts entries
 if [ -f "$HOSTS_FILE" ] && grep -q "$HOSTS_BEGIN_MARKER" "$HOSTS_FILE" 2>/dev/null; then
     echo "Removing /etc/hosts entries..."
