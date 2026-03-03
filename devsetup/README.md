@@ -8,37 +8,27 @@ development and testing.
 
 ### [HotStack-OS - Containerized Setup](hotstack-os/)
 
-A containerized OpenStack deployment using podman-compose that runs on your
-local workstation. Uses host libvirt and OpenvSwitch with all OpenStack
-services in containers.
+A containerized OpenStack deployment that runs on your local workstation.
+Uses host libvirt, OpenvSwitch, and NFS. All OpenStack services in containers
+managed by systemd. Includes automated setup via `make post-setup` that
+creates the HotStack project, user, quotas, flavors, and uploads required
+images.
 
 **Recommended for:**
 
-- **Quick development and testing** (10-15 minutes setup, 2-5 minutes to start)
+- **Quick development and testing** (~10 minutes first-time setup, ~3 minutes to start)
 - Users who want reproducible, self-contained environments
 - Limited resources (no dedicated machine needed)
 
 **Getting Started:**
 
-1. See [hotstack-os/QUICKSTART.md](hotstack-os/QUICKSTART.md) for step-by-step setup
-2. See [hotstack-os/README.md](hotstack-os/README.md) for architecture and reference
+1. See [hotstack-os/README.md](hotstack-os/README.md) for architecture and reference
+2. See [hotstack-os/INSTALL.md](hotstack-os/INSTALL.md) for installation guide
+3. See [hotstack-os/QUICKSTART.md](hotstack-os/QUICKSTART.md) for quick reference
 
 **Requirements:**
 
 - Linux workstation (Fedora/RHEL/CentOS) with libvirt and OpenvSwitch
-- 16GB+ RAM recommended, 50-200GB disk for VM instances
-
-### [Packstack Setup](packstack.md)
-
-A quick and straightforward way to deploy OpenStack on CentOS Stream 9 using
-RDO Packstack. This is the fastest option for getting a working OpenStack
-environment on a dedicated machine.
-
-**Recommended for:**
-
-- CentOS Stream 9 / RHEL-based systems
-- Users familiar with RDO/Packstack
-- Dedicated test machines or VMs
 
 ### [OpenStack-Ansible AIO Setup](osa.md)
 
@@ -54,14 +44,13 @@ deployment in a single node.
 
 ## Choosing a Setup Method
 
-| Feature | HotStack-OS | Packstack | OpenStack-Ansible AIO |
-|---------|-------------|-----------|------------------------|
-| **Deployment Time** | 2-5 minutes | 30-60 minutes | 60-120 minutes |
-| **Host OS** | Fedora/RHEL/CentOS | CentOS Stream 9 | CentOS Stream 9 or 10 |
-| **OpenStack Release** | stable/2025.1 (Epoxy) | Dalmatian | Epoxy or later |
-| **Resource Overhead** | Low (containers) | Medium | High |
-| **Requires Dedicated Machine** | No | Yes | Yes |
-| **Production-like** | No | Yes | Yes |
+| Feature | HotStack-OS | OpenStack-Ansible AIO |
+|---------|-------------|------------------------|
+| **Deployment Time** | ~10 minutes | 60-120 minutes |
+| **Host OS** | Fedora/RHEL/CentOS | CentOS Stream 9 or 10 |
+| **OpenStack Release** | stable/2025.1 (Epoxy) | Epoxy or later |
+| **Resource Overhead** | Low (containers) | High |
+| **Requires Dedicated Machine** | No | Yes |
 
 ## Common Post-Installation Steps
 
@@ -71,12 +60,6 @@ steps to prepare your OpenStack cloud for HotStack scenarios.
 ### Source OpenStack Credentials
 
 First, source the OpenStack credentials:
-
-**For Packstack:**
-
-```bash
-source ~/keystonerc_admin
-```
 
 **For OpenStack-Ansible:**
 
@@ -242,14 +225,6 @@ For building images locally or for more details, see:
 - [Building iPXE images](../ipxe/README.md)
 
 ### Configure Networking
-
-**For Packstack:**
-
-Set the private network as shared so it can be used by the HotStack project:
-
-```shell
-openstack network set --share private
-```
 
 **For OpenStack-Ansible AIO:**
 
