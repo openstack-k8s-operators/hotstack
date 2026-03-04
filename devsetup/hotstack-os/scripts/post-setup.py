@@ -99,6 +99,13 @@ DEFAULT_PROVIDER_GATEWAY = load_env_var("HOTSTACK_PROVIDER_GATEWAY", "172.31.0.1
 DEFAULT_PHYSICAL_NETWORK = load_env_var("HOTSTACK_PHYSICAL_NETWORK", "provider")
 DEFAULT_NETWORK_TYPE = load_env_var("HOTSTACK_NETWORK_TYPE", "flat")
 
+# Network names
+EXTERNAL_NETWORK_NAME = "public"
+EXTERNAL_SUBNET_NAME = "public-subnet"
+PRIVATE_NETWORK_NAME = "private"
+PRIVATE_SUBNET_NAME = "private-subnet"
+ROUTER_NAME = "router1"
+
 # Cloud configuration defaults (can be overridden in .env)
 DEFAULT_CLOUD = load_env_var("HOTSTACK_CLOUD", "hotstack-os")
 DEFAULT_ADMIN_CLOUD = load_env_var("HOTSTACK_ADMIN_CLOUD", "hotstack-os-admin")
@@ -430,11 +437,11 @@ def create_provider_network(
 
     try:
         # Create external network if it doesn't exist
-        network = conn.network.find_network("external")
+        network = conn.network.find_network(EXTERNAL_NETWORK_NAME)
         network_created = False
         if not network:
             network = conn.network.create_network(
-                name="external",
+                name=EXTERNAL_NETWORK_NAME,
                 is_shared=True,
                 is_router_external=True,
                 provider_physical_network=physical_network,
@@ -443,11 +450,11 @@ def create_provider_network(
             network_created = True
 
         # Create subnet if it doesn't exist
-        subnet = conn.network.find_subnet("external-subnet")
+        subnet = conn.network.find_subnet(EXTERNAL_SUBNET_NAME)
         subnet_created = False
         if not subnet:
             subnet_params = {
-                "name": "external-subnet",
+                "name": EXTERNAL_SUBNET_NAME,
                 "network_id": network.id,
                 "cidr": cidr,
                 "ip_version": 4,
@@ -488,18 +495,20 @@ def create_default_network(conn, cidr, dns_nameservers=None, allocation_pools=No
 
     try:
         # Create network if it doesn't exist
-        network = conn.network.find_network("private")
+        network = conn.network.find_network(PRIVATE_NETWORK_NAME)
         network_created = False
         if not network:
-            network = conn.network.create_network(name="private", is_shared=True)
+            network = conn.network.create_network(
+                name=PRIVATE_NETWORK_NAME, is_shared=True
+            )
             network_created = True
 
         # Create subnet if it doesn't exist
-        subnet = conn.network.find_subnet("private-subnet")
+        subnet = conn.network.find_subnet(PRIVATE_SUBNET_NAME)
         subnet_created = False
         if not subnet:
             subnet_params = {
-                "name": "private-subnet",
+                "name": PRIVATE_SUBNET_NAME,
                 "network_id": network.id,
                 "cidr": cidr,
                 "ip_version": 4,
@@ -531,17 +540,17 @@ def create_router(conn, external_network, private_network):
     """
     try:
         # Create router if it doesn't exist
-        router = conn.network.find_router("router1")
+        router = conn.network.find_router(ROUTER_NAME)
         router_created = False
         if not router:
             router = conn.network.create_router(
-                name="router1",
+                name=ROUTER_NAME,
                 external_gateway_info={"network_id": external_network.id},
             )
             router_created = True
 
             # Add interface to private network
-            private_subnet = conn.network.find_subnet("private-subnet")
+            private_subnet = conn.network.find_subnet(PRIVATE_SUBNET_NAME)
             if private_subnet:
                 try:
                     conn.network.add_interface_to_router(
@@ -1008,13 +1017,13 @@ def print_completion_message(args, cloud_secret_path, external_network):
     print("  - Run smoke test: make smoke-test")
     print(
         f"  - Test VM creation: openstack --os-cloud {args.cloud} server create "
-        f"--flavor hotstack.small --image cirros --network private test-vm"
+        f"--flavor hotstack.small --image cirros --network {PRIVATE_NETWORK_NAME} test-vm"
     )
 
     if external_network:
         print(
             f"  - Create floating IP: openstack --os-cloud {args.cloud} "
-            f"floating ip create external"
+            f"floating ip create {EXTERNAL_NETWORK_NAME}"
         )
         print(
             f"  - Attach floating IP: openstack --os-cloud {args.cloud} "

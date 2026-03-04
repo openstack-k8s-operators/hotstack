@@ -44,7 +44,7 @@ parameters:
   external_network:
     type: string
     description: External network for floating IPs
-    default: external
+    default: public
 
 resources:
   #
