@@ -420,8 +420,8 @@ def main():
 
     parser.add_argument(
         "--external-network",
-        default="external",
-        help="External network for floating IPs (default: external)",
+        default="public",
+        help="External network for floating IPs (default: public)",
     )
 
     parser.add_argument(
