@@ -20,6 +20,10 @@
 
 set -e
 
+# Source color and status indicator constants
+# shellcheck disable=SC1091
+source /usr/local/lib/hotstack-colors.sh
+
 CONTAINER_NAME="$1"
 INTERVAL="${2:-10}"
 TIMEOUT="${3:-5}"
@@ -55,7 +59,7 @@ while [ $attempt -lt "$RETRIES" ]; do
 
     # Run healthcheck command inside container
     if podman exec "$CONTAINER_NAME" "${HEALTHCHECK_CMD[@]}" &>/dev/null; then
-        echo "✓ $CONTAINER_NAME is healthy"
+        echo -e "$OK $CONTAINER_NAME is healthy"
         exit 0
     fi
 

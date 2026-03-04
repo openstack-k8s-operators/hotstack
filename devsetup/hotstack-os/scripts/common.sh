@@ -18,13 +18,14 @@
 #
 # Usage: source scripts/common.sh
 
-# ============================================================================
-# Color Constants
-# ============================================================================
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+# shellcheck disable=SC2153
+# ^ Disable "variable may not be assigned" warnings for OK, ERROR, WARNING, INFO, DONE, FAILED
+# These are sourced from colors.sh
+
+# Source color and status indicator constants
+SCRIPT_DIR_COMMON="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR_COMMON/colors.sh"
 
 # ============================================================================
 # Path and Infrastructure Constants
@@ -65,7 +66,7 @@ load_env_file() {
         echo "Edit .env to customize network, passwords, or storage paths."
         echo ""
         cp .env.example .env
-        echo -e "${GREEN}✓${NC} Created .env from .env.example"
+        echo -e "${GREEN}[OK]${NC} Created .env from .env.example"
         sleep 2
     fi
 
@@ -90,19 +91,19 @@ setup_directory() {
     echo -n "$description ($dir_path)... "
 
     if ! mkdir -p "$dir_path"; then
-        echo -e "${RED}✗${NC}"
+        echo -e "${RED}[ERROR]${NC}"
         return 1
     fi
 
     # Set ownership if specified
     if [ -n "$ownership" ]; then
         if ! chown -R "$ownership" "$dir_path" 2>/dev/null; then
-            echo -e "${YELLOW}⚠${NC} (created, but ownership failed: $ownership)"
+            echo -e "${YELLOW}[WARNING]${NC} (created, but ownership failed: $ownership)"
             return 1
         fi
     fi
 
-    echo -e "${GREEN}✓${NC}"
+    echo -e "$OK"
     return 0
 }
 
@@ -116,9 +117,9 @@ setup_directory() {
 check_and_queue_package() {
     local pkg=$1
     if rpm -q "$pkg" &>/dev/null; then
-        echo -e "${GREEN}✓${NC} $pkg is already installed"
+        echo -e "$OK $pkg is already installed"
     else
-        echo -e "${YELLOW}⚠${NC} $pkg needs to be installed"
+        echo -e "$WARNING $pkg needs to be installed"
         PACKAGES_TO_INSTALL+=("$pkg")
     fi
     return 0
@@ -132,9 +133,9 @@ install_queued_packages() {
         echo
         echo "Installing ${#PACKAGES_TO_INSTALL[@]} package(s): ${PACKAGES_TO_INSTALL[*]}"
         dnf install -y "${PACKAGES_TO_INSTALL[@]}"
-        echo -e "${GREEN}✓${NC} All packages installed"
+        echo -e "$OK All packages installed"
     else
-        echo -e "${GREEN}✓${NC} All required packages are already installed"
+        echo -e "$OK All required packages are already installed"
     fi
     return 0
 }
@@ -149,7 +150,7 @@ install_queued_packages() {
 check_systemd_service() {
     local service_name=$1
     if systemctl is-active --quiet "$service_name"; then
-        echo -e "${GREEN}✓${NC} $service_name is already running"
+        echo -e "$OK $service_name is already running"
         return 0
     else
         return 1
@@ -162,16 +163,16 @@ check_systemd_service() {
 enable_start_service() {
     local service_name=$1
 
-    echo -e "${YELLOW}⚠${NC} Starting $service_name service..."
+    echo -e "$WARNING Starting $service_name service..."
     systemctl enable "$service_name"
     if systemctl start "$service_name"; then
         if systemctl is-active --quiet "$service_name"; then
-            echo -e "${GREEN}✓${NC} $service_name started and enabled"
+            echo -e "$OK $service_name started and enabled"
             return 0
         fi
     fi
 
-    echo -e "${RED}✗${NC} Failed to start $service_name service"
+    echo -e "$ERROR Failed to start $service_name service"
     return 1
 }
 
@@ -187,22 +188,22 @@ check_service() {
     status=$(podman ps -a --filter "name=^${container_name}$" --format "{{.Status}}")
 
     if [ -z "$status" ]; then
-        echo -e "${RED}✗${NC} $service_name - container does not exist"
+        echo -e "$ERROR $service_name - container does not exist"
         return 1
     fi
 
     # Parse status - anything not "Up ... (healthy)" or "Up ... (no healthcheck)" is a problem
     if echo "$status" | grep -qE "^Exited|^Created|^Initialized"; then
-        echo -e "${RED}✗${NC} $service_name - $status"
+        echo -e "$ERROR $service_name - $status"
         return 1
     elif echo "$status" | grep -q "(unhealthy)"; then
-        echo -e "${RED}✗${NC} $service_name - unhealthy"
+        echo -e "$ERROR $service_name - unhealthy"
         return 1
     elif echo "$status" | grep -q "(starting)"; then
-        echo -e "${YELLOW}⚠${NC} $service_name - still starting"
+        echo -e "$WARNING $service_name - still starting"
         return 1
     else
-        echo -e "${GREEN}✓${NC} $service_name"
+        echo -e "$OK $service_name"
         return 0
     fi
 }
@@ -219,20 +220,20 @@ check_service() {
 # Returns: 0 if CLI works, 1 otherwise
 verify_openstack_cli() {
     if [ ! -f clouds.yaml ]; then
-        echo -e "${YELLOW}⚠${NC} clouds.yaml not found - skipping CLI test"
+        echo -e "$WARNING clouds.yaml not found - skipping CLI test"
         return 1
     fi
 
     # Check if openstack command is available
     if ! command -v openstack &>/dev/null; then
-        echo -e "${YELLOW}⚠${NC} openstack command not found - install python3-openstackclient"
+        echo -e "$WARNING openstack command not found - install python3-openstackclient"
         echo "  Install: sudo make install-client"
         echo "  Or manually: sudo dnf install -y python3-openstackclient python3-heatclient"
         return 1
     fi
 
     if openstack --os-cloud hotstack-os-admin endpoint list &>/dev/null; then
-        echo -e "${GREEN}✓${NC} OpenStack CLI working"
+        echo -e "$OK OpenStack CLI working"
 
         # Show service status
         echo
@@ -240,7 +241,7 @@ verify_openstack_cli() {
         openstack --os-cloud hotstack-os-admin service list -c Name -c Type
         return 0
     else
-        echo -e "${RED}✗${NC} OpenStack CLI not working"
+        echo -e "$ERROR OpenStack CLI not working"
         return 1
     fi
 }
@@ -255,10 +256,10 @@ verify_openstack_cli() {
 verify_libvirt() {
     echo "Checking libvirt configuration..."
     if virsh list --all &>/dev/null; then
-        echo -e "${GREEN}✓${NC} libvirt is functional"
+        echo -e "$OK libvirt is functional"
         return 0
     else
-        echo -e "${RED}✗${NC} libvirt is not functional"
+        echo -e "$ERROR libvirt is not functional"
         return 1
     fi
 }
@@ -285,18 +286,18 @@ setup_libvirt_services() {
 
         for daemon in $libvirt_sockets; do
             if ! (systemctl is-active --quiet "${daemon}.socket" || systemctl is-active --quiet "${daemon}"); then
-                echo -e "${YELLOW}⚠${NC} Starting ${daemon}..."
+                echo -e "$WARNING Starting ${daemon}..."
                 systemctl enable "${daemon}.socket"
                 if systemctl start "${daemon}.socket"; then
                     if systemctl is-active --quiet "${daemon}.socket" || systemctl is-active --quiet "${daemon}"; then
-                        echo -e "${GREEN}✓${NC} ${daemon} started and enabled"
+                        echo -e "$OK ${daemon} started and enabled"
                     fi
                 else
-                    echo -e "${RED}✗${NC} Failed to start ${daemon}.socket"
+                    echo -e "$ERROR Failed to start ${daemon}.socket"
                     errors=$((errors + 1))
                 fi
             else
-                echo -e "${GREEN}✓${NC} ${daemon} is already running"
+                echo -e "$OK ${daemon} is already running"
             fi
         done
 
@@ -304,7 +305,7 @@ setup_libvirt_services() {
     else
         # Legacy libvirtd
         if ! check_systemd_service libvirtd; then
-            echo -e "${YELLOW}⚠${NC} Starting libvirtd (legacy monolithic)..."
+            echo -e "$WARNING Starting libvirtd (legacy monolithic)..."
             enable_start_service libvirtd || return 1
         fi
     fi
@@ -319,11 +320,11 @@ setup_libvirt_services() {
 # Usage: setup_epel_repository
 setup_epel_repository() {
     if ! dnf repolist enabled | grep -q epel; then
-        echo -e "${YELLOW}⚠${NC} EPEL repository not enabled, installing..."
+        echo -e "$WARNING EPEL repository not enabled, installing..."
         dnf install -y epel-release
-        echo -e "${GREEN}✓${NC} EPEL repository enabled"
+        echo -e "$OK EPEL repository enabled"
     else
-        echo -e "${GREEN}✓${NC} EPEL repository already enabled"
+        echo -e "$OK EPEL repository already enabled"
     fi
     return 0
 }
@@ -332,11 +333,11 @@ setup_epel_repository() {
 # Usage: setup_nfv_repository
 setup_nfv_repository() {
     if ! dnf repolist enabled | grep -q nfv; then
-        echo -e "${YELLOW}⚠${NC} NFV SIG repository not enabled, installing..."
+        echo -e "$WARNING NFV SIG repository not enabled, installing..."
         dnf install -y centos-release-nfv-openvswitch
-        echo -e "${GREEN}✓${NC} NFV SIG repository enabled"
+        echo -e "$OK NFV SIG repository enabled"
     else
-        echo -e "${GREEN}✓${NC} NFV SIG repository already enabled"
+        echo -e "$OK NFV SIG repository already enabled"
     fi
     return 0
 }
@@ -360,9 +361,9 @@ detect_os() {
         OS_ID="${ID}"
         OS_NAME="${NAME}"
         OS_VERSION="${VERSION_ID}"
-        [ "$quiet" = "false" ] && echo -e "${GREEN}✓${NC} Detected: ${OS_NAME} ${OS_VERSION}"
+        [ "$quiet" = "false" ] && echo -e "$OK Detected: ${OS_NAME} ${OS_VERSION}"
     else
-        echo -e "${RED}✗${NC} Cannot detect OS - /etc/os-release not found"
+        echo -e "$ERROR Cannot detect OS - /etc/os-release not found"
         exit 1
     fi
     return 0
@@ -465,11 +466,11 @@ process_config_files() {
     # Use Python script for robust config processing
     # Python handles multi-line replacements and special characters naturally
     if ! "$SCRIPT_DIR/process-configs.py" "$dir" "$@"; then
-        echo -e "${RED}✗${NC}"
+        echo -e "${RED}[ERROR]${NC}"
         return 1
     fi
 
-    echo -e "${GREEN}✓${NC}"
+    echo -e "$OK"
 }
 
 # Get upstream DNS servers from /etc/resolv.conf
@@ -492,7 +493,7 @@ prepare_runtime_configs() {
         mkdir -p "$CONFIGS_RUNTIME_DIR/$dir"
     done
 
-    echo -e "${GREEN}✓${NC}"
+    echo -e "$OK"
 }
 
 # Prepare all configuration files (high-level convenience function)
@@ -510,7 +511,7 @@ prepare_all_configs() {
     rm -rf "$SCRIPTS_RUNTIME_DIR"
     mkdir -p "$SCRIPTS_RUNTIME_DIR"
     cp -r containerfiles/scripts/* "$SCRIPTS_RUNTIME_DIR"/
-    echo -e "${GREEN}✓${NC}"
+    echo -e "$OK"
 
     # Get upstream DNS for dnsmasq
     local upstream_dns
@@ -574,7 +575,7 @@ prepare_all_configs() {
     echo -n "Copying clouds.yaml... "
     cp "$CONFIGS_RUNTIME_DIR/clouds.yaml.example" "${HOTSTACK_DATA_DIR}/clouds.yaml"
     cp "${HOTSTACK_DATA_DIR}/clouds.yaml" clouds.yaml
-    echo -e "${GREEN}✓${NC}"
+    echo -e "$OK"
 }
 
 # ============================================================================

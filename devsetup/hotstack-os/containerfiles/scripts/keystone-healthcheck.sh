@@ -35,5 +35,5 @@ if ! openstack project show service &>/dev/null; then
     exit 1
 fi
 
-echo "✓ Keystone healthy: API responding and bootstrap complete"
+echo -e "$OK Keystone healthy: API responding and bootstrap complete"
 exit 0

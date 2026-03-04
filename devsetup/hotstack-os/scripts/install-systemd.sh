@@ -69,7 +69,7 @@ if [ ${#MISSING_IMAGES[@]} -gt 0 ]; then
     echo ""
     exit 1
 fi
-echo "  ✓ All required images are available"
+echo -e "  $OK All required images are available"
 echo ""
 
 # Ensure .env file exists
@@ -97,16 +97,17 @@ set +a
 
 # Install helper scripts
 echo "Installing scripts..."
+install -m 644 "$SCRIPT_DIR/colors.sh" /usr/local/lib/hotstack-colors.sh
 install -m 755 "$PROJECT_DIR/systemd/hotstack-os-infra-setup.sh" /usr/local/bin/
 install -m 755 "$PROJECT_DIR/systemd/hotstack-os-infra-cleanup.sh" /usr/local/bin/
 install -m 755 "$PROJECT_DIR/systemd/hotstack-healthcheck.sh" /usr/local/bin/
-echo "  ✓ Installed scripts to /usr/local/bin/"
+echo -e "  $OK Installed scripts to /usr/local/bin/ and /usr/local/lib/"
 echo ""
 
 # Run infra-setup to ensure hotstack user exists
 echo "Running infrastructure setup..."
 /usr/local/bin/hotstack-os-infra-setup.sh
-echo "  ✓ Infrastructure setup complete"
+echo -e "  $OK Infrastructure setup complete"
 echo ""
 
 # Detect hotstack user UID for session libvirt
@@ -147,7 +148,7 @@ chown hotstack:hotstack "$USER_SYSTEMD_DIR/hotstack-os-libvirtd-session.service"
 # Verify /dev/kvm is accessible
 if [ -c /dev/kvm ]; then
     if groups hotstack | grep -q '\bkvm\b'; then
-        echo "  ✓ hotstack user has access to /dev/kvm"
+        echo -e "  $OK hotstack user has access to /dev/kvm"
     else
         echo "ERROR: hotstack user not in kvm group" >&2
         exit 1
@@ -161,7 +162,7 @@ fi
 # This is acceptable for dev/test environments
 echo "  Granting CAP_NET_ADMIN capability to libvirtd..."
 setcap cap_net_admin+ep /usr/sbin/libvirtd
-echo "  ✓ libvirtd capabilities configured"
+echo -e "  $OK libvirtd capabilities configured"
 
 # Enable and start the libvirtd user service
 echo "  Enabling and starting libvirtd user service..."
@@ -192,7 +193,7 @@ sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
 SOCKET_PATH="/run/user/$HOTSTACK_UID/libvirt/libvirt-sock"
 echo "  Waiting for libvirt socket at $SOCKET_PATH..."
 if timeout 10 bash -c "while [ ! -S '$SOCKET_PATH' ]; do sleep 0.5; done"; then
-    echo "  ✓ libvirt socket created"
+    echo -e "  $OK libvirt socket created"
 else
     echo "ERROR: Timeout waiting for libvirt socket" >&2
     echo "  Checking service status:" >&2
@@ -201,7 +202,7 @@ else
     exit 1
 fi
 
-echo "  ✓ Libvirt session setup complete"
+echo -e "  $OK Libvirt session setup complete"
 echo ""
 
 # Process and install systemd units
@@ -249,13 +250,13 @@ process_config_files "$tmpdir" "systemd units" \
     "__CHASSIS_HOSTNAME__" "$CHASSIS_HOSTNAME"
 
 install -m 644 "$tmpdir"/* /etc/systemd/system/
-echo "  ✓ Installed systemd units to /etc/systemd/system/"
+echo -e "  $OK Installed systemd units to /etc/systemd/system/"
 echo ""
 
 # Reload systemd
 echo "Reloading systemd..."
 systemctl daemon-reload
-echo "  ✓ Systemd reloaded"
+echo -e "  $OK Systemd reloaded"
 echo ""
 
 echo "========================================"

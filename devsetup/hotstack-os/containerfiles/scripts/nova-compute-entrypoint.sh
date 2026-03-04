@@ -61,10 +61,10 @@ if [[ "$LIBVIRT_URI" =~ /run/user/([0-9]+)/libvirt ]]; then
     echo "  Session socket path: /run/user/$HOTSTACK_UID/libvirt/libvirt-sock"
 
     if [ -d "/run/user/$HOTSTACK_UID/libvirt" ]; then
-        echo "  ✓ Session libvirt directory exists"
-        ls -la "/run/user/$HOTSTACK_UID/libvirt/" 2>/dev/null | sed 's/^/    /' || true
+        echo -e "  $OK Session libvirt directory exists"
+        find "/run/user/$HOTSTACK_UID/libvirt/" -maxdepth 1 -ls 2>/dev/null | sed 's/^/    /' || true
     else
-        echo "  ✗ Session libvirt directory not found"
+        echo -e "  $ERROR Session libvirt directory not found"
     fi
 fi
 
@@ -95,7 +95,7 @@ if ! virsh -c "$LIBVIRT_URI" list &>/dev/null; then
     sleep 60
     exit 1
 fi
-echo "✓ Libvirt session connection OK!"
+echo -e "$OK Libvirt session connection OK!"
 
 # Verify NFS server accessibility
 echo "Checking NFS server accessibility..."
@@ -118,7 +118,7 @@ if ! showmount -e 127.0.0.1 &>/dev/null; then
     sleep 60
     exit 1
 fi
-echo "✓ NFS server accessible:"
+echo -e "$OK NFS server accessible:"
 showmount -e 127.0.0.1 2>/dev/null | sed 's/^/  /'
 
 # Discover compute node in background (if bootstrapping)
@@ -139,13 +139,13 @@ if [ "${OS_BOOTSTRAP:-true}" = "true" ]; then
                 host_count=$(nova-manage cell_v2 list_hosts 2>/dev/null | tail -n +4 | grep -c "^|" || echo 0)
 
                 if [ "$host_count" -gt 0 ]; then
-                    echo "✓ Compute host discovery successful! ($host_count host(s) in cell)"
+                    echo -e "$OK Compute host discovery successful! ($host_count host(s) in cell)"
                     exit 0
                 else
-                    echo "⚠ No hosts found in cell mapping yet, retrying..."
+                    echo -e "$WARNING No hosts found in cell mapping yet, retrying..."
                 fi
             else
-                echo "⚠ Discovery command failed, retrying..."
+                echo -e "$WARNING Discovery command failed, retrying..."
             fi
 
             if [ "$attempt" -lt 10 ]; then

@@ -19,6 +19,10 @@
 
 set -e
 
+# Source color and status indicator constants
+# shellcheck disable=SC1091
+source /usr/local/lib/colors.sh
+
 echo "Testing qemu-img wrapper..."
 
 # Create a temporary directory for testing
@@ -33,9 +37,9 @@ qemu-img create -f qcow2 "$TEST_FILE" 1G > /dev/null
 # Check permissions
 PERMS=$(stat -c "%a" "$TEST_FILE")
 if [ "$PERMS" = "664" ]; then
-    echo "✓ Test 1 PASSED: Permissions are 0664"
+    echo -e "$OK Test 1 PASSED: Permissions are 0664"
 else
-    echo "✗ Test 1 FAILED: Expected 0664, got $PERMS"
+    echo -e "$FAILED Test 1 FAILED: Expected 0664, got $PERMS"
     exit 1
 fi
 
@@ -46,9 +50,9 @@ qemu-img create -f raw "$TEST_FILE2" 1G > /dev/null
 
 PERMS2=$(stat -c "%a" "$TEST_FILE2")
 if [ "$PERMS2" = "664" ]; then
-    echo "✓ Test 2 PASSED: Permissions are 0664"
+    echo -e "$OK Test 2 PASSED: Permissions are 0664"
 else
-    echo "✗ Test 2 FAILED: Expected 0664, got $PERMS2"
+    echo -e "$FAILED Test 2 FAILED: Expected 0664, got $PERMS2"
     exit 1
 fi
 
@@ -59,21 +63,21 @@ qemu-img create -f qcow2 -b "$TEST_FILE" -F qcow2 "$TEST_FILE3" > /dev/null
 
 PERMS3=$(stat -c "%a" "$TEST_FILE3")
 if [ "$PERMS3" = "664" ]; then
-    echo "✓ Test 3 PASSED: Permissions are 0664"
+    echo -e "$OK Test 3 PASSED: Permissions are 0664"
 else
-    echo "✗ Test 3 FAILED: Expected 0664, got $PERMS3"
+    echo -e "$FAILED Test 3 FAILED: Expected 0664, got $PERMS3"
     exit 1
 fi
 
 # Test 4: Non-create command should work normally
 echo "Test 4: Testing non-create command (info)..."
 if qemu-img info "$TEST_FILE" > /dev/null 2>&1; then
-    echo "✓ Test 4 PASSED: Non-create commands work"
+    echo -e "$OK Test 4 PASSED: Non-create commands work"
 else
-    echo "✗ Test 4 FAILED: qemu-img info failed"
+    echo -e "$FAILED Test 4 FAILED: qemu-img info failed"
     exit 1
 fi
 
 echo ""
-echo "All tests PASSED! ✓"
+echo -e "All tests PASSED! $OK"
 echo "The qemu-img wrapper is working correctly."

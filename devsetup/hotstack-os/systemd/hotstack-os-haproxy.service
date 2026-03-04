@@ -38,6 +38,7 @@ ExecStart=/usr/bin/podman run \
     --publish __BREX_IP__:9292:9292 \
     --publish __BREX_IP__:8778:8778 \
     --publish __BREX_IP__:8774:8774 \
+    --publish __BREX_IP__:8775:8775 \
     --publish __BREX_IP__:9696:9696 \
     --publish __BREX_IP__:8776:8776 \
     --publish __BREX_IP__:8004:8004 \

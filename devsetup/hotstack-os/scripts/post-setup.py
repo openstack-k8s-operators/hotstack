@@ -29,11 +29,19 @@ from openstack import exceptions
 import yaml
 
 
-# ANSI color codes
-GREEN = "\033[0;32m"
-YELLOW = "\033[1;33m"
-RED = "\033[0;31m"
-NC = "\033[0m"
+# ANSI color codes and status indicators
+class Colors:
+    RED = "\033[0;31m"
+    GREEN = "\033[0;32m"
+    YELLOW = "\033[1;33m"
+    NC = "\033[0m"  # No Color
+
+    # Status indicators
+    OK = f"{GREEN}[OK]{NC}"
+    WARNING = f"{YELLOW}[WARNING]{NC}"
+    ERROR = f"{RED}[ERROR]{NC}"
+    DONE = f"{GREEN}[DONE]{NC}"
+
 
 # Cache directory for downloaded images
 CACHE_DIR = Path.home() / ".cache" / "hotstack-os" / "images"
@@ -241,17 +249,17 @@ IMAGE_SPECS = [
 
 def print_success(message):
     """Print success message in green"""
-    print(f"{GREEN}✓ {message}{NC}")
+    print(f"{Colors.OK} {message}")
 
 
 def print_warning(message):
     """Print warning message in yellow"""
-    print(f"{YELLOW}⚠ {message}{NC}")
+    print(f"{Colors.WARNING} {message}")
 
 
 def print_error(message):
     """Print error message in red"""
-    print(f"{RED}✗ {message}{NC}", file=sys.stderr)
+    print(f"{Colors.ERROR} {message}", file=sys.stderr)
 
 
 def handle_openstack_error(error, context):
@@ -993,11 +1001,11 @@ def print_completion_message(args, cloud_secret_path, external_network):
         external_network: External network object (or None)
     """
     print()
-    print(f"{GREEN}✓ Post-setup complete!{NC}")
+    print(f"{Colors.DONE} Post-setup complete!")
     print()
     print("Cloud configurations:")
-    print(f"  • Admin: --os-cloud {args.admin_cloud}")
-    print(f"  • User:  --os-cloud {args.cloud}")
+    print(f"  - Admin: --os-cloud {args.admin_cloud}")
+    print(f"  - User:  --os-cloud {args.cloud}")
     print()
 
     if not args.skip_keypair:

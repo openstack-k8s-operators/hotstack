@@ -16,6 +16,10 @@
 
 # Health check for nova-compute: verifies the compute service is operational
 
+# Source color and status indicator constants
+# shellcheck disable=SC1091
+source /usr/local/lib/colors.sh
+
 # 1. Check if nova-compute process is running
 if ! pgrep -f "nova-compute" > /dev/null; then
     echo "ERROR: nova-compute process not running"
@@ -31,5 +35,5 @@ if [ "$host_count" -eq 0 ]; then
     exit 1
 fi
 
-echo "✓ Nova compute service healthy: process running and $host_count host(s) discovered in cell"
+echo -e "$OK Nova compute service healthy: process running and $host_count host(s) discovered in cell"
 exit 0

@@ -16,6 +16,11 @@
 
 set -euo pipefail
 
+# Source color and status indicator constants
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/colors.sh"
+
 # Ensure we're running as root
 if [ "$EUID" -ne 0 ]; then
     echo "Error: This script must be run as root (use sudo)" >&2
@@ -52,7 +57,7 @@ while [ $ELAPSED -lt $MAX_WAIT ]; do
 done
 
 if [ $ELAPSED -ge $MAX_WAIT ]; then
-    echo "  ⚠ Warning: Some services did not stop within ${MAX_WAIT}s"
+    echo -e "  $WARNING Some services did not stop within ${MAX_WAIT}s"
     echo "  Services still active or deactivating:"
     systemctl list-units 'hotstack-os-*.service' --state=active,deactivating --no-legend 2>/dev/null || true
     echo ""
@@ -63,7 +68,7 @@ if [ $ELAPSED -ge $MAX_WAIT ]; then
 fi
 
 systemctl disable hotstack-os.target 2>/dev/null || true
-echo "  ✓ Services stopped"
+echo -e "  $OK Services stopped"
 echo ""
 
 # Note: Libvirt session is NOT stopped during uninstall to preserve running VMs
@@ -76,21 +81,22 @@ echo ""
 echo "Removing systemd units..."
 rm -f /etc/systemd/system/hotstack-os*.service
 rm -f /etc/systemd/system/hotstack-os.target
-echo "  ✓ Removed systemd units"
+echo -e "  $OK Removed systemd units"
 echo ""
 
 # Remove helper scripts
 echo "Removing helper scripts..."
+rm -f /usr/local/lib/hotstack-colors.sh
 rm -f /usr/local/bin/hotstack-os-infra-setup.sh
 rm -f /usr/local/bin/hotstack-os-infra-cleanup.sh
 rm -f /usr/local/bin/hotstack-healthcheck.sh
-echo "  ✓ Removed helper scripts"
+echo -e "  $OK Removed helper scripts"
 echo ""
 
 # Reload systemd
 echo "Reloading systemd..."
 systemctl daemon-reload
-echo "  ✓ Systemd reloaded"
+echo -e "  $OK Systemd reloaded"
 echo ""
 
 echo "========================================"

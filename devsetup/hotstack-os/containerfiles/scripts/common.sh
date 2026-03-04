@@ -16,6 +16,10 @@
 
 # Common functions for OpenStack service entrypoint scripts
 
+# Source color and status indicator constants
+# shellcheck disable=SC1091
+source /usr/local/lib/colors.sh
+
 # Validates that required environment variables are set and non-empty.
 #
 # Parameters:
@@ -87,9 +91,9 @@ wait_for_database() {
             echo ""
             echo "Testing network connectivity to database:"
             if ping -c 1 -W 2 "$db_host" &>/dev/null; then
-                echo "  ✓ Can ping $db_host"
+                echo -e "  $OK Can ping $db_host"
             else
-                echo "  ✗ Cannot ping $db_host (network issue?)"
+                echo -e "  $ERROR Cannot ping $db_host (network issue?)"
             fi
             echo ""
             echo "Attempting connection with verbose output:"

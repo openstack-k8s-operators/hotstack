@@ -11,6 +11,8 @@ EXPOSE 9292
 EXPOSE 8778
 # Compute
 EXPOSE 8774
+# Compute Metadata
+EXPOSE 8775
 # Network
 EXPOSE 9696
 # Block Storage

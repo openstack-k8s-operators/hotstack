@@ -39,10 +39,10 @@ echo ""
 echo -n "Removing container images... "
 # shellcheck disable=SC2046
 podman rmi -f $(podman images -q --filter "reference=localhost/hotstack-os-*" 2>/dev/null) 2>/dev/null || true
-echo -e "${GREEN}✓${NC}"
+echo -e "$OK"
 
 echo -n "Cleaning libvirt VMs... "
-remove_libvirt_vms 2>/dev/null && echo -e "${GREEN}✓${NC}" || echo -e "${YELLOW}⚠${NC}"
+remove_libvirt_vms 2>/dev/null && echo -e "$OK" || echo -e "$WARNING"
 
 echo -n "Stopping libvirt session for hotstack user... "
 if id hotstack &>/dev/null; then
@@ -58,18 +58,18 @@ if id hotstack &>/dev/null; then
     rm -rf /var/lib/hotstack/.config 2>/dev/null || true
     # Remove CAP_NET_ADMIN capability from libvirtd
     setcap -r /usr/sbin/libvirtd 2>/dev/null || true
-    echo -e "${GREEN}✓${NC}"
+    echo -e "$OK"
 else
-    echo -e "${YELLOW}⚠${NC} (no hotstack user)"
+    echo -e "$WARNING (no hotstack user)"
 fi
 
 echo -n "Removing podman network... "
 podman network rm hotstack-os 2>/dev/null || true
-echo -e "${GREEN}✓${NC}"
+echo -e "$OK"
 
 echo -n "Removing podman volumes... "
 podman volume rm hotstack-os-mariadb hotstack-os-rabbitmq hotstack-os-ovn 2>/dev/null || true
-echo -e "${GREEN}✓${NC}"
+echo -e "$OK"
 
 echo -n "Unmounting NFS volumes... "
 # Unmount any NFS mounts in nova-mnt before cleaning
@@ -79,14 +79,14 @@ if [ -d "$HOTSTACK_DATA_DIR/nova-mnt" ]; then
         umount "$mountpoint" 2>/dev/null || true
     done
 fi
-echo -e "${GREEN}✓${NC}"
+echo -e "$OK"
 
 echo -n "Cleaning data directories... "
 if [ -d "$HOTSTACK_DATA_DIR" ]; then
     find "$HOTSTACK_DATA_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
 fi
 rm -f clouds.yaml 2>/dev/null || true
-echo -e "${GREEN}✓${NC}"
+echo -e "$OK"
 
 echo ""
 echo -e "${GREEN}Complete!${NC} To rebuild: sudo make build && sudo make install"

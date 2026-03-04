@@ -74,7 +74,7 @@ echo -n "Enabling NFS server... "
 if ! check_systemd_service "nfs-server"; then
     enable_start_service "nfs-server" || exit 1
 else
-    echo -e "${GREEN}✓${NC} (already running)"
+    echo -e "$OK (already running)"
 fi
 
 echo ""

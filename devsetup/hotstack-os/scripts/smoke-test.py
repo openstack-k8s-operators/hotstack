@@ -36,32 +36,41 @@ from pathlib import Path
 import openstack
 from openstack import exceptions
 
-# ANSI color codes
-GREEN = "\033[0;32m"
-YELLOW = "\033[1;33m"
-RED = "\033[0;31m"
-BLUE = "\033[0;34m"
-NC = "\033[0m"
+
+# ANSI color codes and status indicators
+class Colors:
+    RED = "\033[0;31m"
+    GREEN = "\033[0;32m"
+    YELLOW = "\033[1;33m"
+    BLUE = "\033[0;34m"
+    NC = "\033[0m"  # No Color
+
+    # Status indicators
+    OK = f"{GREEN}[OK]{NC}"
+    WARNING = f"{YELLOW}[WARNING]{NC}"
+    ERROR = f"{RED}[ERROR]{NC}"
+    INFO = f"{BLUE}[INFO]{NC}"
+    DONE = f"{GREEN}[DONE]{NC}"
 
 
 def print_success(message):
     """Print success message in green"""
-    print(f"{GREEN}✓ {message}{NC}")
+    print(f"{Colors.OK} {message}")
 
 
 def print_warning(message):
     """Print warning message in yellow"""
-    print(f"{YELLOW}⚠ {message}{NC}")
+    print(f"{Colors.WARNING} {message}")
 
 
 def print_error(message):
     """Print error message in red"""
-    print(f"{RED}✗ {message}{NC}", file=sys.stderr)
+    print(f"{Colors.ERROR} {message}", file=sys.stderr)
 
 
 def print_info(message):
     """Print info message in blue"""
-    print(f"{BLUE}ℹ {message}{NC}")
+    print(f"{Colors.INFO} {message}")
 
 
 def load_env_var(var_name, default=None):
@@ -226,6 +235,44 @@ def test_connectivity(floating_ip, timeout=30):
     return False
 
 
+def test_ssh_access(floating_ip, private_key_path, username="cirros", timeout=120):
+    """Test SSH access to instance (verifies metadata service worked)"""
+    print_info(f"Testing SSH access to {floating_ip} as user '{username}'...")
+
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            result = subprocess.run(
+                [
+                    "ssh",
+                    "-i",
+                    str(private_key_path),
+                    "-o",
+                    "StrictHostKeyChecking=no",
+                    "-o",
+                    "UserKnownHostsFile=/dev/null",
+                    "-o",
+                    "ConnectTimeout=5",
+                    f"{username}@{floating_ip}",
+                    "echo 'SSH connection successful'",
+                ],
+                capture_output=True,
+                timeout=10,
+                text=True,
+            )
+            if result.returncode == 0 and "SSH connection successful" in result.stdout:
+                print_success(f"Successfully connected via SSH to {floating_ip}")
+                print_success("Metadata service is working correctly!")
+                return True
+        except (subprocess.TimeoutExpired, Exception):
+            pass
+        time.sleep(5)
+
+    print_warning(f"Failed to SSH to {floating_ip} after {timeout} seconds")
+    print_warning("This may indicate metadata service issues")
+    return False
+
+
 def verify_resources(conn, stack_name):
     """Verify that stack resources are in good state"""
     print_info("Verifying stack resources...")
@@ -361,6 +408,51 @@ def run_smoke_test(args):
                 "Some connectivity tests failed (this may be expected if instances are still booting)"
             )
 
+    # Test SSH access (verifies metadata service)
+    if args.test_ssh:
+        print()
+        print_info("Testing SSH access (verifies metadata service)...")
+
+        # Determine private key path
+        if args.ssh_private_key:
+            private_key_path = Path(args.ssh_private_key).expanduser()
+        else:
+            # Auto-detect based on public key used
+            if public_key_path.name == "id_ed25519.pub":
+                private_key_path = public_key_path.parent / "id_ed25519"
+            else:
+                private_key_path = public_key_path.parent / "id_rsa"
+
+        if not private_key_path.exists():
+            print_warning(f"Private key not found: {private_key_path}")
+            print_warning("Skipping SSH test")
+        else:
+            ssh_passed = True
+            if "instance1_floating_ip" in outputs:
+                if not test_ssh_access(
+                    outputs["instance1_floating_ip"],
+                    private_key_path,
+                    username=args.ssh_username,
+                    timeout=120,
+                ):
+                    ssh_passed = False
+
+            if "instance2_floating_ip" in outputs:
+                if not test_ssh_access(
+                    outputs["instance2_floating_ip"],
+                    private_key_path,
+                    username=args.ssh_username,
+                    timeout=120,
+                ):
+                    ssh_passed = False
+
+            if ssh_passed:
+                print_success("All SSH tests passed")
+            else:
+                print_warning(
+                    "Some SSH tests failed (metadata service may have issues)"
+                )
+
     # Cleanup
     if not args.keep_stack:
         print()
@@ -373,7 +465,7 @@ def run_smoke_test(args):
 
     # Final result
     print()
-    print(f"{GREEN}✓ Smoke test completed successfully!{NC}")
+    print(f"{Colors.DONE} Smoke test completed successfully!")
 
 
 def main():
@@ -404,6 +496,25 @@ def main():
         "--ssh-public-key",
         default="~/.ssh/id_rsa.pub",
         help="Path to SSH public key (default: auto-detect ~/.ssh/id_ed25519.pub or ~/.ssh/id_rsa.pub)",
+    )
+
+    parser.add_argument(
+        "--ssh-private-key",
+        default=None,
+        help="Path to SSH private key for SSH tests (default: auto-detect based on public key)",
+    )
+
+    parser.add_argument(
+        "--ssh-username",
+        default="cirros",
+        help="SSH username for test instances (default: cirros)",
+    )
+
+    parser.add_argument(
+        "--no-test-ssh",
+        dest="test_ssh",
+        action="store_false",
+        help="Skip SSH access tests",
     )
 
     parser.add_argument(
