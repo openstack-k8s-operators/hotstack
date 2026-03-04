@@ -72,6 +72,7 @@ RUN (groupadd -r openstack || true) && \
 RUN mkdir -p /opt
 
 # Copy common helper functions used by all OpenStack service entrypoints
+COPY --chmod=644 scripts/colors.sh /usr/local/lib/colors.sh
 COPY --chmod=644 scripts/common.sh /usr/local/lib/common.sh
 
 # Copy Keystone bootstrap Python script for efficient resource management

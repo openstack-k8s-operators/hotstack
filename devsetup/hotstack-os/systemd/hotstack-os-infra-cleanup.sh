@@ -20,6 +20,10 @@
 
 set -e
 
+# Source color and status indicator constants
+# shellcheck disable=SC1091
+source /usr/local/lib/hotstack-colors.sh
+
 # /etc/hosts markers
 HOSTS_FILE="/etc/hosts"
 HOSTS_BEGIN_MARKER="# BEGIN hotstack-os managed entries"
@@ -39,9 +43,9 @@ echo "=== HotStack-OS Infrastructure Cleanup ==="
 if [ -f "$HOSTS_FILE" ] && grep -q "$HOSTS_BEGIN_MARKER" "$HOSTS_FILE" 2>/dev/null; then
     echo "Removing /etc/hosts entries..."
     sed -i "/$HOSTS_BEGIN_MARKER/,/$HOSTS_END_MARKER/d" "$HOSTS_FILE"
-    echo "✓ /etc/hosts entries removed"
+    echo -e "$OK /etc/hosts entries removed"
 else
-    echo "✓ No /etc/hosts entries to remove"
+    echo -e "$OK No /etc/hosts entries to remove"
 fi
 
 # Remove NFS exports
@@ -49,9 +53,9 @@ if [ -f "$NFS_EXPORTS_FILE" ] && grep -q "$NFS_EXPORTS_BEGIN_MARKER" "$NFS_EXPOR
     echo "Removing NFS exports..."
     sed -i "/$NFS_EXPORTS_BEGIN_MARKER/,/$NFS_EXPORTS_END_MARKER/d" "$NFS_EXPORTS_FILE"
     exportfs -ra 2>/dev/null || true
-    echo "✓ NFS exports removed"
+    echo -e "$OK NFS exports removed"
 else
-    echo "✓ No NFS exports to remove"
+    echo -e "$OK No NFS exports to remove"
 fi
 
 echo "=== Infrastructure Cleanup Complete ==="

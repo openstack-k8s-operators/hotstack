@@ -58,10 +58,10 @@ verify_openstack_cli || increment_errors
 
 echo "=========================================="
 if exit_with_error_summary; then
-    echo -e "${GREEN}✓ All services healthy!${NC}"
+    echo -e "$OK All services healthy!"
     exit 0
 else
-    echo -e "${RED}✗ $ERRORS service(s) unhealthy${NC}"
+    echo -e "$ERROR $ERRORS service(s) unhealthy"
     echo "View logs: sudo journalctl -u hotstack-os-<service> -f"
     exit 1
 fi

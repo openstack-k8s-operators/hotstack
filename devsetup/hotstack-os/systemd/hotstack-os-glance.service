@@ -17,7 +17,7 @@
 Description=HotStack-OS Glance Image Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-mariadb.service hotstack-os-keystone.service hotstack-os-dnsmasq.service hotstack-os-haproxy.service
-Requires=hotstack-os-mariadb.service hotstack-os-keystone.service hotstack-os-dnsmasq.service hotstack-os-haproxy.service
+Wants=hotstack-os-mariadb.service hotstack-os-keystone.service hotstack-os-dnsmasq.service
 PartOf=hotstack-os.target
 StartLimitIntervalSec=120
 StartLimitBurst=5

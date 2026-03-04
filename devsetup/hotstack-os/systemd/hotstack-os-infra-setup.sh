@@ -20,6 +20,10 @@
 
 set -e
 
+# Source color and status indicator constants
+# shellcheck disable=SC1091
+source /usr/local/lib/hotstack-colors.sh
+
 # Environment variables are passed by systemd service unit
 # Default values if not set (for standalone testing)
 BREX_IP=${BREX_IP:-172.31.0.129}
@@ -61,16 +65,16 @@ if ! id hotstack &>/dev/null; then
     echo "This should have been created by the install process"
     exit 1
 fi
-echo "✓ hotstack user verified (UID: $(id -u hotstack))"
+echo -e "$OK hotstack user verified (UID: $(id -u hotstack))"
 
 # Create Podman network for containers
 echo "Setting up Podman network..."
 if podman network exists hotstack-os 2>/dev/null; then
-    echo "✓ Podman network 'hotstack-os' already exists"
+    echo -e "$OK Podman network 'hotstack-os' already exists"
 else
     echo "  Creating Podman network 'hotstack-os' with subnet $CONTAINER_NETWORK..."
     podman network create --subnet="$CONTAINER_NETWORK" hotstack-os
-    echo "✓ Podman network 'hotstack-os' created"
+    echo -e "$OK Podman network 'hotstack-os' created"
 fi
 
 # Check OVS is functional
@@ -78,40 +82,40 @@ if ! ovs-vsctl show &>/dev/null; then
     echo "ERROR: OVS is not functional"
     exit 1
 fi
-echo "✓ OVS is functional"
+echo -e "$OK OVS is functional"
 
 # Create hot-int bridge if it doesn't exist
 if ovs-vsctl br-exists hot-int; then
-    echo "✓ hot-int bridge exists"
+    echo -e "$OK hot-int bridge exists"
 else
     echo "Creating hot-int bridge..."
     ovs-vsctl --may-exist add-br hot-int
-    echo "✓ hot-int bridge created"
+    echo -e "$OK hot-int bridge created"
 fi
 
 # Create hot-ex bridge if it doesn't exist
 if ovs-vsctl br-exists hot-ex; then
-    echo "✓ hot-ex bridge exists"
+    echo -e "$OK hot-ex bridge exists"
 else
     echo "Creating hot-ex bridge..."
     ovs-vsctl --may-exist add-br hot-ex
-    echo "✓ hot-ex bridge created"
+    echo -e "$OK hot-ex bridge created"
 fi
 
 # Assign IP to hot-ex bridge internal interface
 if ip addr show hot-ex | grep -q "$BREX_IP"; then
-    echo "✓ hot-ex already has IP $BREX_IP configured"
+    echo -e "$OK hot-ex already has IP $BREX_IP configured"
 else
     echo "Assigning IP $BREX_IP to hot-ex bridge..."
     ip addr add "${BREX_IP}/25" dev hot-ex
     ip link set hot-ex up
-    echo "✓ Assigned IP $BREX_IP to hot-ex bridge"
+    echo -e "$OK Assigned IP $BREX_IP to hot-ex bridge"
 fi
 
 # Ensure hot-ex is up
 ip link set hot-ex up
 
-echo "✓ hot-ex configured for provider networks ($PROVIDER_NETWORK)"
+echo -e "$OK hot-ex configured for provider networks ($PROVIDER_NETWORK)"
 
 # Configure /etc/hosts entries
 echo "Configuring /etc/hosts for OpenStack service access..."
@@ -136,7 +140,7 @@ $BREX_IP heat.hotstack-os.local
 $HOSTS_END_MARKER
 EOF
 
-echo "✓ /etc/hosts updated with OpenStack service FQDNs"
+echo -e "$OK /etc/hosts updated with OpenStack service FQDNs"
 
 # Configure NFS exports for Cinder
 echo "Configuring NFS exports for Cinder..."
@@ -171,7 +175,7 @@ EOF
 echo "  Exporting NFS shares..."
 exportfs -ra
 
-echo "✓ NFS exports configured"
+echo -e "$OK NFS exports configured"
 
 # Create required data directories for services
 echo "Creating service data directories..."
@@ -222,7 +226,7 @@ if command -v semanage >/dev/null 2>&1; then
     restorecon -R "$NOVA_NFS_MOUNT_POINT_BASE" 2>/dev/null || true
 fi
 
-echo "✓ Service data directories created with proper permissions and SELinux context"
+echo -e "$OK Service data directories created with proper permissions and SELinux context"
 
 echo "=== Infrastructure Setup Complete ==="
 exit 0

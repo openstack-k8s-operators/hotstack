@@ -51,7 +51,7 @@ if [ ! -r "$NFS_SHARES_FILE" ]; then
     exit 1
 fi
 
-echo "✓ NFS shares config file found: $NFS_SHARES_FILE"
+echo -e "$OK NFS shares config file found: $NFS_SHARES_FILE"
 
 # Verify NFS server is reachable
 echo "Verifying NFS server accessibility..."
@@ -67,7 +67,7 @@ if ! showmount -e "$NFS_SERVER" &>/dev/null; then
     exit 1
 fi
 
-echo "✓ NFS server is accessible at $NFS_SERVER"
+echo -e "$OK NFS server is accessible at $NFS_SERVER"
 echo ""
 showmount -e "$NFS_SERVER" 2>/dev/null | sed 's/^/  /'
 echo ""

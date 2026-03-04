@@ -19,6 +19,11 @@
 
 set -euo pipefail
 
+# Source color and status indicator constants
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/colors.sh"
+
 # Ensure we're running as root
 if [ "$EUID" -ne 0 ]; then
     echo "Error: This script must be run as root (use sudo)" >&2
@@ -33,9 +38,9 @@ echo "Setting up hotstack system user for libvirt session isolation..."
 if ! id hotstack &>/dev/null; then
     echo "  Creating hotstack system user..."
     useradd -r -m -d /var/lib/hotstack -s /sbin/nologin -c "HotStack-OS Libvirt User" hotstack
-    echo "✓ hotstack user created with home directory"
+    echo -e "$OK hotstack user created with home directory"
 else
-    echo "✓ hotstack user already exists"
+    echo -e "$OK hotstack user already exists"
     # Ensure home directory exists for existing user
     if [ ! -d /var/lib/hotstack ]; then
         echo "  Creating home directory for hotstack user..."
@@ -49,18 +54,18 @@ fi
 if ! groups hotstack | grep -q '\bkvm\b'; then
     echo "  Adding hotstack user to kvm group..."
     usermod -aG kvm hotstack
-    echo "✓ hotstack user added to kvm group"
+    echo -e "$OK hotstack user added to kvm group"
 else
-    echo "✓ hotstack user already in kvm group"
+    echo -e "$OK hotstack user already in kvm group"
 fi
 
 # Enable lingering to keep user session active
 if ! loginctl show-user hotstack 2>/dev/null | grep -q "Linger=yes"; then
     echo "  Enabling lingering for hotstack user..."
     loginctl enable-linger hotstack
-    echo "✓ Lingering enabled for hotstack user"
+    echo -e "$OK Lingering enabled for hotstack user"
 else
-    echo "✓ Lingering already enabled for hotstack user"
+    echo -e "$OK Lingering already enabled for hotstack user"
 fi
 
 # Configure libvirt session QEMU settings
@@ -93,9 +98,9 @@ sed -e "s/__HOTSTACK_UID__/$HOTSTACK_UID/g" \
 
 chown hotstack:hotstack "$LIBVIRT_CONFIG_DIR/qemu.conf"
 chmod 644 "$LIBVIRT_CONFIG_DIR/qemu.conf"
-echo "✓ libvirt session QEMU configuration created"
+echo -e "$OK libvirt session QEMU configuration created"
 
 echo ""
-echo "✓ hotstack user configured (UID: $HOTSTACK_UID, GID: $HOTSTACK_GID)"
+echo -e "$OK hotstack user configured (UID: $HOTSTACK_UID, GID: $HOTSTACK_GID)"
 echo ""
 echo "=== User Creation Complete ==="

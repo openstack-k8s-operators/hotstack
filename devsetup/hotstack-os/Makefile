@@ -66,7 +66,7 @@ install-client:
 			echo "Installing OpenStack Epoxy repository..."; \
 			dnf install -y centos-release-openstack-epoxy; \
 		else \
-			echo "✓ OpenStack Epoxy repository already installed"; \
+			echo "[OK] OpenStack Epoxy repository already installed"; \
 		fi; \
 	else \
 		echo "Detected Fedora or other distro (packages available in standard repos)"; \
@@ -74,7 +74,7 @@ install-client:
 	@echo "Installing OpenStack client packages..."
 	@dnf install -y python3-openstackclient python3-heatclient
 	@echo ""
-	@echo "✓ OpenStack client installation complete"
+	@echo "[OK] OpenStack client installation complete"
 	@echo ""
 	@echo "You can now run 'make post-setup' directly from the host"
 
