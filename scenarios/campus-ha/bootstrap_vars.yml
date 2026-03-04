@@ -10,8 +10,7 @@ automation_vars_file: "{{ scenario_dir }}/{{ scenario }}/automation-vars.yml"
 
 ntp_servers: []
 dns_servers:
-  - 8.8.8.8
-  - 8.8.4.4
+  - 172.31.0.129
 
 pull_secret_file: ~/pull-secret.txt
 

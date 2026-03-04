@@ -24,6 +24,9 @@ set -e
 # shellcheck disable=SC1091
 source /usr/local/lib/hotstack-colors.sh
 
+# Environment variables (match infra-setup.sh defaults)
+PROVIDER_NETWORK=${PROVIDER_NETWORK:-172.31.0.128/25}
+
 # /etc/hosts markers
 HOSTS_FILE="/etc/hosts"
 HOSTS_BEGIN_MARKER="# BEGIN hotstack-os managed entries"
@@ -56,6 +59,20 @@ if [ -f "$NFS_EXPORTS_FILE" ] && grep -q "$NFS_EXPORTS_BEGIN_MARKER" "$NFS_EXPOR
     echo -e "$OK NFS exports removed"
 else
     echo -e "$OK No NFS exports to remove"
+fi
+
+# Remove provider network from firewall trusted zone
+if command -v firewall-cmd >/dev/null 2>&1; then
+    if firewall-cmd --zone=trusted --query-source="$PROVIDER_NETWORK" &>/dev/null; then
+        echo "Removing provider network from firewall trusted zone..."
+        firewall-cmd --zone=trusted --remove-source="$PROVIDER_NETWORK" --permanent
+        firewall-cmd --reload
+        echo -e "$OK Provider network removed from trusted zone"
+    else
+        echo -e "$OK Provider network not in trusted zone"
+    fi
+else
+    echo -e "$OK firewalld not found, skipping firewall cleanup"
 fi
 
 echo "=== Infrastructure Cleanup Complete ==="

@@ -117,6 +117,21 @@ ip link set hot-ex up
 
 echo -e "$OK hot-ex configured for provider networks ($PROVIDER_NETWORK)"
 
+# Configure firewall for provider network
+echo "Configuring firewall for provider network..."
+if command -v firewall-cmd >/dev/null 2>&1; then
+    if ! firewall-cmd --zone=trusted --query-source="$PROVIDER_NETWORK" &>/dev/null; then
+        echo "  Adding $PROVIDER_NETWORK to trusted zone..."
+        firewall-cmd --zone=trusted --add-source="$PROVIDER_NETWORK" --permanent
+        firewall-cmd --reload
+        echo -e "$OK Provider network added to trusted firewall zone"
+    else
+        echo -e "$OK Provider network already in trusted zone"
+    fi
+else
+    echo -e "$WARN firewalld not found, skipping firewall configuration"
+fi
+
 # Configure /etc/hosts entries
 echo "Configuring /etc/hosts for OpenStack service access..."
 

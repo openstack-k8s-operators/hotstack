@@ -16,7 +16,8 @@
 [Unit]
 Description=HotStack-OS OVN Northd Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
-After=hotstack-os-keystone.service
+After=hotstack-os-keystone.service hotstack-os-infra-setup.service
+Requires=hotstack-os-infra-setup.service
 PartOf=hotstack-os.target
 
 [Service]

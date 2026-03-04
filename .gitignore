@@ -5,3 +5,4 @@ cloud-secret.yaml
 cloud-secret.*.yaml.bak
 dataplane_ssh_keys_vars.yaml
 *-outputs.yaml
+hotstack_overrides.yaml
