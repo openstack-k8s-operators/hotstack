@@ -52,6 +52,8 @@ ExecStart=/usr/bin/podman run \
     --volume __HOTSTACK_DATA_DIR__/runtime/config/mount-wrapper.conf:/etc/hotstack/mount-wrapper.conf:ro,z \
     --volume /run/user/__HOTSTACK_UID__:/run/user/__HOTSTACK_UID__:ro \
     --volume /var/run/libvirt:/var/run/libvirt:ro \
+    --volume /usr/share/qemu/firmware:/usr/share/qemu/firmware:ro \
+    --volume /usr/share/edk2/ovmf:/usr/share/edk2/ovmf:ro \
     --volume /etc/iscsi:/etc/iscsi:z \
     --volume /var/lib/iscsi:/var/lib/iscsi:z \
     --volume /run/openvswitch:/run/openvswitch \
