@@ -82,6 +82,8 @@
             'scenarios'
           ] | ansible.builtin.path_join
         }}
+      hotstack_enable_nova_console_poller: true
+      hotstack_enable_nova_console_recorder: true
       hotstack_overrides:
         stack_parameters:
           dns_servers:
@@ -145,6 +147,8 @@
             'scenarios'
           ] | ansible.builtin.path_join
         }}
+      hotstack_enable_nova_console_poller: true
+      hotstack_enable_nova_console_recorder: true
       hotstack_overrides:
         stack_parameters:
           dns_servers:
@@ -214,6 +218,8 @@
       openstack_operators_image: quay.io/openstack-k8s-operators/openstack-operator-index-upgrade:latest
       openstack_operator_channel: alpha
       openstack_operator_starting_csv: v0.4.0
+      hotstack_enable_nova_console_poller: true
+      hotstack_enable_nova_console_recorder: true
       hotstack_overrides:
         stack_parameters:
           dns_servers:
@@ -277,6 +283,8 @@
             'scenarios'
           ] | ansible.builtin.path_join
         }}
+      hotstack_enable_nova_console_poller: true
+      hotstack_enable_nova_console_recorder: true
       hotstack_overrides:
         stack_parameters:
           dns_servers:
