@@ -93,6 +93,10 @@ HOTSTACK_DATA_DIR=${HOTSTACK_DATA_DIR:-/var/lib/hotstack-os}
 NOVA_INSTANCES_PATH=${NOVA_INSTANCES_PATH:-${HOTSTACK_DATA_DIR}/nova-instances}
 NOVA_NFS_MOUNT_POINT_BASE=${NOVA_NFS_MOUNT_POINT_BASE:-${HOTSTACK_DATA_DIR}/nova-mnt}
 CINDER_NFS_EXPORT_DIR=${CINDER_NFS_EXPORT_DIR:-${HOTSTACK_DATA_DIR}/cinder-nfs}
+# Mount wrapper configuration - intercept NFS mounts and use bind mounts instead
+# Use hotstack-os.fakenfs.local to clearly indicate this is intercepted by the mount wrapper
+NFS_SHARE=${NFS_SHARE:-hotstack-os.fakenfs.local:${CINDER_NFS_EXPORT_DIR}}
+NFS_LOCAL_PATH=${NFS_LOCAL_PATH:-${CINDER_NFS_EXPORT_DIR}}
 set +a
 
 # Install helper scripts
@@ -220,6 +224,8 @@ process_config_files "$tmpdir" "systemd units" \
     "__NOVA_INSTANCES_PATH__" "$NOVA_INSTANCES_PATH" \
     "__NOVA_NFS_MOUNT_POINT_BASE__" "$NOVA_NFS_MOUNT_POINT_BASE" \
     "__CINDER_NFS_EXPORT_DIR__" "$CINDER_NFS_EXPORT_DIR" \
+    "__NFS_SHARE__" "$NFS_SHARE" \
+    "__NFS_LOCAL_PATH__" "$NFS_LOCAL_PATH" \
     "__HOTSTACK_UID__" "$HOTSTACK_UID" \
     "__MARIADB_IP__" "$MARIADB_IP" \
     "__RABBITMQ_IP__" "$RABBITMQ_IP" \

@@ -71,10 +71,10 @@ echo -n "Removing podman volumes... "
 podman volume rm hotstack-os-mariadb hotstack-os-rabbitmq hotstack-os-ovn 2>/dev/null || true
 echo -e "$OK"
 
-echo -n "Unmounting NFS volumes... "
-# Unmount any NFS mounts in nova-mnt before cleaning
+echo -n "Unmounting bind mounts... "
+# Unmount any bind mounts in nova-mnt before cleaning
 if [ -d "$HOTSTACK_DATA_DIR/nova-mnt" ]; then
-    # Find and unmount all NFS mounts under nova-mnt
+    # Find and unmount all mounts under nova-mnt
     mount | grep "$HOTSTACK_DATA_DIR/nova-mnt" | awk '{print $3}' | while read -r mountpoint; do
         umount "$mountpoint" 2>/dev/null || true
     done

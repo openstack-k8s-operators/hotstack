@@ -6,10 +6,10 @@ A minimal containerized OpenStack deployment designed for running HotStack scena
 
 - **Fast setup**: ~10 minutes from zero to working OpenStack (first-time build)
 - **Self-contained**: All services in containers with file-backed storage
-- **Host integration**: Uses host libvirt (KVM), OpenvSwitch, and NFS
+- **Host integration**: Uses host libvirt (KVM) and OpenvSwitch
 - **Isolated virtualization**: Uses libvirt session mode with dedicated user for complete isolation from system VMs
 - **HotStack-ready**: Supports Heat orchestration, trunk ports, VLANs, boot from volume, NoVNC console, and serial console logging
-- **Minimal dependencies**: Requires libvirt, OpenvSwitch, podman, NFS server, and nmap-ncat on host
+- **Minimal dependencies**: Requires libvirt, OpenvSwitch, podman, and nmap-ncat on host
 - **Production-like**: systemd service management with ordering, informational health checks, and automatic restart on failure
 
 > ⚠️ **Security Warning**: This environment uses default passwords, no encryption, and minimal access controls. It grants `CAP_NET_ADMIN` capability to libvirtd for network device creation (required for session libvirt). Services are exposed on the provider network bridge (default: 172.31.0.129) which should be a host-only or private network. Intended ONLY for development and testing on trusted private networks, not for internet-facing deployments.
@@ -51,7 +51,7 @@ HotStack-OS is designed to coexist safely with other podman containers and workl
 - **Destroys ALL libvirt VMs matching pattern `notapet-<uuid>` in the session**
 - **Removes ALL network namespaces matching pattern `netns-*`**
 - Removes libvirt session service and hotstack user
-- Removes podman network and NFS exports
+- Removes podman network
 - Removes OVS bridges
 - To review VMs before cleanup: Check session VMs with `virsh -c qemu:///session?socket=/run/user/$(id -u hotstack)/libvirt/libvirt-sock list --all`
 
@@ -59,7 +59,7 @@ HotStack-OS is designed to coexist safely with other podman containers and workl
 
 - **Single-node only**: No HA or multi-node support
 - **Networking**: Default setup provides isolated private networks; external internet access requires provider network configuration
-- **Storage**: NFS-based Cinder volumes using shared filesystem for HotStack scenario testing
+- **Storage**: Local filesystem storage with mount.nfs wrapper for Cinder volumes
 - **Security**: Default passwords, no SSL/TLS, no authentication tokens
 
 ## Management Commands

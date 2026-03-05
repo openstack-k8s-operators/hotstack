@@ -1,1 +1,1 @@
-127.0.0.1:/var/lib/hotstack-os/cinder-nfs
+hotstack-os.fakenfs.local:/var/lib/hotstack-os/cinder-nfs

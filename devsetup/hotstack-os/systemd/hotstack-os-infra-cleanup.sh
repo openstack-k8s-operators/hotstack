@@ -15,7 +15,7 @@
 # under the License.
 
 # HotStack-OS Infrastructure Cleanup Script
-# Removes /etc/hosts entries and NFS exports when systemd services stop
+# Removes /etc/hosts entries when systemd services stop
 # This script is idempotent and safe to run multiple times
 
 set -e
@@ -32,11 +32,6 @@ HOSTS_FILE="/etc/hosts"
 HOSTS_BEGIN_MARKER="# BEGIN hotstack-os managed entries"
 HOSTS_END_MARKER="# END hotstack-os managed entries"
 
-# NFS exports markers
-NFS_EXPORTS_FILE="/etc/exports"
-NFS_EXPORTS_BEGIN_MARKER="# BEGIN hotstack-os managed exports"
-NFS_EXPORTS_END_MARKER="# END hotstack-os managed exports"
-
 echo "=== HotStack-OS Infrastructure Cleanup ==="
 
 # Note: Libvirt session cleanup is handled by 'make clean' to preserve VMs
@@ -51,15 +46,6 @@ else
     echo -e "$OK No /etc/hosts entries to remove"
 fi
 
-# Remove NFS exports
-if [ -f "$NFS_EXPORTS_FILE" ] && grep -q "$NFS_EXPORTS_BEGIN_MARKER" "$NFS_EXPORTS_FILE" 2>/dev/null; then
-    echo "Removing NFS exports..."
-    sed -i "/$NFS_EXPORTS_BEGIN_MARKER/,/$NFS_EXPORTS_END_MARKER/d" "$NFS_EXPORTS_FILE"
-    exportfs -ra 2>/dev/null || true
-    echo -e "$OK NFS exports removed"
-else
-    echo -e "$OK No NFS exports to remove"
-fi
 
 # Remove provider network from firewall trusted zone
 if command -v firewall-cmd >/dev/null 2>&1; then

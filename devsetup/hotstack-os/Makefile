@@ -104,7 +104,7 @@ clean:
 	@echo -e "  • \033[1;33mAll libvirt VMs matching pattern 'notapet-<uuid>'\033[0m"
 	@echo "  • Libvirt session service and hotstack user"
 	@echo "  • Podman network (hotstack-os)"
-	@echo "  • NFS exports"
+	@echo "  • Storage directories"
 	@echo "  • OVS bridges"
 	@echo ""
 	@echo "Run 'sudo make uninstall' first to stop and remove systemd services."

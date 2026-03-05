@@ -49,7 +49,6 @@ check_and_queue_package "qemu-kvm"
 check_and_queue_package "podman"
 check_and_queue_package "make"
 check_and_queue_package "nmap-ncat"
-check_and_queue_package "nfs-utils"
 if is_centos; then
     check_and_queue_package "openvswitch3.5"
 else
@@ -68,14 +67,6 @@ verify_libvirt || exit 1
 
 # Setup OpenvSwitch service
 setup_openvswitch_service || exit 1
-
-# Enable NFS server (exports managed by deployment method)
-echo -n "Enabling NFS server... "
-if ! check_systemd_service "nfs-server"; then
-    enable_start_service "nfs-server" || exit 1
-else
-    echo -e "$OK (already running)"
-fi
 
 echo ""
 echo "========================================"

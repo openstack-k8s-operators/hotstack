@@ -198,10 +198,11 @@ sudo restorecon -Rv /custom/path
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `NOVA_NFS_MOUNT_POINT_BASE` | `${HOTSTACK_DATA_DIR}/nova-mnt` | Directory for NFS volume mounts on host |
+| `NOVA_NFS_MOUNT_POINT_BASE` | `${HOTSTACK_DATA_DIR}/nova-mnt` | Directory for volume mounts on host |
 
-This directory is used by Nova to mount NFS-based Cinder volumes when attaching them to instances:
+This directory is used by Nova to mount Cinder volumes when attaching them to instances:
 - Maps directly to Nova's `libvirt.nfs_mount_point_base` configuration option
+- mount.nfs wrapper creates bind mounts here for direct filesystem access
 - Created automatically by `make install`
 - Bind-mounted into the nova-compute container with `shared` propagation
 - **CRITICAL**: Must use identical path in both host and container for libvirt compatibility
@@ -218,14 +219,14 @@ sudo restorecon -Rv /custom/path
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `CINDER_NFS_EXPORT_DIR` | `/var/lib/hotstack-os/cinder-nfs` | NFS export directory for Cinder volumes |
+| `CINDER_NFS_EXPORT_DIR` | `/var/lib/hotstack-os/cinder-nfs` | Storage directory for Cinder volumes |
 
 This directory is:
-- Exported via NFS by the host
-- Mounted by `cinder-volume` container for volume management
-- Mounted by `nova-compute` container for attaching volumes to VMs
+- Used by mount.nfs wrapper for direct filesystem access via bind mounts
+- Accessed by `cinder-volume` container for volume management
+- Accessed by `nova-compute` container for attaching volumes to VMs
 
-The `make install` command configures the NFS export automatically.
+The `make install` command creates this directory automatically.
 
 ## HotStack Project Quotas
 

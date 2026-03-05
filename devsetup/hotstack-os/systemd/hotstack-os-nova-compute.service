@@ -49,6 +49,7 @@ ExecStart=/usr/bin/podman run \
     --env METADATA_SECRET=__SERVICE_PASSWORD__ \
     --env XDG_RUNTIME_DIR=/run/user/__HOTSTACK_UID__ \
     --volume __HOTSTACK_DATA_DIR__/runtime/config/nova/nova.conf:/etc/nova/nova.conf:ro,z \
+    --volume __HOTSTACK_DATA_DIR__/runtime/config/mount-wrapper.conf:/etc/hotstack/mount-wrapper.conf:ro,z \
     --volume /run/user/__HOTSTACK_UID__:/run/user/__HOTSTACK_UID__:ro \
     --volume /var/run/libvirt:/var/run/libvirt:ro \
     --volume /etc/iscsi:/etc/iscsi:z \
@@ -57,6 +58,7 @@ ExecStart=/usr/bin/podman run \
     --volume __HOTSTACK_DATA_DIR__/nova:/var/lib/nova:z \
     --volume __NOVA_INSTANCES_PATH__:__NOVA_INSTANCES_PATH__:shared \
     --volume __NOVA_NFS_MOUNT_POINT_BASE__:__NOVA_NFS_MOUNT_POINT_BASE__:shared \
+    --volume __NFS_LOCAL_PATH__:__NFS_LOCAL_PATH__:z \
     --volume /sys/fs/cgroup:/sys/fs/cgroup:ro \
     --entrypoint /usr/local/bin/nova-compute-entrypoint.sh \
     localhost/hotstack-os-nova:latest

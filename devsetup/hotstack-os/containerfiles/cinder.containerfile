@@ -59,6 +59,16 @@ COPY --chmod=755 scripts/qemu-img-wrapper.py /usr/local/bin/qemu-img
 COPY --chmod=755 scripts/test-qemu-img-wrapper.sh /tmp/test-qemu-img-wrapper.sh
 RUN /tmp/test-qemu-img-wrapper.sh && rm /tmp/test-qemu-img-wrapper.sh
 
+# Install mount.nfs wrapper to intercept NFS mounts and use bind mounts instead
+# This eliminates NFS overhead in dev/test environments where storage is local
+# When mount -t nfs is called, it delegates to /sbin/mount.nfs
+RUN mv /sbin/mount.nfs /sbin/mount.nfs.real
+COPY --chmod=755 scripts/mount.nfs-wrapper.py /sbin/mount.nfs
+
+# Test the mount.nfs wrapper to ensure it works correctly (fails build if broken)
+COPY --chmod=755 scripts/test-mount-wrapper.sh /tmp/test-mount-wrapper.sh
+RUN /tmp/test-mount-wrapper.sh && rm /tmp/test-mount-wrapper.sh
+
 USER cinder
 WORKDIR /var/lib/cinder
 

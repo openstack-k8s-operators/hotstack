@@ -16,9 +16,9 @@
 [Unit]
 Description=HotStack-OS Infrastructure Setup
 Documentation=https://github.com/openstack-k8s-operators/hotstack
-After=openvswitch.service nfs-server.service network-online.target
+After=openvswitch.service network-online.target
 Wants=network-online.target
-Requires=openvswitch.service nfs-server.service
+Requires=openvswitch.service
 PartOf=hotstack-os.target
 
 [Service]

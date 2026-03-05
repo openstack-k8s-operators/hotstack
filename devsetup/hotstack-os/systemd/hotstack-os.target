@@ -16,7 +16,7 @@
 [Unit]
 Description=HotStack-OS OpenStack Development Environment
 Documentation=https://github.com/openstack-k8s-operators/hotstack
-After=network-online.target openvswitch.service nfs-server.service
+After=network-online.target openvswitch.service
 Wants=network-online.target
 
 # Infrastructure setup (oneshot)

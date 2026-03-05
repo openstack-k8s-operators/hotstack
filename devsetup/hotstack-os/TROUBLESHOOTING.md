@@ -320,29 +320,25 @@ sudo virsh list --all
 
 **Debug:**
 ```bash
-# Check NFS export
-showmount -e 127.0.0.1
-exportfs -v
-
-# Check NFS server status
-systemctl status nfs-server
-
 # View cinder-volume logs
 sudo podman logs hotstack-os-cinder-volume
 
 # Test Cinder API
 curl http://cinder.hotstack-os.local:8776/
 
-# Check NFS mounts inside container
-sudo podman exec hotstack-os-cinder-volume mount | grep nfs
+# Check storage directory
+ls -lh /var/lib/hotstack-os/cinder-nfs
+
+# Check mounts inside container
+sudo podman exec hotstack-os-cinder-volume mount | grep cinder
 sudo podman exec hotstack-os-cinder-volume ls -lh /var/lib/cinder/mnt
 ```
 
 **Common fixes:**
-- If NFS not exported: Run `sudo systemctl restart hotstack-os-infra-setup.service` to configure NFS server
-- If volume service crashes: Check logs and verify NFS export is accessible
-- If mount fails: Check NFS server status and firewall rules
-- To reset NFS: Use `sudo make clean` (removes everything) or manually remove export directory
+- If storage directory missing: Run `sudo systemctl restart hotstack-os-infra-setup.service`
+- If volume service crashes: Check logs and verify storage directory is accessible
+- If mount fails: Check mount.nfs wrapper configuration (/etc/hotstack/mount-wrapper.conf in container)
+- To reset storage: Use `sudo make clean` (removes everything) or manually remove storage directory
 
 ## SELinux Issues
 
@@ -380,11 +376,8 @@ sudo setcap -r /usr/sbin/libvirtd
 sudo podman rm -af
 sudo podman rmi -f $(sudo podman images -q --filter "reference=localhost/hotstack-os-*")
 
-# Unmount any NFS volumes
+# Unmount any bind mounts
 sudo umount /var/lib/hotstack-os/nova-mnt/* 2>/dev/null || true
-
-# Remove NFS export
-sudo exportfs -u 127.0.0.1:/var/lib/hotstack-os/cinder-nfs
 
 # Remove data
 sudo rm -rf /var/lib/hotstack-os

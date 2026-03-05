@@ -58,6 +58,7 @@ COPY --chmod=755 scripts/nova-scheduler-entrypoint.sh /usr/local/bin/nova-schedu
 COPY --chmod=755 scripts/nova-compute-entrypoint.sh /usr/local/bin/nova-compute-entrypoint.sh
 COPY --chmod=755 scripts/nova-compute-healthcheck.sh /usr/local/bin/nova-compute-healthcheck.sh
 COPY --chmod=755 scripts/nova-novncproxy-entrypoint.sh /usr/local/bin/nova-novncproxy-entrypoint.sh
+COPY scripts/common.sh /usr/local/lib/common.sh
 
 # Install qemu-img wrapper to fix permissions for session libvirt
 # This wrapper ensures disk images are created with 0664 instead of 0644
@@ -68,6 +69,16 @@ COPY --chmod=755 scripts/qemu-img-wrapper.py /usr/local/bin/qemu-img
 # Test the wrapper to ensure it works correctly (fails build if broken)
 COPY --chmod=755 scripts/test-qemu-img-wrapper.sh /tmp/test-qemu-img-wrapper.sh
 RUN /tmp/test-qemu-img-wrapper.sh && rm /tmp/test-qemu-img-wrapper.sh
+
+# Install mount.nfs wrapper to intercept NFS mounts and use bind mounts instead
+# This eliminates NFS overhead in dev/test environments where storage is local
+# When mount -t nfs is called, it delegates to /sbin/mount.nfs
+RUN mv /sbin/mount.nfs /sbin/mount.nfs.real
+COPY --chmod=755 scripts/mount.nfs-wrapper.py /sbin/mount.nfs
+
+# Test the mount.nfs wrapper to ensure it works correctly (fails build if broken)
+COPY --chmod=755 scripts/test-mount-wrapper.sh /tmp/test-mount-wrapper.sh
+RUN /tmp/test-mount-wrapper.sh && rm /tmp/test-mount-wrapper.sh
 
 USER nova
 WORKDIR /var/lib/nova
