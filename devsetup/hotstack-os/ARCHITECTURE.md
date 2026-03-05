@@ -7,7 +7,7 @@ HotStack-OS uses a hybrid architecture where the OpenStack control plane runs in
 - **Control plane**: All OpenStack services containerized and managed via systemd
 - **Compute**: Integrates with host libvirt/KVM for VM management via isolated session mode
 - **Networking**: Uses host OpenvSwitch with OVN for SDN (Geneve overlays, VLAN trunking)
-- **Storage**: NFS-based block storage exported from host
+- **Storage**: Local filesystem storage with mount.nfs wrapper optimization (no NFS overhead)
 - **Access**: Unified DNS + load balancer at 172.31.0.129 for all services
 - **Release**: OpenStack `stable/2025.1` (Epoxy) by default
 
@@ -15,7 +15,6 @@ HotStack-OS uses a hybrid architecture where the OpenStack control plane runs in
 Host Machine
 ├── libvirtd (manages KVM VMs)
 ├── openvswitch (hot-int, hot-ex bridges)
-├── nfs-server (exports Cinder volume storage)
 └── Containers (22 total)
     ├── Infrastructure (5): dnsmasq, haproxy, mariadb, memcached, rabbitmq
     ├── Identity: keystone
@@ -50,7 +49,7 @@ Host Machine
 | neutron-ovn-metadata-agent | root | host | yes | Metadata service, network namespaces |
 | cinder-api | (default) | bridge | no | Block storage API |
 | cinder-scheduler | (default) | bridge | no | Volume scheduler |
-| cinder-volume | root | host | yes | Volume management, NFS mounting |
+| cinder-volume | root | host | yes | Volume management, storage mounting |
 | heat-api | (default) | bridge | no | Orchestration API |
 | heat-engine | (default) | bridge | no | Orchestration engine |
 
@@ -58,7 +57,7 @@ Host Machine
 - **(default)** user means the container runs as the default user defined in the image (typically the service user)
 - **host** network mode means the container shares the host's network namespace
 - **bridge** network mode means the container uses the podman bridge network (172.31.0.0/25)
-- **Privileged** containers have full access to host kernel features (required for KVM, OVS, network namespaces, NFS mounting)
+- **Privileged** containers have full access to host kernel features (required for KVM, OVS, network namespaces, bind mounting)
 
 ## Network Architecture
 
@@ -110,8 +109,8 @@ All persistent data is stored under `${HOTSTACK_DATA_DIR}` (default: `/var/lib/h
 - `cinder/` - Cinder state files
 - `nova/` - Nova state files
 - `nova-instances/` - VM instance disk images and metadata
-- `cinder-nfs/` - Cinder volume files (NFS exported)
-- `nova-mnt/` - NFS mount points for attached Cinder volumes
+- `cinder-nfs/` - Cinder volume files (local storage)
+- `nova-mnt/` - Mount points for attached Cinder volumes (bind mounts)
 
 **Storage Directory Permissions:**
 
@@ -124,7 +123,7 @@ The setgid bit ensures new files/directories inherit the kvm group. The hotstack
 
 VM instance files are stored in `${NOVA_INSTANCES_PATH}` (default: `${HOTSTACK_DATA_DIR}/nova-instances`). This path is configured in Nova's `instances_path` option.
 
-Cinder volumes are stored in `${CINDER_NFS_EXPORT_DIR}` (default: `${HOTSTACK_DATA_DIR}/cinder-nfs`). Nova mounts this NFS share at `${NOVA_NFS_MOUNT_POINT_BASE}` (default: `${HOTSTACK_DATA_DIR}/nova-mnt`) when attaching volumes to instances, configured via Nova's `libvirt.nfs_mount_point_base` option.
+Cinder volumes are stored in `${CINDER_NFS_EXPORT_DIR}` (default: `${HOTSTACK_DATA_DIR}/cinder-nfs`). The mount.nfs wrapper intercepts mount requests and creates bind mounts at `${NOVA_NFS_MOUNT_POINT_BASE}` (default: `${HOTSTACK_DATA_DIR}/nova-mnt`) when Nova attaches volumes to instances, configured via Nova's `libvirt.nfs_mount_point_base` option.
 
 All Nova paths default to isolated locations under `HOTSTACK_DATA_DIR` to avoid conflicts with system-level OpenStack installations.
 
@@ -187,7 +186,18 @@ Host Machine
    - Tested during container build to ensure functionality
    - See `containerfiles/scripts/qemu-img-wrapper.py` for implementation details
 
-5. **Nova Integration**:
+5. **mount.nfs Wrapper** (NFS Optimization):
+   - Installed in Nova and Cinder containers at `/sbin/mount.nfs`
+   - Intercepts NFS mount requests to `hotstack-os.fakenfs.local` and creates bind mounts instead
+   - Eliminates NFS overhead by using direct filesystem access
+   - Called automatically when `mount -t nfs` is executed (mount delegates to mount.nfs)
+   - Configured via `/etc/hotstack/mount-wrapper.conf` (generated from `configs/mount-wrapper.conf`)
+   - Default: `hotstack-os.fakenfs.local:/var/lib/hotstack-os/cinder-nfs` → bind mount to local path
+   - Only works for single-host deployments where storage is local
+   - Other NFS shares pass through to real mount.nfs unchanged
+   - See `containerfiles/scripts/mount.nfs-wrapper.py` for implementation details
+
+6. **Nova Integration**:
    - Connection URI: `qemu+unix:///session?socket=/run/user/<UID>/libvirt/libvirt-sock`
    - Environment: `XDG_RUNTIME_DIR=/run/user/<UID>`
    - Volume mount: `/run/user/<UID>:/run/user/<UID>:ro`

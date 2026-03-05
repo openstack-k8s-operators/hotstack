@@ -46,7 +46,9 @@ ExecStart=/usr/bin/podman run \
     --env REGION_NAME=__REGION_NAME__ \
     --volume __HOTSTACK_DATA_DIR__/runtime/config/cinder/cinder.conf:/etc/cinder/cinder.conf:ro,z \
     --volume __HOTSTACK_DATA_DIR__/runtime/config/cinder/nfs_shares:/etc/cinder/nfs_shares:ro,z \
+    --volume __HOTSTACK_DATA_DIR__/runtime/config/mount-wrapper.conf:/etc/hotstack/mount-wrapper.conf:ro,z \
     --volume __HOTSTACK_DATA_DIR__/cinder:/var/lib/cinder:z \
+    --volume __NFS_LOCAL_PATH__:__NFS_LOCAL_PATH__:z \
     --entrypoint /usr/local/bin/cinder-volume-entrypoint.sh \
     localhost/hotstack-os-cinder:latest
 

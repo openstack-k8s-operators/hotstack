@@ -6,8 +6,8 @@ This directory contains systemd unit files and helper scripts for deploying HotS
 
 ### Helper Scripts
 
-- `hotstack-os-infra-setup.sh` - Idempotent infrastructure setup (OVS bridges, /etc/hosts, NFS exports)
-- `hotstack-os-infra-cleanup.sh` - Infrastructure cleanup (removes /etc/hosts entries and NFS exports)
+- `hotstack-os-infra-setup.sh` - Idempotent infrastructure setup (OVS bridges, /etc/hosts, storage directories)
+- `hotstack-os-infra-cleanup.sh` - Infrastructure cleanup (removes /etc/hosts entries, OVS bridges)
 - `hotstack-healthcheck.sh` - Health check polling for container services
 
 ### Service Units

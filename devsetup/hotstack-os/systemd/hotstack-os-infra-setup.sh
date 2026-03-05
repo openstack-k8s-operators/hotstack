@@ -15,7 +15,7 @@
 # under the License.
 
 # HotStack-OS Infrastructure Setup Script
-# Sets up network (OVS bridges, /etc/hosts) and storage (NFS exports) for systemd deployment
+# Sets up network (OVS bridges, /etc/hosts) and storage directories for systemd deployment
 # This script is idempotent and safe to run multiple times
 
 set -e
@@ -35,10 +35,7 @@ HOSTS_FILE="/etc/hosts"
 HOSTS_BEGIN_MARKER="# BEGIN hotstack-os managed entries"
 HOSTS_END_MARKER="# END hotstack-os managed entries"
 
-# NFS exports markers
-NFS_EXPORTS_FILE="/etc/exports"
-NFS_EXPORTS_BEGIN_MARKER="# BEGIN hotstack-os managed exports"
-NFS_EXPORTS_END_MARKER="# END hotstack-os managed exports"
+# Storage directory for Cinder volumes (used by mount wrapper)
 CINDER_NFS_EXPORT_DIR="${CINDER_NFS_EXPORT_DIR:-/var/lib/hotstack-os/cinder-nfs}"
 
 # Service data directories to create
@@ -157,40 +154,22 @@ EOF
 
 echo -e "$OK /etc/hosts updated with OpenStack service FQDNs"
 
-# Configure NFS exports for Cinder
-echo "Configuring NFS exports for Cinder..."
+# Configure storage directory for Cinder (used by mount wrapper)
+echo "Configuring storage directory for Cinder..."
 
-# Create export directory if it doesn't exist
+# Create storage directory if it doesn't exist
 # Use kvm group ownership with setgid so cinder-volume (root) creates files
 # that libvirt session (hotstack user in kvm group) can access
 if [ ! -d "$CINDER_NFS_EXPORT_DIR" ]; then
-    echo "  Creating NFS export directory..."
+    echo "  Creating storage directory..."
     mkdir -p "$CINDER_NFS_EXPORT_DIR"
 fi
 chown root:kvm "$CINDER_NFS_EXPORT_DIR"
 # Set setgid bit and group-writable so files inherit kvm group
 chmod 2775 "$CINDER_NFS_EXPORT_DIR"
 
-# Remove old exports if they exist
-if grep -q "$NFS_EXPORTS_BEGIN_MARKER" "$NFS_EXPORTS_FILE" 2>/dev/null; then
-    echo "  Removing old NFS exports..."
-    sed -i "/$NFS_EXPORTS_BEGIN_MARKER/,/$NFS_EXPORTS_END_MARKER/d" "$NFS_EXPORTS_FILE"
-fi
-
-# Add new export entry
-echo "  Adding NFS export for $CINDER_NFS_EXPORT_DIR..."
-cat >> "$NFS_EXPORTS_FILE" <<EOF
-
-$NFS_EXPORTS_BEGIN_MARKER
-$CINDER_NFS_EXPORT_DIR 127.0.0.1(rw,sync,no_root_squash,no_subtree_check)
-$NFS_EXPORTS_END_MARKER
-EOF
-
-# Export the shares
-echo "  Exporting NFS shares..."
-exportfs -ra
-
-echo -e "$OK NFS exports configured"
+echo -e "$OK Storage directory configured: $CINDER_NFS_EXPORT_DIR"
+echo "  mount.nfs wrapper will use this directory for bind mounts (no NFS server needed)"
 
 # Create required data directories for services
 echo "Creating service data directories..."
@@ -227,7 +206,7 @@ if command -v semanage >/dev/null 2>&1; then
     restorecon -R "$NOVA_INSTANCES_PATH" 2>/dev/null || true
 fi
 
-# Nova mount directory for NFS volume attachments
+# Nova mount directory for volume attachments (used by mount wrapper)
 # Use kvm group ownership with setgid so mounted volumes are accessible
 # to libvirt session (hotstack user in kvm group)
 chown root:kvm "$NOVA_NFS_MOUNT_POINT_BASE"

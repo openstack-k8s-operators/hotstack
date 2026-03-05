@@ -97,30 +97,6 @@ if ! virsh -c "$LIBVIRT_URI" list &>/dev/null; then
 fi
 echo -e "$OK Libvirt session connection OK!"
 
-# Verify NFS server accessibility
-echo "Checking NFS server accessibility..."
-if ! showmount -e 127.0.0.1 &>/dev/null; then
-    echo ""
-    echo "=========================================="
-    echo "ERROR: NFS server not accessible"
-    echo "=========================================="
-    echo ""
-    echo "Cannot connect to NFS server on 127.0.0.1"
-    echo "This is required for attaching Cinder volumes."
-    echo ""
-    echo "Fix: Run 'sudo make setup' to configure the NFS server on host"
-    echo ""
-    echo "Debug: showmount -e 127.0.0.1"
-    showmount -e 127.0.0.1 2>&1 | sed 's/^/  /'
-    echo ""
-    echo "Container will retry in 60 seconds..."
-    echo "=========================================="
-    sleep 60
-    exit 1
-fi
-echo -e "$OK NFS server accessible:"
-showmount -e 127.0.0.1 2>/dev/null | sed 's/^/  /'
-
 # Discover compute node in background (if bootstrapping)
 if [ "${OS_BOOTSTRAP:-true}" = "true" ]; then
     (

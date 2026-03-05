@@ -26,55 +26,21 @@ for _ in {1..60}; do
     sleep 2
 done
 
-# Configure NFS for Cinder
-echo "Checking NFS configuration..."
+# Configure storage for Cinder
+echo "Checking storage configuration..."
 
-NFS_SHARES_FILE="/etc/cinder/nfs_shares"
-NFS_SERVER="127.0.0.1"
+SHARES_FILE="/etc/cinder/nfs_shares"
 
-# Verify NFS shares config file exists
-if [ ! -f "$NFS_SHARES_FILE" ]; then
-    echo "ERROR: NFS shares config file not found: $NFS_SHARES_FILE"
-    echo ""
-    echo "The Cinder volume service requires an NFS shares configuration."
-    echo ""
-    echo "To set it up on the host, run:"
-    echo "  sudo make setup"
-    echo ""
-    echo "This will create the NFS export and configuration."
+# Verify shares config file exists
+if [ ! -f "$SHARES_FILE" ]; then
+    echo "ERROR: Storage shares config file not found: $SHARES_FILE"
     exit 1
 fi
 
-# Verify NFS shares file is readable
-if [ ! -r "$NFS_SHARES_FILE" ]; then
-    echo "ERROR: NFS shares config file is not readable: $NFS_SHARES_FILE"
-    exit 1
-fi
-
-echo -e "$OK NFS shares config file found: $NFS_SHARES_FILE"
-
-# Verify NFS server is reachable
-echo "Verifying NFS server accessibility..."
-if ! showmount -e "$NFS_SERVER" &>/dev/null; then
-    echo "ERROR: Cannot reach NFS server at $NFS_SERVER"
-    echo ""
-    echo "Please ensure the NFS server is running on the host:"
-    echo "  sudo systemctl status nfs-server"
-    echo "  sudo showmount -e $NFS_SERVER"
-    echo ""
-    echo "To set up NFS on the host, run:"
-    echo "  sudo make setup"
-    exit 1
-fi
-
-echo -e "$OK NFS server is accessible at $NFS_SERVER"
-echo ""
-showmount -e "$NFS_SERVER" 2>/dev/null | sed 's/^/  /'
+echo -e "$OK Storage config file found: $SHARES_FILE"
 echo ""
 
 # Start Cinder Volume
 echo "Starting Cinder Volume service..."
-echo "  Backend: NFS"
-echo "  Target: NFS (127.0.0.1:/var/lib/hotstack-os/cinder-nfs)"
 echo "About to exec cinder-volume..."
 exec cinder-volume --config-file=/etc/cinder/cinder.conf

@@ -42,7 +42,7 @@ The `make install` command:
 2. Prepares runtime configuration from `.env` (runs `make config`)
 3. Creates persistent podman resources (network, volumes)
 4. Installs helper scripts to `/usr/local/bin/`:
-   - `hotstack-os-infra-setup.sh` - Sets up OVS bridges, /etc/hosts, NFS exports
+   - `hotstack-os-infra-setup.sh` - Sets up OVS bridges, /etc/hosts, storage directories
    - `hotstack-os-infra-cleanup.sh` - Cleans up infrastructure
    - `hotstack-healthcheck.sh` - Health check polling
 5. Installs systemd service units to `/etc/systemd/system/`:
@@ -105,7 +105,7 @@ sudo make clean
 - All libvirt VMs with pattern `notapet-<uuid>`
 - Libvirt session service and hotstack user
 - Podman network (`hotstack-os`)
-- NFS exports
+- Storage directories
 - OVS bridges
 
 ## Troubleshooting
