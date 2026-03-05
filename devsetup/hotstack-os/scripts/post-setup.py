@@ -923,7 +923,7 @@ def upload_images(conn, images_to_upload):
                     container_format="bare",
                     visibility="public",
                     data=image_file,
-                    **{f"property:{k}": v for k, v in spec["properties"].items()},
+                    **spec["properties"],
                 )
             print_success(f"Uploaded {spec['name']} to Glance")
         except Exception as e:
