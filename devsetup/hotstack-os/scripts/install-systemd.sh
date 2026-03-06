@@ -241,7 +241,8 @@ process_config_files "$tmpdir" "systemd units" \
     "__RABBITMQ_DEFAULT_USER__" "$RABBITMQ_DEFAULT_USER" \
     "__RABBITMQ_DEFAULT_PASS__" "$RABBITMQ_DEFAULT_PASS" \
     "__REGION_NAME__" "$REGION_NAME" \
-    "__CHASSIS_HOSTNAME__" "$CHASSIS_HOSTNAME"
+    "__CHASSIS_HOSTNAME__" "$CHASSIS_HOSTNAME" \
+    "__GLOBAL_PHYSNET_MTU__" "${GLOBAL_PHYSNET_MTU:-1500}"
 
 install -m 644 "$tmpdir"/* /etc/systemd/system/
 echo -e "$OK Installed systemd units to /etc/systemd/system/"
@@ -259,11 +260,8 @@ echo "  1. Enable and start services:"
 echo "     sudo systemctl enable --now hotstack-os.target"
 echo ""
 echo "  2. Check status:"
-echo "     sudo systemctl status hotstack-os.target"
+echo "     sudo systemctl list-units \"hotstack-os*\""
 echo ""
-echo "  3. View logs:"
-echo "     sudo journalctl -u hotstack-os.target -f"
-echo ""
-echo "  4. After services are running, create resources:"
+echo "  3. After services are running, create resources:"
 echo "     make post-setup"
 echo ""

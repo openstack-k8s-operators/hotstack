@@ -153,6 +153,39 @@ HEAT_ENGINE_IP=172.31.0.53
 |---------|---------|-------------|
 | `REGION_NAME` | `RegionOne` | OpenStack region name (affects service catalog) |
 
+### MTU Configuration
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `GLOBAL_PHYSNET_MTU` | `9216` | MTU of the underlying physical network (maximum jumbo frame size) |
+| `PATH_MTU` | `9216` | MTU for overlay/tunnel networks (should match GLOBAL_PHYSNET_MTU) |
+
+**Jumbo Frames Support**:
+
+HotStack-OS is configured with jumbo frames by default (9216 MTU) for optimal tenant networking. Neutron automatically calculates the appropriate MTU for tenant networks by subtracting overlay protocol overhead:
+
+- **GENEVE overlay**: 38 bytes overhead
+  - Physical MTU: 9216 (default)
+  - Tenant network MTU: 9178 (9216 - 38)
+  - VM interfaces: 9178 MTU
+  - Result: VMs can run 9000 MTU workloads
+
+**Common MTU Values**:
+- `9216`: Maximum jumbo frames (yields ~9178 MTU for VMs) - **default**
+- `9000`: Common jumbo frames (yields ~8962 MTU for VMs)
+- `1500`: Standard Ethernet (yields ~1462 MTU for VMs)
+
+**Configuration Example**:
+```bash
+# In .env file - default is already 9216
+GLOBAL_PHYSNET_MTU=9216
+PATH_MTU=9216
+
+# Or reduce to standard Ethernet if needed
+# GLOBAL_PHYSNET_MTU=1500
+# PATH_MTU=1500
+```
+
 ## Storage Configuration
 
 ### Data Directory

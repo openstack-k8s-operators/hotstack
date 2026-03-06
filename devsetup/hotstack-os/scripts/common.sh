@@ -561,6 +561,8 @@ prepare_all_configs() {
         "CINDER_API_IP" "$CINDER_API_IP" \
         "HEAT_API_IP" "$HEAT_API_IP" \
         "NOVA_NOVNCPROXY_IP" "$NOVA_NOVNCPROXY_IP" \
+        "GLOBAL_PHYSNET_MTU" "${GLOBAL_PHYSNET_MTU:-1500}" \
+        "PATH_MTU" "${PATH_MTU:-1500}" \
         "password: admin" "password: ${KEYSTONE_ADMIN_PASSWORD}"
 
     # Copy clouds.yaml to data directory and repo directory for OpenStack client
