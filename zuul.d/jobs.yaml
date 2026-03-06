@@ -86,6 +86,8 @@
       hotstack_enable_nova_console_recorder: true
       hotstack_overrides:
         stack_parameters:
+          net_value_specs:
+            mtu: 1450
           dns_servers:
             - 199.204.44.24
             - 199.204.47.54

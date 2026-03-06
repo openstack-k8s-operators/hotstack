@@ -137,7 +137,7 @@ stages:
   - name: Create subnet for ironic provisioning if needed
     documentation: >-
       Configures IP addressing for the baremetal provisioning network (172.20.1.0/24).
-      DNS server 192.168.122.80 provides name resolution during node deployment.
+      DNS server 172.20.1.80 provides name resolution during node deployment.
       The allocation pool 100-200 reserves addresses for DHCP assignment to baremetal
       nodes during their provisioning lifecycle.
     shell: |
@@ -150,7 +150,7 @@ stages:
             --network provisioning \
             --subnet-range 172.20.1.0/24 \
             --gateway 172.20.1.1 \
-            --dns-nameserver 192.168.122.80 \
+            --dns-nameserver 172.20.1.80 \
             --allocation-pool start=172.20.1.100,end=172.20.1.200
 
   - name: Create baremetal flavor if needed
