@@ -570,7 +570,7 @@ outputs:
           bios_interface: no-bios
           boot_interface: pxe
           properties:
-            capabilities: boot_mode:bios
+            capabilities: 'boot_mode:uefi'
           driver_info:
             redfish_address: http://sushy-emulator.apps.sno.openstack.lab
             redfish_system_id:
@@ -588,7 +588,7 @@ outputs:
           bios_interface: no-bios
           boot_interface: pxe
           properties:
-            capabilities: boot_mode:bios
+            capabilities: 'boot_mode:uefi'
           driver_info:
             redfish_address: http://sushy-emulator.apps.sno.openstack.lab
             redfish_system_id:
