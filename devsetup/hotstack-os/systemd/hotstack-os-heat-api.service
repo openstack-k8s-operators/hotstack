@@ -27,7 +27,7 @@ Type=simple
 Restart=on-failure
 RestartSec=10
 TimeoutStartSec=300
-TimeoutStopSec=30
+TimeoutStopSec=10
 SuccessExitStatus=143
 
 ExecStartPre=-/usr/bin/podman stop -t 2 hotstack-os-heat-api
@@ -50,7 +50,7 @@ ExecStart=/usr/bin/podman run \
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
 ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-heat-api 10 5 15 10 curl -f http://localhost:8004/
-ExecStop=/usr/bin/podman stop -t 30 hotstack-os-heat-api
+ExecStop=/usr/bin/podman stop -t 10 hotstack-os-heat-api
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-heat-api
 
 StandardOutput=journal

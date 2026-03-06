@@ -29,6 +29,7 @@ source /usr/local/lib/hotstack-colors.sh
 BREX_IP=${BREX_IP:-172.31.0.129}
 PROVIDER_NETWORK=${PROVIDER_NETWORK:-172.31.0.128/25}
 CONTAINER_NETWORK=${CONTAINER_NETWORK:-172.31.0.0/25}
+GLOBAL_PHYSNET_MTU=${GLOBAL_PHYSNET_MTU:-1500}
 
 # /etc/hosts markers
 HOSTS_FILE="/etc/hosts"
@@ -87,6 +88,10 @@ else
     echo -e "  $OK hot-int bridge created"
 fi
 
+# Set MTU on hot-int bridge for tenant overlay networks
+ovs-vsctl set Interface hot-int mtu_request="$GLOBAL_PHYSNET_MTU"
+echo -e "  $OK hot-int MTU set to $GLOBAL_PHYSNET_MTU"
+
 # Create hot-ex bridge if it doesn't exist
 if ovs-vsctl br-exists hot-ex; then
     echo -e "  $OK hot-ex bridge exists"
@@ -94,6 +99,10 @@ else
     ovs-vsctl --may-exist add-br hot-ex
     echo -e "  $OK hot-ex bridge created"
 fi
+
+# Set MTU on hot-ex bridge for provider networks
+ovs-vsctl set Interface hot-ex mtu_request="$GLOBAL_PHYSNET_MTU"
+echo -e "  $OK hot-ex MTU set to $GLOBAL_PHYSNET_MTU"
 
 # Assign IP to hot-ex bridge internal interface
 if ip addr show hot-ex | grep -q "$BREX_IP"; then
