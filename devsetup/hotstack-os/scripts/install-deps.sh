@@ -29,7 +29,6 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "Installing HotStack-OS dependencies..."
-echo ""
 
 # Initialize package queue
 # shellcheck disable=SC2034
@@ -37,13 +36,11 @@ PACKAGES_TO_INSTALL=()
 
 # Setup required repositories (CentOS only)
 if is_centos; then
-    echo "Setting up required repositories..."
     setup_epel_repository
     setup_nfv_repository
 fi
 
 # Install required packages
-echo "Installing required packages..."
 check_and_queue_package "libvirt"
 check_and_queue_package "qemu-kvm"
 check_and_queue_package "podman"
@@ -56,22 +53,15 @@ else
 fi
 
 install_queued_packages
-echo ""
 
 # Enable and start required system services
-echo "Configuring required system services..."
-
-# Setup libvirt services
 setup_libvirt_services || exit 1
 verify_libvirt || exit 1
 
-# Setup OpenvSwitch service
 setup_openvswitch_service || exit 1
 
 echo ""
-echo "========================================"
 echo "Dependencies installed!"
-echo "========================================"
 echo ""
 echo "System packages and services are now ready."
 echo ""

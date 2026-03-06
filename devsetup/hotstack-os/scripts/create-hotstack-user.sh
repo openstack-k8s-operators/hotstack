@@ -30,20 +30,16 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-echo "=== Creating HotStack System User ==="
-echo ""
+echo "Creating HotStack system user..."
 
 # Create hotstack system user for isolated libvirt session
-echo "Setting up hotstack system user for libvirt session isolation..."
 if ! id hotstack &>/dev/null; then
-    echo "  Creating hotstack system user..."
     useradd -r -m -d /var/lib/hotstack -s /sbin/nologin -c "HotStack-OS Libvirt User" hotstack
-    echo -e "$OK hotstack user created with home directory"
+    echo -e "  $OK hotstack user created with home directory"
 else
-    echo -e "$OK hotstack user already exists"
+    echo -e "  $OK hotstack user already exists"
     # Ensure home directory exists for existing user
     if [ ! -d /var/lib/hotstack ]; then
-        echo "  Creating home directory for hotstack user..."
         mkdir -p /var/lib/hotstack
         chown hotstack:hotstack /var/lib/hotstack
         chmod 755 /var/lib/hotstack
@@ -52,24 +48,21 @@ fi
 
 # Add hotstack user to kvm group for /dev/kvm access
 if ! groups hotstack | grep -q '\bkvm\b'; then
-    echo "  Adding hotstack user to kvm group..."
     usermod -aG kvm hotstack
-    echo -e "$OK hotstack user added to kvm group"
+    echo -e "  $OK hotstack user added to kvm group"
 else
-    echo -e "$OK hotstack user already in kvm group"
+    echo -e "  $OK hotstack user already in kvm group"
 fi
 
 # Enable lingering to keep user session active
 if ! loginctl show-user hotstack 2>/dev/null | grep -q "Linger=yes"; then
-    echo "  Enabling lingering for hotstack user..."
     loginctl enable-linger hotstack
-    echo -e "$OK Lingering enabled for hotstack user"
+    echo -e "  $OK Lingering enabled for hotstack user"
 else
-    echo -e "$OK Lingering already enabled for hotstack user"
+    echo -e "  $OK Lingering already enabled for hotstack user"
 fi
 
 # Configure libvirt session QEMU settings
-echo "  Configuring libvirt session QEMU settings..."
 HOTSTACK_UID=$(id -u hotstack)
 HOTSTACK_GID=$(id -g hotstack)
 LIBVIRT_CONFIG_DIR="/var/lib/hotstack/.config/libvirt"
@@ -98,9 +91,7 @@ sed -e "s/__HOTSTACK_UID__/$HOTSTACK_UID/g" \
 
 chown hotstack:hotstack "$LIBVIRT_CONFIG_DIR/qemu.conf"
 chmod 644 "$LIBVIRT_CONFIG_DIR/qemu.conf"
-echo -e "$OK libvirt session QEMU configuration created"
+echo -e "  $OK libvirt session QEMU configuration created"
 
+echo -e "  $OK hotstack user configured (UID: $HOTSTACK_UID, GID: $HOTSTACK_GID)"
 echo ""
-echo -e "$OK hotstack user configured (UID: $HOTSTACK_UID, GID: $HOTSTACK_GID)"
-echo ""
-echo "=== User Creation Complete ==="

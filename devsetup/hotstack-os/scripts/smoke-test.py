@@ -53,24 +53,28 @@ class Colors:
     DONE = f"{GREEN}[DONE]{NC}"
 
 
-def print_success(message):
+def print_success(message, indent=True):
     """Print success message in green"""
-    print(f"{Colors.OK} {message}")
+    prefix = "  " if indent else ""
+    print(f"{prefix}{Colors.OK} {message}")
 
 
-def print_warning(message):
+def print_warning(message, indent=True):
     """Print warning message in yellow"""
-    print(f"{Colors.WARNING} {message}")
+    prefix = "  " if indent else ""
+    print(f"{prefix}{Colors.WARNING} {message}")
 
 
-def print_error(message):
+def print_error(message, indent=True):
     """Print error message in red"""
-    print(f"{Colors.ERROR} {message}", file=sys.stderr)
+    prefix = "  " if indent else ""
+    print(f"{prefix}{Colors.ERROR} {message}", file=sys.stderr)
 
 
-def print_info(message):
+def print_info(message, indent=True):
     """Print info message in blue"""
-    print(f"{Colors.INFO} {message}")
+    prefix = "  " if indent else ""
+    print(f"{prefix}{Colors.INFO} {message}")
 
 
 def load_env_var(var_name, default=None):
@@ -312,7 +316,7 @@ def verify_resources(conn, stack_name):
 
 def run_smoke_test(args):
     """Main smoke test execution"""
-    print("=== HotStack-OS Smoke Test ===")
+    print("HotStack-OS smoke test...")
     print()
 
     # Check if running as root (not recommended)
@@ -558,7 +562,7 @@ def main():
 
     # Cleanup only mode
     if args.cleanup_only:
-        print("=== HotStack-OS Smoke Test Cleanup ===")
+        print("HotStack-OS smoke test cleanup...")
         print()
         try:
             conn = openstack.connect(cloud=args.cloud)
