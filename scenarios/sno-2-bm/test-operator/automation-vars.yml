@@ -291,19 +291,6 @@ stages:
         sleep 10
       done
 
-  - name: Set capabilities boot_mode:uefi for ironic nodes
-    documentation: >-
-      Configures nodes to use UEFI boot mode instead of legacy BIOS. This capability
-      setting influences how Ironic prepares boot images and configures network boot
-      options. UEFI boot is required for modern security features like Secure Boot
-      and provides better hardware compatibility for contemporary systems.
-    shell: |
-      set -xe -o pipefail
-      oc project openstack
-
-      oc rsh openstackclient openstack baremetal node set --property capabilities='boot_mode:uefi' ironic0
-      oc rsh openstackclient openstack baremetal node set --property capabilities='boot_mode:uefi' ironic1
-
   - name: Provide ironic nodes
     documentation: >-
       Transitions nodes from 'manageable' to 'available' state, making them eligible
