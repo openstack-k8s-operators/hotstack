@@ -44,6 +44,17 @@ spec:
   - 172.19.0.80-172.19.0.90
 ---
 apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  labels:
+    osp/lb-addresses-type: standard
+  name: ironic
+  namespace: metallb-system
+spec:
+  addresses:
+  - 172.20.1.80-172.20.1.90
+---
+apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
 metadata:
   name: ctlplane
@@ -86,3 +97,14 @@ spec:
   - tenant
   ipAddressPools:
   - tenant
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: ironic
+  namespace: metallb-system
+spec:
+  interfaces:
+  - ironic
+  ipAddressPools:
+  - ironic

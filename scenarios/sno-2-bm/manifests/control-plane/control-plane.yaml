@@ -198,9 +198,9 @@ spec:
             internal:
               metadata:
                 annotations:
-                  metallb.universe.tf/address-pool: ctlplane
-                  metallb.universe.tf/allow-shared-ip: ctlplane
-                  metallb.universe.tf/loadBalancerIPs: 192.168.122.80
+                  metallb.universe.tf/address-pool: ironic
+                  metallb.universe.tf/allow-shared-ip: ironic
+                  metallb.universe.tf/loadBalancerIPs: 172.20.1.80
               spec:
                 type: LoadBalancer
         replicas: 1
@@ -240,9 +240,9 @@ spec:
             internal:
               metadata:
                 annotations:
-                  metallb.universe.tf/address-pool: ctlplane
-                  metallb.universe.tf/allow-shared-ip: ctlplane
-                  metallb.universe.tf/loadBalancerIPs: 192.168.122.80
+                  metallb.universe.tf/address-pool: ironic
+                  metallb.universe.tf/allow-shared-ip: ironic
+                  metallb.universe.tf/loadBalancerIPs: 172.20.1.80
               spec:
                 type: LoadBalancer
         preserveJobs: false
