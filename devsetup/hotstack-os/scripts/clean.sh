@@ -33,18 +33,15 @@ if [ -f .env ]; then
     source .env
 fi
 
-echo -e "${RED}=== Complete data cleanup ===${NC}"
+echo -e "${RED}Complete data cleanup...${NC}"
 echo ""
 
-echo -n "Removing container images... "
 # shellcheck disable=SC2046
 podman rmi -f $(podman images -q --filter "reference=localhost/hotstack-os-*" 2>/dev/null) 2>/dev/null || true
-echo -e "$OK"
+echo -e "  $OK Removed container images"
 
-echo -n "Cleaning libvirt VMs... "
-remove_libvirt_vms 2>/dev/null && echo -e "$OK" || echo -e "$WARNING"
+remove_libvirt_vms 2>/dev/null && echo -e "  $OK Cleaned libvirt VMs" || echo -e "  $WARNING Could not clean libvirt VMs"
 
-echo -n "Stopping libvirt session for hotstack user... "
 if id hotstack &>/dev/null; then
     HOTSTACK_UID=$(id -u hotstack)
     # Stop the user service
@@ -58,20 +55,17 @@ if id hotstack &>/dev/null; then
     rm -rf /var/lib/hotstack/.config 2>/dev/null || true
     # Remove CAP_NET_ADMIN capability from libvirtd
     setcap -r /usr/sbin/libvirtd 2>/dev/null || true
-    echo -e "$OK"
+    echo -e "  $OK Stopped libvirt session for hotstack user"
 else
-    echo -e "$WARNING (no hotstack user)"
+    echo -e "  $WARNING No hotstack user found"
 fi
 
-echo -n "Removing podman network... "
 podman network rm hotstack-os 2>/dev/null || true
-echo -e "$OK"
+echo -e "  $OK Removed podman network"
 
-echo -n "Removing podman volumes... "
 podman volume rm hotstack-os-mariadb hotstack-os-rabbitmq hotstack-os-ovn 2>/dev/null || true
-echo -e "$OK"
+echo -e "  $OK Removed podman volumes"
 
-echo -n "Unmounting bind mounts... "
 # Unmount any bind mounts in nova-mnt before cleaning
 if [ -d "$HOTSTACK_DATA_DIR/nova-mnt" ]; then
     # Find and unmount all mounts under nova-mnt
@@ -79,14 +73,13 @@ if [ -d "$HOTSTACK_DATA_DIR/nova-mnt" ]; then
         umount "$mountpoint" 2>/dev/null || true
     done
 fi
-echo -e "$OK"
+echo -e "  $OK Unmounted bind mounts"
 
-echo -n "Cleaning data directories... "
 if [ -d "$HOTSTACK_DATA_DIR" ]; then
     find "$HOTSTACK_DATA_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
 fi
 rm -f clouds.yaml 2>/dev/null || true
-echo -e "$OK"
+echo -e "  $OK Cleaned data directories"
 
 echo ""
-echo -e "${GREEN}Complete!${NC} To rebuild: sudo make build && sudo make install"
+echo -e "${GREEN}Cleanup complete!${NC} To rebuild: sudo make build && sudo make install"

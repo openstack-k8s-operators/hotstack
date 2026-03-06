@@ -31,11 +31,11 @@ echo "Uninstalling HotStack-OS systemd services..."
 echo ""
 
 # Stop and disable target
-echo "Stopping services..."
 systemctl stop hotstack-os.target 2>/dev/null || true
 
 # Wait for all services to fully stop (not just deactivating)
-echo "  Waiting for services to fully stop..."
+# Give services a moment to start deactivating before checking status
+sleep 2
 MAX_WAIT=90
 ELAPSED=0
 while [ $ELAPSED -lt $MAX_WAIT ]; do
@@ -78,30 +78,23 @@ echo "  To stop libvirt session and clean VMs: sudo make clean"
 echo ""
 
 # Remove systemd units
-echo "Removing systemd units..."
 rm -f /etc/systemd/system/hotstack-os*.service
 rm -f /etc/systemd/system/hotstack-os.target
 echo -e "  $OK Removed systemd units"
-echo ""
 
 # Remove helper scripts
-echo "Removing helper scripts..."
 rm -f /usr/local/lib/hotstack-colors.sh
 rm -f /usr/local/bin/hotstack-os-infra-setup.sh
 rm -f /usr/local/bin/hotstack-os-infra-cleanup.sh
 rm -f /usr/local/bin/hotstack-healthcheck.sh
 echo -e "  $OK Removed helper scripts"
-echo ""
 
 # Reload systemd
-echo "Reloading systemd..."
 systemctl daemon-reload
 echo -e "  $OK Systemd reloaded"
-echo ""
 
-echo "========================================"
+echo ""
 echo "Uninstall complete!"
-echo "========================================"
 echo ""
 echo "Note: Podman resources (network, volumes) and data in"
 echo "/var/lib/hotstack-os were not removed. To clean up:"

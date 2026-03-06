@@ -24,7 +24,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
 
-echo "=== HotStack-OS Health Check ==="
+echo "HotStack-OS health check..."
+echo ""
 
 # Initialize error tracking
 init_error_counter
@@ -36,6 +37,7 @@ check_service "MariaDB" "hotstack-os-mariadb" || increment_errors
 check_service "RabbitMQ" "hotstack-os-rabbitmq" || increment_errors
 check_service "Memcached" "hotstack-os-memcached" || increment_errors
 
+echo ""
 echo "OpenStack Services:"
 check_service "Keystone" "hotstack-os-keystone" || increment_errors
 check_service "Glance" "hotstack-os-glance" || increment_errors
@@ -56,7 +58,7 @@ check_service "Heat API" "hotstack-os-heat-api" || increment_errors
 check_service "Heat Engine" "hotstack-os-heat-engine" || increment_errors
 verify_openstack_cli || increment_errors
 
-echo "=========================================="
+echo ""
 if exit_with_error_summary; then
     echo -e "$OK All services healthy!"
     exit 0

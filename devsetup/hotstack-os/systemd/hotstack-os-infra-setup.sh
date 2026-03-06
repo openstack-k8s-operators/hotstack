@@ -54,7 +54,7 @@ SERVICE_DATA_DIRS=(
     "cinder"
 )
 
-echo "=== HotStack-OS Infrastructure Setup ==="
+echo "HotStack-OS Infrastructure Setup..."
 
 # Verify hotstack user exists (should be created by create-hotstack-user.sh)
 if ! id hotstack &>/dev/null; then
@@ -62,16 +62,14 @@ if ! id hotstack &>/dev/null; then
     echo "This should have been created by the install process"
     exit 1
 fi
-echo -e "$OK hotstack user verified (UID: $(id -u hotstack))"
+echo -e "  $OK hotstack user verified (UID: $(id -u hotstack))"
 
 # Create Podman network for containers
-echo "Setting up Podman network..."
 if podman network exists hotstack-os 2>/dev/null; then
-    echo -e "$OK Podman network 'hotstack-os' already exists"
+    echo -e "  $OK Podman network 'hotstack-os' already exists"
 else
-    echo "  Creating Podman network 'hotstack-os' with subnet $CONTAINER_NETWORK..."
     podman network create --subnet="$CONTAINER_NETWORK" hotstack-os
-    echo -e "$OK Podman network 'hotstack-os' created"
+    echo -e "  $OK Podman network 'hotstack-os' created with subnet $CONTAINER_NETWORK"
 fi
 
 # Check OVS is functional
@@ -79,31 +77,28 @@ if ! ovs-vsctl show &>/dev/null; then
     echo "ERROR: OVS is not functional"
     exit 1
 fi
-echo -e "$OK OVS is functional"
+echo -e "  $OK OVS is functional"
 
 # Create hot-int bridge if it doesn't exist
 if ovs-vsctl br-exists hot-int; then
-    echo -e "$OK hot-int bridge exists"
+    echo -e "  $OK hot-int bridge exists"
 else
-    echo "Creating hot-int bridge..."
     ovs-vsctl --may-exist add-br hot-int
-    echo -e "$OK hot-int bridge created"
+    echo -e "  $OK hot-int bridge created"
 fi
 
 # Create hot-ex bridge if it doesn't exist
 if ovs-vsctl br-exists hot-ex; then
-    echo -e "$OK hot-ex bridge exists"
+    echo -e "  $OK hot-ex bridge exists"
 else
-    echo "Creating hot-ex bridge..."
     ovs-vsctl --may-exist add-br hot-ex
-    echo -e "$OK hot-ex bridge created"
+    echo -e "  $OK hot-ex bridge created"
 fi
 
 # Assign IP to hot-ex bridge internal interface
 if ip addr show hot-ex | grep -q "$BREX_IP"; then
     echo -e "$OK hot-ex already has IP $BREX_IP configured"
 else
-    echo "Assigning IP $BREX_IP to hot-ex bridge..."
     ip addr add "${BREX_IP}/25" dev hot-ex
     ip link set hot-ex up
     echo -e "$OK Assigned IP $BREX_IP to hot-ex bridge"
@@ -112,34 +107,28 @@ fi
 # Ensure hot-ex is up
 ip link set hot-ex up
 
-echo -e "$OK hot-ex configured for provider networks ($PROVIDER_NETWORK)"
+echo -e "  $OK hot-ex configured for provider networks ($PROVIDER_NETWORK)"
 
 # Configure firewall for provider network
-echo "Configuring firewall for provider network..."
 if command -v firewall-cmd >/dev/null 2>&1; then
     if ! firewall-cmd --zone=trusted --query-source="$PROVIDER_NETWORK" &>/dev/null; then
-        echo "  Adding $PROVIDER_NETWORK to trusted zone..."
         firewall-cmd --zone=trusted --add-source="$PROVIDER_NETWORK" --permanent
         firewall-cmd --reload
-        echo -e "$OK Provider network added to trusted firewall zone"
+        echo -e "  $OK Provider network added to trusted firewall zone"
     else
-        echo -e "$OK Provider network already in trusted zone"
+        echo -e "  $OK Provider network already in trusted zone"
     fi
 else
-    echo -e "$WARN firewalld not found, skipping firewall configuration"
+    echo -e "  $WARN firewalld not found, skipping firewall configuration"
 fi
 
 # Configure /etc/hosts entries
-echo "Configuring /etc/hosts for OpenStack service access..."
-
 # Remove old hotstack-os entries if they exist
 if grep -q "$HOSTS_BEGIN_MARKER" "$HOSTS_FILE"; then
-    echo "  Removing old hotstack-os entries..."
     sed -i "/$HOSTS_BEGIN_MARKER/,/$HOSTS_END_MARKER/d" "$HOSTS_FILE"
 fi
 
 # Add new entries
-echo "  Adding hotstack-os service entries for $BREX_IP..."
 cat >> "$HOSTS_FILE" <<EOF
 $HOSTS_BEGIN_MARKER
 $BREX_IP keystone.hotstack-os.local
@@ -152,27 +141,22 @@ $BREX_IP heat.hotstack-os.local
 $HOSTS_END_MARKER
 EOF
 
-echo -e "$OK /etc/hosts updated with OpenStack service FQDNs"
+echo -e "  $OK /etc/hosts updated with OpenStack service FQDNs for $BREX_IP"
 
 # Configure storage directory for Cinder (used by mount wrapper)
-echo "Configuring storage directory for Cinder..."
-
 # Create storage directory if it doesn't exist
 # Use kvm group ownership with setgid so cinder-volume (root) creates files
 # that libvirt session (hotstack user in kvm group) can access
 if [ ! -d "$CINDER_NFS_EXPORT_DIR" ]; then
-    echo "  Creating storage directory..."
     mkdir -p "$CINDER_NFS_EXPORT_DIR"
 fi
 chown root:kvm "$CINDER_NFS_EXPORT_DIR"
 # Set setgid bit and group-writable so files inherit kvm group
 chmod 2775 "$CINDER_NFS_EXPORT_DIR"
 
-echo -e "$OK Storage directory configured: $CINDER_NFS_EXPORT_DIR"
-echo "  mount.nfs wrapper will use this directory for bind mounts (no NFS server needed)"
+echo -e "  $OK Storage directory configured: $CINDER_NFS_EXPORT_DIR"
 
 # Create required data directories for services
-echo "Creating service data directories..."
 HOTSTACK_DATA_DIR="${HOTSTACK_DATA_DIR:-/var/lib/hotstack-os}"
 NOVA_INSTANCES_PATH="${NOVA_INSTANCES_PATH:-${HOTSTACK_DATA_DIR}/nova-instances}"
 NOVA_NFS_MOUNT_POINT_BASE="${NOVA_NFS_MOUNT_POINT_BASE:-${HOTSTACK_DATA_DIR}/nova-mnt}"
@@ -193,7 +177,6 @@ chmod 755 "$HOTSTACK_DATA_DIR"
 # must be owned by hotstack:kvm so both Nova (root) and libvirt (hotstack) can access
 # The hotstack user is in the kvm group, so group permissions provide access
 # The qemu-img wrapper ensures disk files are created with 0664 (group-writable)
-echo "Configuring Nova instances directory for libvirt session..."
 chown hotstack:kvm "$NOVA_INSTANCES_PATH"
 # Set setgid bit and group-writable so nova-compute (root) can create files
 # that libvirt session (hotstack user) can manage via group permissions
@@ -201,9 +184,9 @@ chmod 2775 "$NOVA_INSTANCES_PATH"
 
 # Set SELinux context for libvirt access
 if command -v semanage >/dev/null 2>&1; then
-    echo "  Setting SELinux context for Nova instances..."
-    semanage fcontext -a -t virt_var_lib_t "$NOVA_INSTANCES_PATH(/.*)?" 2>/dev/null || true
-    restorecon -R "$NOVA_INSTANCES_PATH" 2>/dev/null || true
+    semanage fcontext -a -t virt_var_lib_t "$NOVA_INSTANCES_PATH(/.*)?" &>/dev/null || true
+    restorecon -R "$NOVA_INSTANCES_PATH" &>/dev/null || true
+    echo -e "  $OK SELinux context configured for Nova instances: $NOVA_INSTANCES_PATH"
 fi
 
 # Nova mount directory for volume attachments (used by mount wrapper)
@@ -215,12 +198,11 @@ chmod 2775 "$NOVA_NFS_MOUNT_POINT_BASE"
 
 # Set SELinux context for libvirt access to mounted volumes
 if command -v semanage >/dev/null 2>&1; then
-    echo "  Setting SELinux context for Nova mounts..."
-    semanage fcontext -a -t virt_var_lib_t "$NOVA_NFS_MOUNT_POINT_BASE(/.*)?" 2>/dev/null || true
-    restorecon -R "$NOVA_NFS_MOUNT_POINT_BASE" 2>/dev/null || true
+    semanage fcontext -a -t virt_var_lib_t "$NOVA_NFS_MOUNT_POINT_BASE(/.*)?" &>/dev/null || true
+    restorecon -R "$NOVA_NFS_MOUNT_POINT_BASE" &>/dev/null || true
+    echo -e "  $OK SELinux context configured for Nova mounts: $NOVA_NFS_MOUNT_POINT_BASE"
 fi
 
-echo -e "$OK Service data directories created with proper permissions and SELinux context"
-
-echo "=== Infrastructure Setup Complete ==="
+echo -e "  $OK Service data directories created with proper permissions and SELinux context"
+echo ""
 exit 0

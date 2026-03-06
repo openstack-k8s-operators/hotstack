@@ -120,9 +120,9 @@ setup_directory() {
 check_and_queue_package() {
     local pkg=$1
     if rpm -q "$pkg" &>/dev/null; then
-        echo -e "$OK $pkg is already installed"
+        echo -e "  $OK $pkg is already installed"
     else
-        echo -e "$WARNING $pkg needs to be installed"
+        echo -e "  $WARNING $pkg needs to be installed"
         PACKAGES_TO_INSTALL+=("$pkg")
     fi
     return 0
@@ -133,13 +133,13 @@ check_and_queue_package() {
 # Requires: PACKAGES_TO_INSTALL array
 install_queued_packages() {
     if [ ${#PACKAGES_TO_INSTALL[@]} -gt 0 ]; then
-        echo
-        echo "Installing ${#PACKAGES_TO_INSTALL[@]} package(s): ${PACKAGES_TO_INSTALL[*]}"
+        echo ""
         dnf install -y "${PACKAGES_TO_INSTALL[@]}"
-        echo -e "$OK All packages installed"
+        echo -e "  $OK Installed ${#PACKAGES_TO_INSTALL[@]} package(s): ${PACKAGES_TO_INSTALL[*]}"
     else
-        echo -e "$OK All required packages are already installed"
+        echo -e "  $OK All required packages are already installed"
     fi
+    echo ""
     return 0
 }
 
@@ -153,7 +153,7 @@ install_queued_packages() {
 check_systemd_service() {
     local service_name=$1
     if systemctl is-active --quiet "$service_name"; then
-        echo -e "$OK $service_name is already running"
+        echo -e "  $OK $service_name is already running"
         return 0
     else
         return 1
@@ -166,16 +166,15 @@ check_systemd_service() {
 enable_start_service() {
     local service_name=$1
 
-    echo -e "$WARNING Starting $service_name service..."
     systemctl enable "$service_name"
     if systemctl start "$service_name"; then
         if systemctl is-active --quiet "$service_name"; then
-            echo -e "$OK $service_name started and enabled"
+            echo -e "  $OK $service_name started and enabled"
             return 0
         fi
     fi
 
-    echo -e "$ERROR Failed to start $service_name service"
+    echo -e "  $ERROR Failed to start $service_name service"
     return 1
 }
 
@@ -257,12 +256,11 @@ verify_openstack_cli() {
 # Usage: verify_libvirt
 # Returns: 0 if functional, 1 otherwise
 verify_libvirt() {
-    echo "Checking libvirt configuration..."
     if virsh list --all &>/dev/null; then
-        echo -e "$OK libvirt is functional"
+        echo -e "  $OK libvirt is functional"
         return 0
     else
-        echo -e "$ERROR libvirt is not functional"
+        echo -e "  $ERROR libvirt is not functional"
         return 1
     fi
 }
@@ -281,26 +279,23 @@ setup_openvswitch_service() {
 setup_libvirt_services() {
     # Check for modular libvirt (newer systems)
     if systemctl list-unit-files | grep -q virtqemud.socket; then
-        echo "Detected modular libvirt, enabling/starting required daemons..."
-
         # List of modular libvirt sockets needed for nova-compute
         local libvirt_sockets="virtqemud virtnodedevd virtstoraged virtnetworkd"
         local errors=0
 
         for daemon in $libvirt_sockets; do
             if ! (systemctl is-active --quiet "${daemon}.socket" || systemctl is-active --quiet "${daemon}"); then
-                echo -e "$WARNING Starting ${daemon}..."
                 systemctl enable "${daemon}.socket"
                 if systemctl start "${daemon}.socket"; then
                     if systemctl is-active --quiet "${daemon}.socket" || systemctl is-active --quiet "${daemon}"; then
-                        echo -e "$OK ${daemon} started and enabled"
+                        echo -e "  $OK ${daemon} started and enabled"
                     fi
                 else
-                    echo -e "$ERROR Failed to start ${daemon}.socket"
+                    echo -e "  $ERROR Failed to start ${daemon}.socket"
                     errors=$((errors + 1))
                 fi
             else
-                echo -e "$OK ${daemon} is already running"
+                echo -e "  $OK ${daemon} is already running"
             fi
         done
 
@@ -308,7 +303,6 @@ setup_libvirt_services() {
     else
         # Legacy libvirtd
         if ! check_systemd_service libvirtd; then
-            echo -e "$WARNING Starting libvirtd (legacy monolithic)..."
             enable_start_service libvirtd || return 1
         fi
     fi
@@ -323,11 +317,10 @@ setup_libvirt_services() {
 # Usage: setup_epel_repository
 setup_epel_repository() {
     if ! dnf repolist enabled | grep -q epel; then
-        echo -e "$WARNING EPEL repository not enabled, installing..."
         dnf install -y epel-release
-        echo -e "$OK EPEL repository enabled"
+        echo -e "  $OK EPEL repository enabled"
     else
-        echo -e "$OK EPEL repository already enabled"
+        echo -e "  $OK EPEL repository already enabled"
     fi
     return 0
 }
@@ -336,11 +329,10 @@ setup_epel_repository() {
 # Usage: setup_nfv_repository
 setup_nfv_repository() {
     if ! dnf repolist enabled | grep -q nfv; then
-        echo -e "$WARNING NFV SIG repository not enabled, installing..."
         dnf install -y centos-release-nfv-openvswitch
-        echo -e "$OK NFV SIG repository enabled"
+        echo -e "  $OK NFV SIG repository enabled"
     else
-        echo -e "$OK NFV SIG repository already enabled"
+        echo -e "  $OK NFV SIG repository already enabled"
     fi
     return 0
 }
@@ -464,16 +456,14 @@ process_config_files() {
     local description=$2
     shift 2
 
-    echo -n "Processing ${description}... "
-
     # Use Python script for robust config processing
     # Python handles multi-line replacements and special characters naturally
     if ! "$SCRIPT_DIR/process-configs.py" "$dir" "$@"; then
-        echo -e "${RED}[ERROR]${NC}"
+        echo -e "${RED}[ERROR]${NC} Failed to process ${description}"
         return 1
     fi
 
-    echo -e "$OK"
+    echo -e "$OK Processed ${description}"
 }
 
 # Get upstream DNS servers from /etc/resolv.conf
@@ -486,7 +476,6 @@ get_upstream_dns_servers() {
 # Usage: prepare_runtime_configs [extra_dirs...]
 # Example: prepare_runtime_configs "keystone/fernet-keys" "keystone/credential-keys"
 prepare_runtime_configs() {
-    echo -n "Preparing runtime configs... "
     rm -rf "$CONFIGS_RUNTIME_DIR"
     mkdir -p "$CONFIGS_RUNTIME_DIR"
     cp -r "$CONFIGS_DIR"/* "$CONFIGS_RUNTIME_DIR"/
@@ -496,7 +485,7 @@ prepare_runtime_configs() {
         mkdir -p "$CONFIGS_RUNTIME_DIR/$dir"
     done
 
-    echo -e "$OK"
+    echo -e "  $OK Prepared runtime configs"
 }
 
 # Prepare all configuration files (high-level convenience function)
@@ -510,11 +499,10 @@ prepare_all_configs() {
     prepare_runtime_configs "keystone/fernet-keys" "keystone/credential-keys"
 
     # Copy scripts to runtime directory
-    echo -n "Copying container scripts... "
     rm -rf "$SCRIPTS_RUNTIME_DIR"
     mkdir -p "$SCRIPTS_RUNTIME_DIR"
     cp -r containerfiles/scripts/* "$SCRIPTS_RUNTIME_DIR"/
-    echo -e "$OK"
+    echo -e "  $OK Copied container scripts"
 
     # Get upstream DNS for dnsmasq
     local upstream_dns
@@ -533,7 +521,6 @@ prepare_all_configs() {
     fi
     local hotstack_uid
     hotstack_uid=$(id -u hotstack)
-    echo "Using hotstack user UID: $hotstack_uid"
 
     # Process ALL config files in one pass
     process_config_files \
@@ -577,10 +564,9 @@ prepare_all_configs() {
         "password: admin" "password: ${KEYSTONE_ADMIN_PASSWORD}"
 
     # Copy clouds.yaml to data directory and repo directory for OpenStack client
-    echo -n "Copying clouds.yaml... "
     cp "$CONFIGS_RUNTIME_DIR/clouds.yaml.example" "${HOTSTACK_DATA_DIR}/clouds.yaml"
     cp "${HOTSTACK_DATA_DIR}/clouds.yaml" clouds.yaml
-    echo -e "$OK"
+    echo -e "  $OK Copied clouds.yaml"
 }
 
 # ============================================================================

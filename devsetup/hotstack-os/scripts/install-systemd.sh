@@ -109,10 +109,11 @@ echo -e "  $OK Installed scripts to /usr/local/bin/ and /usr/local/lib/"
 echo ""
 
 # Run infra-setup to ensure hotstack user exists
-echo "Running infrastructure setup..."
 /usr/local/bin/hotstack-os-infra-setup.sh
-echo -e "  $OK Infrastructure setup complete"
 echo ""
+
+# Setup libvirt session for hotstack user
+echo "Setting up libvirt session for hotstack user..."
 
 # Detect hotstack user UID for session libvirt
 if ! id hotstack &>/dev/null; then
@@ -120,34 +121,29 @@ if ! id hotstack &>/dev/null; then
     exit 1
 fi
 HOTSTACK_UID=$(id -u hotstack)
-echo "Detected hotstack user UID: $HOTSTACK_UID"
-echo ""
-
-# Setup libvirt session for hotstack user
-echo "Setting up libvirt session for hotstack user..."
 
 # Create libvirt config directory
 LIBVIRT_CONFIG_DIR="/var/lib/hotstack/.config/libvirt"
-echo "  Creating libvirt config directory..."
 mkdir -p "$LIBVIRT_CONFIG_DIR"
 chown hotstack:hotstack "$LIBVIRT_CONFIG_DIR"
+echo -e "  $OK Created libvirt config directory"
 
 # Install libvirtd.conf
-echo "  Installing libvirt session configuration..."
 cp "$PROJECT_DIR/configs/libvirt/libvirtd.conf" "$LIBVIRT_CONFIG_DIR/libvirtd.conf"
 chown hotstack:hotstack "$LIBVIRT_CONFIG_DIR/libvirtd.conf"
 chmod 644 "$LIBVIRT_CONFIG_DIR/libvirtd.conf"
+echo -e "  $OK Installed libvirt session configuration"
 
 # Create systemd user service directory
 USER_SYSTEMD_DIR="/var/lib/hotstack/.config/systemd/user"
-echo "  Creating systemd user service directory..."
 mkdir -p "$USER_SYSTEMD_DIR"
 chown -R hotstack:hotstack "/var/lib/hotstack/.config/systemd"
+echo -e "  $OK Created systemd user service directory"
 
 # Install libvirtd user service
-echo "  Installing libvirtd user service..."
 cp "$PROJECT_DIR/systemd/hotstack-os-libvirtd-session.service" "$USER_SYSTEMD_DIR/hotstack-os-libvirtd-session.service"
 chown hotstack:hotstack "$USER_SYSTEMD_DIR/hotstack-os-libvirtd-session.service"
+echo -e "  $OK Installed libvirtd user service"
 
 # Verify /dev/kvm is accessible
 if [ -c /dev/kvm ]; then
@@ -162,27 +158,21 @@ else
 fi
 
 # Grant CAP_NET_ADMIN to libvirtd for TAP device creation
-# Required for session libvirt to create network interfaces (tap devices)
-# This is acceptable for dev/test environments
-echo "  Granting CAP_NET_ADMIN capability to libvirtd..."
 setcap cap_net_admin+ep /usr/sbin/libvirtd
-echo -e "  $OK libvirtd capabilities configured"
+echo -e "  $OK Granted CAP_NET_ADMIN capability to libvirtd"
 
 # Enable and start the libvirtd user service
-echo "  Enabling and starting libvirtd user service..."
 sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
     systemctl --user daemon-reload
 
 # Reset failed state if service is in failed state
-# This ensures a clean start if previous attempts failed
-# Only resets if actually failed - won't interrupt running VMs
 if sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
     systemctl --user is-failed hotstack-os-libvirtd-session.service &>/dev/null; then
-    echo "  Resetting failed libvirtd session state..."
     sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
         systemctl --user stop hotstack-os-libvirtd-session.service 2>/dev/null || true
     sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
         systemctl --user reset-failed 2>/dev/null || true
+    echo -e "  $OK Reset failed libvirtd session state"
 fi
 
 # Enable the service
@@ -195,9 +185,8 @@ sudo -u hotstack XDG_RUNTIME_DIR=/run/user/"$HOTSTACK_UID" \
 
 # Wait for socket to be created
 SOCKET_PATH="/run/user/$HOTSTACK_UID/libvirt/libvirt-sock"
-echo "  Waiting for libvirt socket at $SOCKET_PATH..."
 if timeout 10 bash -c "while [ ! -S '$SOCKET_PATH' ]; do sleep 0.5; done"; then
-    echo -e "  $OK libvirt socket created"
+    echo -e "  $OK libvirt socket created at $SOCKET_PATH"
 else
     echo "ERROR: Timeout waiting for libvirt socket" >&2
     echo "  Checking service status:" >&2
@@ -210,7 +199,6 @@ echo -e "  $OK Libvirt session setup complete"
 echo ""
 
 # Process and install systemd units
-echo "Installing systemd units with configuration..."
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
@@ -256,18 +244,15 @@ process_config_files "$tmpdir" "systemd units" \
     "__CHASSIS_HOSTNAME__" "$CHASSIS_HOSTNAME"
 
 install -m 644 "$tmpdir"/* /etc/systemd/system/
-echo -e "  $OK Installed systemd units to /etc/systemd/system/"
+echo -e "$OK Installed systemd units to /etc/systemd/system/"
 echo ""
 
 # Reload systemd
-echo "Reloading systemd..."
 systemctl daemon-reload
-echo -e "  $OK Systemd reloaded"
+echo -e "$OK Systemd reloaded"
 echo ""
 
-echo "========================================"
 echo "Installation complete!"
-echo "========================================"
 echo ""
 echo "Next steps:"
 echo "  1. Enable and start services:"

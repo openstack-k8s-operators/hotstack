@@ -247,9 +247,10 @@ IMAGE_SPECS = [
 ]
 
 
-def print_success(message):
+def print_success(message, indent=True):
     """Print success message in green"""
-    print(f"{Colors.OK} {message}")
+    prefix = "  " if indent else ""
+    print(f"{prefix}{Colors.OK} {message}")
 
 
 def print_warning(message):
@@ -340,9 +341,9 @@ def create_hotstack_project_and_user(admin_conn):
                 pass
 
         if project_created or user_created:
-            print_success(f"HotStack project and user created")
+            print_success("HotStack project and user created")
         else:
-            print_success(f"HotStack project and user already exist")
+            print_success("HotStack project and user created")
 
         return project, user
     except Exception as e:
@@ -826,7 +827,6 @@ def download_images(conn, image_urls):
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
     # Check which images need to be downloaded and download them
-    print("Checking existing images and downloading...")
     images_to_upload = []
 
     for spec in IMAGE_SPECS:
@@ -867,7 +867,7 @@ def download_images(conn, image_urls):
 
         try:
             # Download with progress reporting
-            print(f"Downloading {spec['name']}...")
+            print(f"  Downloading {spec['name']}...")
             urllib.request.urlretrieve(
                 image_url, cache_path, reporthook=_progress_callback(spec["name"])
             )
@@ -906,10 +906,10 @@ def download_images(conn, image_urls):
 def upload_images(conn, images_to_upload):
     """Upload images to Glance"""
     if not images_to_upload:
-        print("No new images to upload")
+        print("  No new images to upload")
         return
 
-    print(f"\nUploading {len(images_to_upload)} image(s) to Glance...")
+    print("")
 
     for item in images_to_upload:
         spec = item["spec"]
@@ -1325,7 +1325,7 @@ def main():
     """Main execution function"""
     args = parse_arguments()
 
-    print("=== HotStack-OS Post-Setup ===")
+    print("HotStack-OS post-setup...")
 
     # Check if running as root (not recommended)
     if os.geteuid() == 0:

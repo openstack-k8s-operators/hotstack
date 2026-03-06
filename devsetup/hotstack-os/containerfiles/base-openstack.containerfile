@@ -27,6 +27,7 @@ RUN apt-get update && \
         libvirt-dev \
         pkg-config \
         ca-certificates \
+        patch \
     && rm -rf /var/lib/apt/lists/*
 
 # Runtime stage - lean image with only runtime dependencies

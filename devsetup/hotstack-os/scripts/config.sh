@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
 
-echo "=== Preparing HotStack-OS Runtime Configuration ==="
+echo "Preparing HotStack-OS runtime configuration..."
 
 # Load environment configuration
 load_env_file
@@ -32,7 +32,9 @@ load_env_file
 # Prepare runtime configurations
 prepare_all_configs
 
-echo -e "\n${GREEN}Configuration complete!${NC}"
-echo -e "Runtime configs prepared in: $CONFIGS_RUNTIME_DIR"
-echo -e "Runtime scripts prepared in: $SCRIPTS_RUNTIME_DIR"
-echo -e "clouds.yaml copied to: ${HOTSTACK_DATA_DIR}/clouds.yaml and $(pwd)/clouds.yaml"
+echo ""
+echo "Configuration complete!"
+echo "Runtime configs prepared in: $CONFIGS_RUNTIME_DIR"
+echo "Runtime scripts prepared in: $SCRIPTS_RUNTIME_DIR"
+echo "clouds.yaml copied to: ${HOTSTACK_DATA_DIR}/clouds.yaml and $(pwd)/clouds.yaml"
+echo ""
