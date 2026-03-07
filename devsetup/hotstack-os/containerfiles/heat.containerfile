@@ -3,11 +3,9 @@ FROM localhost/hotstack-os-base-builder:latest AS builder
 ARG OPENSTACK_BRANCH=stable/2025.1
 
 # Clone and build Heat from source
-COPY patches/heat-add-sata-disk-bus.patch /tmp/heat-add-sata-disk-bus.patch
 RUN git clone --depth 1 --branch ${OPENSTACK_BRANCH} \
         https://opendev.org/openstack/heat /tmp/heat && \
     cd /tmp/heat && \
-    patch -p1 < /tmp/heat-add-sata-disk-bus.patch && \
     pip3 install --no-cache-dir --break-system-packages \
         -c https://opendev.org/openstack/requirements/raw/branch/${OPENSTACK_BRANCH}/upper-constraints.txt \
         . pymysql python-memcached python-openstackclient && \
