@@ -57,6 +57,7 @@
     parameters: >-
       {{
         stack_parameters
+        | ansible.builtin.combine(stack_parameter_overrides | default({}), recursive=true)
         | ansible.builtin.combine(_latest_snapset.output | default({}), recursive=true)
         | ansible.builtin.combine({'dataplane_ssh_pub_key': dataplane_ssh_public_key})
       }}
