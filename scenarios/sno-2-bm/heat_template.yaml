@@ -567,6 +567,16 @@ outputs:
     description: Ironic boot interface configured for the redfish nodes
     value: redfish-virtual-media
 
+  network_mtu:
+    description: MTU values for all networks
+    value:
+      machine: {get_attr: [machine-net, mtu]}
+      ctlplane: {get_attr: [ctlplane-net, mtu]}
+      internal_api: {get_attr: [internal-api-net, mtu]}
+      storage: {get_attr: [storage-net, mtu]}
+      tenant: {get_attr: [tenant-net, mtu]}
+      ironic: {get_attr: [ironic-net, mtu]}
+
   sushy_emulator_uuids:
     description: UUIDs of instances to manage with sushy-tools - RedFish virtual BMC
     value:

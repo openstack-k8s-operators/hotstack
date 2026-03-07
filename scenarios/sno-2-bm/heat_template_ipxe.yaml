@@ -551,6 +551,16 @@ outputs:
       ironic0: {get_resource: ironic0}
       ironic1: {get_resource: ironic1}
 
+  network_mtu:
+    description: MTU values for all networks
+    value:
+      machine: {get_attr: [machine-net, mtu]}
+      ctlplane: {get_attr: [ctlplane-net, mtu]}
+      internal_api: {get_attr: [internal-api-net, mtu]}
+      storage: {get_attr: [storage-net, mtu]}
+      tenant: {get_attr: [tenant-net, mtu]}
+      ironic: {get_attr: [ironic-net, mtu]}
+
   ironic_nodes:
     description: Ironic nodes YAML, used with openstack baremetal create to enroll nodes in Openstack Ironic
     value:
