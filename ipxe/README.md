@@ -43,6 +43,8 @@ For specific versions, see the [releases page](https://github.com/openstack-k8s-
      --property os_shutdown_timeout=5 \
      --property hw_firmware_type=uefi \
      --property hw_machine_type=q35 \
+     --property hw_rescue_device=cdrom \
+     --property hw_rescue_bus=usb \
      --public
    ```
 
@@ -51,6 +53,8 @@ For specific versions, see the [releases page](https://github.com/openstack-k8s-
    ```shell
    openstack image create --disk-format=raw --file ipxe-bios-latest.img ipxe-rescue-bios \
      --property os_shutdown_timeout=5 \
+     --property hw_rescue_device=cdrom \
+     --property hw_rescue_bus=usb \
      --public
    ```
 

@@ -225,6 +225,8 @@ IMAGE_SPECS = [
             "os_shutdown_timeout": "5",
             "hw_firmware_type": "uefi",
             "hw_machine_type": "q35",
+            "hw_rescue_device": "cdrom",
+            "hw_rescue_bus": "usb",
         },
     },
     {
@@ -233,6 +235,8 @@ IMAGE_SPECS = [
         "disk_format": "raw",
         "properties": {
             "os_shutdown_timeout": "5",
+            "hw_rescue_device": "cdrom",
+            "hw_rescue_bus": "usb",
         },
     },
     {
