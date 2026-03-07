@@ -94,7 +94,7 @@ post-setup:
 	@echo ""
 	./scripts/post-setup.py --cloud-secret-path ../../cloud-secret.yaml
 
-clean:
+clean: uninstall
 	$(call require-root,clean)
 	@echo ""
 	@echo -e "\033[0;31mWARNING: Complete data cleanup\033[0m"
@@ -106,8 +106,6 @@ clean:
 	@echo "  • Podman network (hotstack-os)"
 	@echo "  • Storage directories"
 	@echo "  • OVS bridges"
-	@echo ""
-	@echo "Run 'sudo make uninstall' first to stop and remove systemd services."
 	@echo ""
 	@if [ -z "$$HOTSTACK_CLEANUP_CONFIRM" ]; then \
 		read -p "Proceed with complete cleanup? [y/N] " -n 1 -r; \
