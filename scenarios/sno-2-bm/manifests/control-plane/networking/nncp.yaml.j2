@@ -8,11 +8,6 @@ metadata:
   namespace: openstack
 spec:
   desiredState:
-    dns-resolver:
-      config:
-        search: []
-        server:
-        - 192.168.32.254
     interfaces:
     - name: internalapi
       type: vlan
@@ -25,7 +20,7 @@ spec:
         enabled: true
       ipv6:
         enabled: false
-      mtu: 1442
+      mtu: {{ stack_outputs.network_mtu.internal_api }}
       state: up
       vlan:
         base-iface: eth1
@@ -41,7 +36,7 @@ spec:
         enabled: true
       ipv6:
         enabled: false
-      mtu: 1442
+      mtu: {{ stack_outputs.network_mtu.storage }}
       state: up
       vlan:
         base-iface: eth1
@@ -57,13 +52,13 @@ spec:
         enabled: true
       ipv6:
         enabled: false
-      mtu: 1442
+      mtu: {{ stack_outputs.network_mtu.tenant }}
       state: up
       vlan:
         base-iface: eth1
         id: "22"
     - description: ctlplane interface
-      mtu: 1442
+      mtu: {{ stack_outputs.network_mtu.ctlplane }}
       name: eth1
       state: up
       type: ethernet
@@ -85,7 +80,7 @@ spec:
         enabled: true
       ipv6:
         enabled: false
-      mtu: 1442
+      mtu: {{ stack_outputs.network_mtu.ctlplane }}
       state: up
     - name: ironic
       type: linux-bridge
@@ -103,7 +98,7 @@ spec:
         enabled: true
       ipv6:
         enabled: false
-      mtu: 1442
+      mtu: {{ stack_outputs.network_mtu.ironic }}
     route-rules:
       config: []
     routes:

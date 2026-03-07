@@ -1,3 +1,4 @@
+{% raw %}
 ---
 apiVersion: v1
 data:
@@ -317,7 +318,10 @@ spec:
         ovn_emit_need_to_frag = true
 
         [ml2]
-        global_physnet_mtu = 1442
+{% endraw %}
+        global_physnet_mtu = {{ stack_outputs.network_mtu.ctlplane }}
+        path_mtu = {{ stack_outputs.network_mtu.tenant }}
+{% raw %}
         type_drivers = geneve,vxlan,vlan,flat,local
         tenant_network_types = geneve,flat
       ml2MechanismDrivers:
@@ -477,3 +481,4 @@ spec:
         replicas: 1
   telemetry:
     enabled: false
+{% endraw %}

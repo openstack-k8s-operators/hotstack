@@ -39,7 +39,7 @@ stages:
     documentation: |
       Apply node network configuration policies to configure host networking.
       Waits for all policies to be successfully configured.
-    manifest: manifests/control-plane/networking/nncp.yaml
+    j2_manifest: manifests/control-plane/networking/nncp.yaml.j2
     wait_conditions:
       - >-
         oc wait -n openstack nncp -l osp/nncm-config-type=standard
@@ -62,7 +62,7 @@ stages:
     documentation: |
       Deploy the OpenStack control plane with all core services.
       Waits for the control plane to be fully ready before proceeding.
-    manifest: manifests/control-plane/control-plane.yaml
+    j2_manifest: manifests/control-plane/control-plane.yaml.j2
     wait_conditions:
       - >-
         oc -n openstack wait openstackcontrolplanes.core.openstack.org controlplane

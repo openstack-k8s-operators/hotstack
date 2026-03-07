@@ -37,7 +37,6 @@ spec:
       "name": "ironic",
       "type": "bridge",
       "bridge": "ironic",
-      "mtu": 1442,
       "ipam": {
         "type": "whereabouts",
         "range": "172.20.1.0/24",
