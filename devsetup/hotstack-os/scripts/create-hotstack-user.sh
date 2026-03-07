@@ -30,11 +30,11 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-echo "Creating HotStack system user..."
+echo "Creating HotsTac(k)os system user..."
 
 # Create hotstack system user for isolated libvirt session
 if ! id hotstack &>/dev/null; then
-    useradd -r -m -d /var/lib/hotstack -s /sbin/nologin -c "HotStack-OS Libvirt User" hotstack
+    useradd -r -m -d /var/lib/hotstack -s /sbin/nologin -c "HotsTac(k)os Libvirt User" hotstack
     echo -e "  $OK hotstack user created with home directory"
 else
     echo -e "  $OK hotstack user already exists"

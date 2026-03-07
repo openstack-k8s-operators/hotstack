@@ -14,7 +14,7 @@
 # under the License.
 
 [Unit]
-Description=HotStack-OS Nova Conductor Service
+Description=HotsTac(k)os Nova Conductor Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-nova-api.service hotstack-os-infra-setup.service
 Wants=hotstack-os-nova-api.service

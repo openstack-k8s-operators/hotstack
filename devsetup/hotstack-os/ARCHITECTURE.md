@@ -1,8 +1,8 @@
-# HotStack-OS Architecture
+# HotsTac(k)os Architecture
 
 ## Overview
 
-HotStack-OS uses a hybrid architecture where the OpenStack control plane runs in containers (22 total) while integrating with host services for compute and networking:
+HotsTac(k)os uses a hybrid architecture where the OpenStack control plane runs in containers (22 total) while integrating with host services for compute and networking:
 
 - **Control plane**: All OpenStack services containerized and managed via systemd
 - **Compute**: Integrates with host libvirt/KVM for VM management via isolated session mode
@@ -61,7 +61,7 @@ Host Machine
 
 ## Network Architecture
 
-HotStack-OS uses a dedicated `172.31.0.0/24` address space split into two subnets:
+HotsTac(k)os uses a dedicated `172.31.0.0/24` address space split into two subnets:
 
 ### 1. Container Network (`172.31.0.0/25` - 128 IPs: .0 to .127)
 
@@ -136,7 +136,7 @@ The bind mounts use the syntax `${PATH}:${PATH}:shared` (same path twice) to mai
 
 ## Libvirt Session Isolation
 
-HotStack-OS uses libvirt's session mode with a dedicated `hotstack` system user to provide complete isolation from system libvirt VMs. This approach ensures Nova's sanity checks don't fail when other VMs exist on the system.
+HotsTac(k)os uses libvirt's session mode with a dedicated `hotstack` system user to provide complete isolation from system libvirt VMs. This approach ensures Nova's sanity checks don't fail when other VMs exist on the system.
 
 ### Architecture
 

@@ -14,7 +14,7 @@
 # under the License.
 
 [Unit]
-Description=HotStack-OS Cinder Scheduler Service
+Description=HotsTac(k)os Cinder Scheduler Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-cinder-api.service hotstack-os-infra-setup.service
 Wants=hotstack-os-cinder-api.service

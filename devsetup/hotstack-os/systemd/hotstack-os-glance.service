@@ -14,7 +14,7 @@
 # under the License.
 
 [Unit]
-Description=HotStack-OS Glance Image Service
+Description=HotsTac(k)os Glance Image Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-mariadb.service hotstack-os-keystone.service hotstack-os-dnsmasq.service hotstack-os-haproxy.service hotstack-os-infra-setup.service
 Wants=hotstack-os-mariadb.service hotstack-os-keystone.service hotstack-os-dnsmasq.service

@@ -29,7 +29,7 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-echo "Installing HotStack-OS systemd services..."
+echo "Installing HotsTac(k)os systemd services..."
 echo ""
 
 # Check if container images are available

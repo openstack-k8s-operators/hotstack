@@ -1,10 +1,10 @@
-# HotStack-OS Quick Start Guide
+# HotsTac(k)os Quick Start Guide
 
-Guide for using HotStack-OS with HotStack scenarios.
+Guide for using HotsTac(k)os with HotStack scenarios.
 
 ## Prerequisites
 
-HotStack-OS must be installed and running. See [INSTALL.md](INSTALL.md) for installation instructions.
+HotsTac(k)os must be installed and running. See [INSTALL.md](INSTALL.md) for installation instructions.
 
 ## Setup for HotStack
 

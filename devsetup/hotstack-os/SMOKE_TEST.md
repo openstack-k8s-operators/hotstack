@@ -1,6 +1,6 @@
-# HotStack-OS Smoke Test
+# HotsTac(k)os Smoke Test
 
-Validates the HotStack-OS deployment by creating a Heat stack with various OpenStack resources and testing connectivity.
+Validates the HotsTac(k)os deployment by creating a Heat stack with various OpenStack resources and testing connectivity.
 
 ## What It Tests
 

@@ -17,14 +17,14 @@ define require-root
 endef
 
 help:
-	@echo "HotStack-OS Makefile Commands:"
+	@echo "HotsTac(k)os Makefile Commands:"
 	@echo ""
 	@echo "Setup:"
 	@echo "  sudo make install-deps        - Install system dependencies (packages and services)"
 	@echo "  sudo make build               - Build all container images"
 	@echo "  sudo make build PARALLEL=N    - Build with N parallel jobs"
 	@echo "  sudo make build VERBOSE=1     - Build with verbose output"
-	@echo "  sudo make install             - Install HotStack-OS as systemd services"
+	@echo "  sudo make install             - Install HotsTac(k)os as systemd services"
 	@echo ""
 	@echo "Post-Installation:"
 	@echo "  sudo make install-client      - Install OpenStack client packages on host (optional)"
@@ -131,7 +131,7 @@ smoke-test:
 		echo ""; \
 		exit 1; \
 	fi
-	@echo "Running HotStack-OS smoke test..."
+	@echo "Running HotsTac(k)os smoke test..."
 	@echo "This will create a Heat stack with test resources."
 	@echo ""
 	./scripts/smoke-test.py

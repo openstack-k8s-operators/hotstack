@@ -6,7 +6,7 @@ development and testing.
 
 ## Available Setup Guides
 
-### [HotStack-OS - Containerized Setup](hotstack-os/)
+### [HotsTac(k)os - Containerized Setup](hotstack-os/)
 
 A containerized OpenStack deployment that runs on your local workstation.
 Uses host libvirt, OpenvSwitch, and NFS. All OpenStack services in containers
@@ -45,7 +45,7 @@ deployment in a single node.
 
 ## Choosing a Setup Method
 
-| Feature | HotStack-OS | OpenStack-Ansible AIO |
+| Feature | HotsTac(k)os | OpenStack-Ansible AIO |
 |---------|-------------|------------------------|
 | **Deployment Time** | ~10 minutes | 60-120 minutes |
 | **Host OS** | Fedora/RHEL/CentOS | CentOS Stream 9 or 10 |

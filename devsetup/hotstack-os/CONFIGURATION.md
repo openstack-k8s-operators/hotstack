@@ -1,6 +1,6 @@
-# HotStack-OS Configuration Guide
+# HotsTac(k)os Configuration Guide
 
-This guide covers all configuration options available in HotStack-OS. Most defaults work well for development environments, but you can customize settings to match your specific needs.
+This guide covers all configuration options available in HotsTac(k)os. Most defaults work well for development environments, but you can customize settings to match your specific needs.
 
 ## Configuration File
 
@@ -25,7 +25,7 @@ All configuration is managed through the `.env` file in the `devsetup/hotstack-o
 
 ## Messaging Backend
 
-HotStack-OS uses **RabbitMQ** for oslo.messaging (RPC and notifications).
+HotsTac(k)os uses **RabbitMQ** for oslo.messaging (RPC and notifications).
 
 RabbitMQ credentials can be configured in `.env`:
 ```bash
@@ -90,7 +90,7 @@ DEBUG_LOGGING=true
 
 ### Address Space
 
-HotStack-OS uses a dedicated `172.31.0.0/24` address space split into two subnets:
+HotsTac(k)os uses a dedicated `172.31.0.0/24` address space split into two subnets:
 
 | Setting | Default | Description |
 |---------|---------|-------------|

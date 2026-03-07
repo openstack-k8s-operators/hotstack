@@ -14,7 +14,7 @@
 # under the License.
 
 [Unit]
-Description=HotStack-OS Keystone Identity Service
+Description=HotsTac(k)os Keystone Identity Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-mariadb.service hotstack-os-memcached.service hotstack-os-dnsmasq.service hotstack-os-haproxy.service hotstack-os-infra-setup.service
 Wants=hotstack-os-mariadb.service hotstack-os-memcached.service hotstack-os-dnsmasq.service

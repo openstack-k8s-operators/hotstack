@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# HotStack-OS Health Check Helper
+# HotsTac(k)os Health Check Helper
 # Polls container health checks until healthy or timeout
 # Usage: hotstack-healthcheck.sh CONTAINER_NAME INTERVAL TIMEOUT RETRIES START_PERIOD [HEALTHCHECK_CMD...]
 
