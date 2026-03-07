@@ -341,9 +341,9 @@ def create_hotstack_project_and_user(admin_conn):
                 pass
 
         if project_created or user_created:
-            print_success("HotStack project and user created")
+            print_success("HotsTac(k)os project and user created")
         else:
-            print_success("HotStack project and user created")
+            print_success("HotsTac(k)os project and user created")
 
         return project, user
     except Exception as e:
@@ -1014,7 +1014,7 @@ def print_completion_message(args, cloud_secret_path, external_network):
 
     if cloud_secret_path:
         print(f"Application credential created and saved to: {cloud_secret_path}")
-        print("You can now run HotStack scenarios with this credential")
+        print("You can now run HotsTac(k)os scenarios with this credential")
         print()
 
     if not args.skip_images:
@@ -1038,7 +1038,7 @@ def print_completion_message(args, cloud_secret_path, external_network):
             f"server add floating ip <server> <floating-ip>"
         )
 
-    print("  - Use with HotStack scenarios")
+    print("  - Use with HotsTac(k)os scenarios")
 
 
 def parse_arguments():
@@ -1325,7 +1325,7 @@ def main():
     """Main execution function"""
     args = parse_arguments()
 
-    print("HotStack-OS post-setup...")
+    print("HotsTac(k)os post-setup...")
 
     # Check if running as root (not recommended)
     if os.geteuid() == 0:

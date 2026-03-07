@@ -12,7 +12,7 @@
     parent: base-minimal
     nodeset: hotstack-image-vexxhost
     description: |
-      Test HotStack-OS containerized OpenStack devsetup
+      Test HotsTac(k)os containerized OpenStack devsetup
     timeout: 2700
     required-projects:
       - opendev.org/zuul/zuul-jobs

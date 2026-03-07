@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# Prepare runtime configuration files for HotStack-OS
+# Prepare runtime configuration files for HotsTac(k)os
 
 set -e
 
@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
 
-echo "Preparing HotStack-OS runtime configuration..."
+echo "Preparing HotsTac(k)os runtime configuration..."
 
 # Load environment configuration
 load_env_file

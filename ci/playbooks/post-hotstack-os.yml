@@ -1,5 +1,5 @@
 ---
-- name: Post-run tasks for HotStack-OS test
+- name: Post-run tasks for HotsTac(k)os test
   hosts: all
   vars:
     hotstack_os_dir: "{{ ansible_user_dir }}/{{ zuul.project.src_dir }}/devsetup/hotstack-os"
@@ -315,14 +315,14 @@
         recurse: true
       failed_when: false
 
-    - name: Stop HotStack-OS services
+    - name: Stop HotsTac(k)os services
       become: true
       ansible.builtin.systemd:
         name: hotstack-os.target
         state: stopped
       failed_when: false
 
-    - name: Cleanup HotStack-OS environment
+    - name: Cleanup HotsTac(k)os environment
       become: true
       args:
         chdir: "{{ hotstack_os_dir }}"

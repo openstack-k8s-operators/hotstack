@@ -27,7 +27,7 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-echo "Uninstalling HotStack-OS systemd services..."
+echo "Uninstalling HotsTac(k)os systemd services..."
 echo ""
 
 # Stop and disable target

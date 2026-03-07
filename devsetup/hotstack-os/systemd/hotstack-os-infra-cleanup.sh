@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# HotStack-OS Infrastructure Cleanup Script
+# HotsTac(k)os Infrastructure Cleanup Script
 # Removes /etc/hosts entries when systemd services stop
 # This script is idempotent and safe to run multiple times
 
@@ -32,7 +32,7 @@ HOSTS_FILE="/etc/hosts"
 HOSTS_BEGIN_MARKER="# BEGIN hotstack-os managed entries"
 HOSTS_END_MARKER="# END hotstack-os managed entries"
 
-echo "=== HotStack-OS Infrastructure Cleanup ==="
+echo "=== HotsTac(k)os Infrastructure Cleanup ==="
 
 # Note: Libvirt session cleanup is handled by 'make clean' to preserve VMs
 # during service restarts. The libvirt session remains running.

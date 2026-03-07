@@ -14,7 +14,7 @@
 # under the License.
 
 [Unit]
-Description=HotStack-OS Neutron Metadata Agent Service
+Description=HotsTac(k)os Neutron Metadata Agent Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-neutron-server.service hotstack-os-ovn-controller.service hotstack-os-infra-setup.service
 Wants=hotstack-os-neutron-server.service hotstack-os-ovn-controller.service

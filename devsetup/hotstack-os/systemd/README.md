@@ -1,6 +1,6 @@
-# HotStack-OS systemd Services
+# HotsTac(k)os systemd Services
 
-This directory contains systemd unit files and helper scripts for deploying HotStack-OS as systemd services.
+This directory contains systemd unit files and helper scripts for deploying HotsTac(k)os as systemd services.
 
 ## Files
 
@@ -14,7 +14,7 @@ This directory contains systemd unit files and helper scripts for deploying HotS
 
 - `hotstack-os-infra-setup.service` - Oneshot service that sets up network and storage infrastructure
 - `hotstack-os-*.service` - Individual container services (to be created)
-- `hotstack-os.target` - Target that groups all HotStack-OS services
+- `hotstack-os.target` - Target that groups all HotsTac(k)os services
 
 ## Configuration
 

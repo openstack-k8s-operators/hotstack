@@ -1,8 +1,8 @@
-# HotStack-OS Troubleshooting Guide
+# HotsTac(k)os Troubleshooting Guide
 
 Common issues and their solutions.
 
-**Note**: HotStack-OS uses rootful podman (requires sudo). All `podman` commands should be run with `sudo`.
+**Note**: HotsTac(k)os uses rootful podman (requires sudo). All `podman` commands should be run with `sudo`.
 
 ## Quick Diagnostics
 
@@ -150,7 +150,7 @@ sudo make install
 
 ### Nova Compute / Libvirt Issues
 
-HotStack-OS uses libvirt session mode with a dedicated `hotstack` user for complete isolation from system VMs.
+HotsTac(k)os uses libvirt session mode with a dedicated `hotstack` user for complete isolation from system VMs.
 
 For libvirt session-related issues, see the detailed sections below:
 - [Session Service Not Starting](#session-service-not-starting)
@@ -161,7 +161,7 @@ For libvirt session-related issues, see the detailed sections below:
 
 ## Libvirt Session Isolation Issues
 
-HotStack-OS uses libvirt session mode with a dedicated `hotstack` user to isolate Nova VMs from system VMs.
+HotsTac(k)os uses libvirt session mode with a dedicated `hotstack` user to isolate Nova VMs from system VMs.
 
 ### Session Service Not Starting
 

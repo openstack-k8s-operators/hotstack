@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
 
-echo "HotStack-OS health check..."
+echo "HotsTac(k)os health check..."
 echo ""
 
 # Initialize error tracking

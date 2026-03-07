@@ -14,7 +14,7 @@
 # under the License.
 
 [Unit]
-Description=HotStack-OS OpenStack Development Environment
+Description=HotsTac(k)os OpenStack Development Environment
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=network-online.target openvswitch.service
 Wants=network-online.target

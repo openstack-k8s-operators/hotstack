@@ -14,7 +14,7 @@
 # under the License.
 
 [Unit]
-Description=HotStack-OS Neutron Server Service
+Description=HotsTac(k)os Neutron Server Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-mariadb.service hotstack-os-rabbitmq.service hotstack-os-keystone.service hotstack-os-ovn-northd.service hotstack-os-dnsmasq.service hotstack-os-haproxy.service hotstack-os-infra-setup.service
 Wants=hotstack-os-mariadb.service hotstack-os-rabbitmq.service hotstack-os-keystone.service hotstack-os-ovn-northd.service hotstack-os-dnsmasq.service

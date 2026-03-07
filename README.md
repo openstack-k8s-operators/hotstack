@@ -94,7 +94,7 @@ to install OCP.
 
 HotStack requires an OpenStack cloud to deploy on. See [devsetup](devsetup/) for options:
 
-- **[HotStack-OS](devsetup/hotstack-os/)** - NEW! Containerized OpenStack using podman-compose (2-5 min setup)
+- **[HotsTac(k)os](devsetup/hotstack-os/)** - NEW! Containerized OpenStack using podman-compose (2-5 min setup)
 - **[Packstack](devsetup/packstack.md)** - Single-node OpenStack on CentOS Stream 9 (30-60 min setup)
 - **[OpenStack-Ansible](devsetup/osa.md)** - Production-like AIO deployment (60-120 min setup)
 

@@ -28,7 +28,7 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-echo "Installing HotStack-OS dependencies..."
+echo "Installing HotsTac(k)os dependencies..."
 
 # Initialize package queue
 # shellcheck disable=SC2034

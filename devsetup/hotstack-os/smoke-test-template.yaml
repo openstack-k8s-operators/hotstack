@@ -17,7 +17,7 @@
 heat_template_version: rocky
 
 description: >
-  Smoke test Heat template for HotStack-OS.
+  Smoke test Heat template for HotsTac(k)os.
   Creates a minimal but comprehensive test environment with:
   - Networks, subnets, and router
   - Instance 1: Volume boot (boot volume only, with trunk port for VLAN testing)
@@ -166,7 +166,7 @@ resources:
         users:
           - default
         runcmd:
-          - echo "HotStack-OS smoke test instance initialized" > /tmp/smoke-test-init
+          - echo "HotsTac(k)os smoke test instance initialized" > /tmp/smoke-test-init
           - date >> /tmp/smoke-test-init
 
   #

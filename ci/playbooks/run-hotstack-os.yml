@@ -216,7 +216,7 @@
       register: hotstack_uid
       changed_when: false
 
-    - name: Test service restart - Stop HotStack-OS services
+    - name: Test service restart - Stop HotsTac(k)os services
       become: true
       ansible.builtin.systemd:
         name: hotstack-os.target
@@ -247,7 +247,7 @@
         fail_msg: "Libvirt session stopped - should remain running"
         success_msg: "✓ Libvirt session persisted across service stop"
 
-    - name: Test service restart - Start HotStack-OS services
+    - name: Test service restart - Start HotsTac(k)os services
       become: true
       ansible.builtin.systemd:
         name: hotstack-os.target

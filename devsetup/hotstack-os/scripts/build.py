@@ -15,7 +15,7 @@
 # under the License.
 
 """
-Build all HotStack-OS container images.
+Build all HotsTac(k)os container images.
 
 Builds base images and all service container images with support for
 parallel builds and configurable service lists.
@@ -60,7 +60,7 @@ DEFAULT_OPENSTACK_IMAGES = [
 
 
 class ImageBuilder:
-    """Handles building HotStack-OS container images."""
+    """Handles building HotsTac(k)os container images."""
 
     def __init__(
         self,
@@ -391,7 +391,7 @@ def parse_arguments() -> argparse.Namespace:
     :returns: Parsed command line arguments
     """
     parser = argparse.ArgumentParser(
-        description="Build all HotStack-OS container images"
+        description="Build all HotsTac(k)os container images"
     )
     parser.add_argument(
         "--env-file", type=Path, required=True, help="Path to .env file"
@@ -439,7 +439,7 @@ def main():
     project_dir = script_dir.parent
     containerfiles_dir = project_dir / "containerfiles"
 
-    print("=== Building HotStack-OS Container Images ===\n")
+    print("=== Building HotsTac(k)os Container Images ===\n")
 
     # Load environment configuration from .env file (if not already in environment)
     load_env_file(args.env_file)

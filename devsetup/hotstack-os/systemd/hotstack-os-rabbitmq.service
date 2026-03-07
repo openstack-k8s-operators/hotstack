@@ -14,7 +14,7 @@
 # under the License.
 
 [Unit]
-Description=HotStack-OS RabbitMQ Service
+Description=HotsTac(k)os RabbitMQ Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-infra-setup.service
 Requires=hotstack-os-infra-setup.service

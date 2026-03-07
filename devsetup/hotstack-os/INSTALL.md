@@ -1,6 +1,6 @@
-# HotStack-OS Installation Guide
+# HotsTac(k)os Installation Guide
 
-This guide covers installing HotStack-OS as systemd services.
+This guide covers installing HotsTac(k)os as systemd services.
 
 ## Prerequisites
 
@@ -79,7 +79,7 @@ sudo make uninstall
 ```
 
 This:
-- Stops all HotStack-OS services (via `systemctl stop hotstack-os.target`)
+- Stops all HotsTac(k)os services (via `systemctl stop hotstack-os.target`)
 - Disables automatic startup (via `systemctl disable hotstack-os.target`)
 - Removes systemd service units from `/etc/systemd/system/`
 - Removes helper scripts from `/usr/local/bin/`
@@ -100,7 +100,7 @@ sudo make clean
 ```
 
 **WARNING**: This destroys:
-- All HotStack-OS containers and images
+- All HotsTac(k)os containers and images
 - All persistent data (databases, images, volumes)
 - All libvirt VMs with pattern `notapet-<uuid>`
 - Libvirt session service and hotstack user

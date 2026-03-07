@@ -14,7 +14,7 @@
 # under the License.
 
 [Unit]
-Description=HotStack-OS Heat API Service
+Description=HotsTac(k)os Heat API Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-mariadb.service hotstack-os-rabbitmq.service hotstack-os-keystone.service hotstack-os-dnsmasq.service hotstack-os-haproxy.service hotstack-os-infra-setup.service
 Requires=hotstack-os-infra-setup.service

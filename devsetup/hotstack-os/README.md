@@ -1,4 +1,4 @@
-# HotStack-OS - Containerized OpenStack for HotStack Development
+# HotsTac(k)os - Containerized OpenStack for HotStack Development
 
 A minimal containerized OpenStack deployment designed for running HotStack scenarios on developer workstations, managed via systemd for production-like service management.
 
@@ -32,7 +32,7 @@ Then set `export OS_CLOUD=hotstack-os` for regular user access or `export OS_CLO
 
 ## Architecture
 
-HotStack-OS uses a hybrid architecture with OpenStack control plane services running in containers (22 total) while integrating with host libvirt (KVM) and OpenvSwitch for compute and networking. All services are accessible through a load balancer at `172.31.0.129` (hot-ex interface). See **[ARCHITECTURE.md](ARCHITECTURE.md)** for detailed information on components, networking, security, and data persistence.
+HotsTac(k)os uses a hybrid architecture with OpenStack control plane services running in containers (22 total) while integrating with host libvirt (KVM) and OpenvSwitch for compute and networking. All services are accessible through a load balancer at `172.31.0.129` (hot-ex interface). See **[ARCHITECTURE.md](ARCHITECTURE.md)** for detailed information on components, networking, security, and data persistence.
 
 ## Smoke Test
 
@@ -44,10 +44,10 @@ The default configuration works for most development environments. If you need t
 
 ## Coexistence with Other Workloads
 
-HotStack-OS is designed to coexist safely with other podman containers and workloads. The setup uses project-scoped resources and explicit naming to avoid conflicts.
+HotsTac(k)os is designed to coexist safely with other podman containers and workloads. The setup uses project-scoped resources and explicit naming to avoid conflicts.
 
 **⚠️ WARNING about `make clean`:**
-- Removes all HotStack-OS containers, images, and persistent data
+- Removes all HotsTac(k)os containers, images, and persistent data
 - **Destroys ALL libvirt VMs matching pattern `notapet-<uuid>` in the session**
 - **Removes ALL network namespaces matching pattern `netns-*`**
 - Removes libvirt session service and hotstack user

@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-"""Smoke test for HotStack-OS
+"""Smoke test for HotsTac(k)os
 
 Creates a Heat stack with test resources and validates the deployment:
 - Networks, subnets, routers
@@ -316,7 +316,7 @@ def verify_resources(conn, stack_name):
 
 def run_smoke_test(args):
     """Main smoke test execution"""
-    print("HotStack-OS smoke test...")
+    print("HotsTac(k)os smoke test...")
     print()
 
     # Check if running as root (not recommended)
@@ -475,7 +475,7 @@ def run_smoke_test(args):
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(
-        description="HotStack-OS smoke test - create and validate test resources"
+        description="HotsTac(k)os smoke test - create and validate test resources"
     )
 
     parser.add_argument(
@@ -562,7 +562,7 @@ def main():
 
     # Cleanup only mode
     if args.cleanup_only:
-        print("HotStack-OS smoke test cleanup...")
+        print("HotsTac(k)os smoke test cleanup...")
         print()
         try:
             conn = openstack.connect(cloud=args.cloud)

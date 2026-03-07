@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# HotStack-OS Infrastructure Setup Script
+# HotsTac(k)os Infrastructure Setup Script
 # Sets up network (OVS bridges, /etc/hosts) and storage directories for systemd deployment
 # This script is idempotent and safe to run multiple times
 
@@ -55,7 +55,7 @@ SERVICE_DATA_DIRS=(
     "cinder"
 )
 
-echo "HotStack-OS Infrastructure Setup..."
+echo "HotsTac(k)os Infrastructure Setup..."
 
 # Verify hotstack user exists (should be created by create-hotstack-user.sh)
 if ! id hotstack &>/dev/null; then

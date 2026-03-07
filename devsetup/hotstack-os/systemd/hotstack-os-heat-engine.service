@@ -14,7 +14,7 @@
 # under the License.
 
 [Unit]
-Description=HotStack-OS Heat Engine Service
+Description=HotsTac(k)os Heat Engine Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-heat-api.service hotstack-os-infra-setup.service
 Requires=hotstack-os-infra-setup.service

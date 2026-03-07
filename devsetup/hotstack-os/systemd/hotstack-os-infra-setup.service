@@ -14,7 +14,7 @@
 # under the License.
 
 [Unit]
-Description=HotStack-OS Infrastructure Setup
+Description=HotsTac(k)os Infrastructure Setup
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=openvswitch.service network-online.target
 Wants=network-online.target
