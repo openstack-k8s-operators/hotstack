@@ -28,6 +28,24 @@
       - ^ci/playbooks/post-hotstack-os\.yml
 
 - job:
+    name: base-hotstack-vexxhost
+    parent: base-hotstack
+    nodeset: hotstack-image-vexxhost
+    description: |
+      Base job for Hotstack scenarios on Vexxhost
+    vars:
+      cloud_name: vexxhost
+      stack_parameter_overrides:
+        cdrom_disk_bus: sata
+      hotstack_enable_nova_console_poller: true
+      hotstack_enable_nova_console_recorder: true
+    pre-run:
+      - ci/playbooks/pre-deploy.yml
+    run:
+      - ci/playbooks/run-deploy.yml
+      - ci/playbooks/run-tests.yml
+
+- job:
     name: vexxhost-hotstack-ipxe-image
     parent: base-hotstack-ixpe-image-periodic
     nodeset: hotstack-image-vexxhost
@@ -124,6 +142,8 @@
             cd_image: sushy-tools-blank-image
             # vpu: 2 ram 4GB disk: 40GB
             flavor: ci.m1.medium
+    pre-run:
+      - ci/playbooks/pre-deploy.yml
     run:
       - ci/playbooks/run-deploy.yml
       - ci/playbooks/run-tests.yml
