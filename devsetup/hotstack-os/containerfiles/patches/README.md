@@ -1,24 +1,35 @@
 # Patches
 
-This directory contains patches applied to OpenStack services during the container build process.
+This directory is reserved for patches that need to be applied to OpenStack services during the container build process.
 
----
+## How to Apply Patches
 
-## Heat Patches
+If you need to apply a patch to an OpenStack service:
 
-### heat-add-sata-disk-bus.patch
+1. **Add the patch file** to this directory (e.g., `service-name-fix.patch`)
 
-**Source**: https://review.opendev.org/c/openstack/heat/+/966688
-**Upstream Commit**: 8319172da0f8188162594c629190e43b098d10e5
-**Author**: Harald Jensås <hjensas@redhat.com>
-**Date**: Tue, 11 Nov 2025 15:55:46 +0100
-**Story**: https://storyboard.openstack.org/#!/story/2011600
-**Task**: 53096
+2. **Update the corresponding containerfile** to copy and apply the patch:
 
-#### Description
+```dockerfile
+# Example: Applying a patch to Heat
+COPY patches/heat-fix-something.patch /tmp/heat-fix-something.patch
+RUN git clone --depth 1 --branch ${OPENSTACK_BRANCH} \
+        https://opendev.org/openstack/heat /tmp/heat && \
+    cd /tmp/heat && \
+    patch -p1 < /tmp/heat-fix-something.patch && \
+    pip3 install --no-cache-dir --break-system-packages \
+        -c https://opendev.org/openstack/requirements/raw/branch/${OPENSTACK_BRANCH}/upper-constraints.txt \
+        . [additional-packages]
+```
 
-Adds `sata` as a valid value for the `disk_bus` property in `OS::Nova::Server` resource's `block_device_mapping_v2`. The SATA disk bus was added to Nova in the Queens release, but Heat's validation constraints were not updated to allow it.
+3. **Document the patch** in this README with:
+   - Source review URL (if from OpenStack Gerrit)
+   - Upstream commit hash (if merged)
+   - Description of what the patch does
+   - Why it's needed (e.g., not yet backported to stable branch)
 
-#### Why This Patch Is Needed
+4. **Remove the patch** once it's merged upstream in the target branch
 
-Different OVMF/EDK2 firmware versions may have issues booting from SCSI CD-ROM devices but work correctly with SATA CD-ROM devices. When using Metal3/Ironic virtual media boot with UEFI systems, the CD-ROM device may need to use SATA bus for proper boot detection. This patch was merged upstream but has not been backported to the stable/2025.1 (Epoxy) branch.
+## Currently Applied Patches
+
+None - all required patches have been merged upstream.
