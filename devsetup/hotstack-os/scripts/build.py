@@ -158,7 +158,7 @@ class ImageBuilder:
         :param target: Optional build target stage
         :returns: Tuple of (image_name, success, error_message)
         """
-        cmd = ["podman", "build"]
+        cmd = ["buildah", "bud"]
 
         if target:
             cmd.extend(["--target", target])
@@ -284,7 +284,7 @@ class ImageBuilder:
         for image, error in failed_builds:
             print(f"\n{image}:")
             print(f"  {error[:500]}")  # Truncate long errors
-        print("\nIf you see permission errors, try: podman system reset -f")
+        print("\nIf you see permission errors, try: buildah unshare buildah rm --all")
         print(
             f"If you see storage/layer errors, try reducing BUILD_PARALLEL in .env (current: {self.parallel_jobs})"
         )

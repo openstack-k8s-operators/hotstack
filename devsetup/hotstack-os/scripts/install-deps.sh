@@ -44,6 +44,7 @@ fi
 check_and_queue_package "libvirt"
 check_and_queue_package "qemu-kvm"
 check_and_queue_package "podman"
+check_and_queue_package "buildah"
 check_and_queue_package "make"
 check_and_queue_package "nmap-ncat"
 if is_centos; then
