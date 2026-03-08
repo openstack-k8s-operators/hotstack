@@ -8,7 +8,7 @@ RUN git clone --depth 1 --branch ${OPENSTACK_BRANCH} \
     cd /tmp/nova && \
     pip3 install --no-cache-dir --break-system-packages \
         -c https://opendev.org/openstack/requirements/raw/branch/${OPENSTACK_BRANCH}/upper-constraints.txt \
-        . libvirt-python pymysql python-memcached python-openstackclient && \
+        . libvirt-python pymysql python-memcached python-openstackclient novnc && \
     mkdir -p /etc/nova /etc/nova/rootwrap.d && \
     cp /tmp/nova/etc/nova/api-paste.ini /etc/nova/ && \
     cp /tmp/nova/etc/nova/rootwrap.conf /etc/nova/ && \
@@ -34,7 +34,6 @@ RUN apt-get update && \
         libvirt-clients \
         genisoimage \
         sysfsutils \
-        novnc \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages and config from builder
@@ -43,7 +42,9 @@ COPY --from=builder /etc/nova /etc/nova
 
 # Create directories and user
 # Create kvm group and add root to it to allow access to libvirt session socket (0770 permissions)
-RUN mkdir -p /var/lib/nova/instances /var/lock/nova && \
+# Extract noVNC web files from the pip package to /usr/share/novnc
+RUN mkdir -p /var/lib/nova/instances /var/lock/nova /usr/share/novnc && \
+    python3 -m zipfile -e /usr/local/lib/python3.11/dist-packages/novnc/resources/novnc_server.zip /usr/share/novnc && \
     (useradd -m -d /var/lib/nova -s /bin/bash nova || true) && \
     chown -R nova:nova /var/lib/nova /var/lock/nova && \
     (groupadd -g ${KVM_GID} kvm || true) && \
