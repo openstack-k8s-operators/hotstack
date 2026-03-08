@@ -44,10 +44,10 @@ controller_dib_build: controller_dib_setup
 	@mkdir -p $(CONTROLLER_DIB_WORKDIR)/cache
 	@. $(CONTROLLER_DIB_VENV)/bin/activate && \
 		cd $(CURDIR) && \
-		ELEMENTS_PATH=$(CURDIR)/elements \
+		ELEMENTS_PATH=$(CURDIR)/dib/elements \
 		DIB_IMAGE_CACHE=$(CONTROLLER_DIB_WORKDIR)/cache \
 		DIB_DEBUG_TRACE=1 \
-		diskimage-builder controller-image.yaml
+		diskimage-builder dib/controller-image.yaml
 	@echo "Controller image built successfully: $(CONTROLLER_IMAGE_NAME)"
 
 controller_convert:
