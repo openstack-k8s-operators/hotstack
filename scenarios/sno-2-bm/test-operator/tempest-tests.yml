@@ -17,6 +17,7 @@ spec:
           auth.create_isolated_networks false
           baremetal.available_nodes 2
           baremetal.max_microversion 1.82
+          compute-feature-enabled.config_drive true
           compute-feature-enabled.disk_config false
           compute-feature-enabled.interface_attach false
           compute.fixed_network_name provisioning
