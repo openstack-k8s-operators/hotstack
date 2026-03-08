@@ -129,6 +129,17 @@
       - ^roles/.*
 
 - job:
+    name: vexxhost-hotstack-3-nodes-pod-test
+    parent: base-hotstack-vexxhost
+    nodeset: hotstack-pod-test
+    description: |
+      Hotstack scenario: 3-nodes (pod-based test)
+    timeout: 10800
+    attempts: 1
+    vars:
+      scenario: 3-nodes
+
+- job:
     name: vexxhost-hotstack-3-nodes-update
     parent: base-hotstack-vexxhost
     nodeset: hotstack-image-vexxhost

@@ -3,14 +3,4 @@
     name: openstack-k8s-operators/hotstack
     github-check:
       jobs:
-        - hotstack-pre-commit
-        - devsetup-hotstack-os
-        - vexxhost-hotstack-ipxe-image
-        - vexxhost-hotstack-blank-image
-        - vexxhost-hotstack-controller-image
-    github-experimental-trigger:
-      jobs:
-        - vexxhost-hotstack-sno-2-bm
-        - vexxhost-hotstack-3-nodes
-        - vexxhost-hotstack-3-nodes-update
-        - vexxhost-hotstack-multi-nodeset
+        - vexxhost-hotstack-3-nodes-pod-test
