@@ -34,7 +34,8 @@ prepare_all_configs
 
 echo ""
 echo "Configuration complete!"
-echo "Runtime configs prepared in: $CONFIGS_RUNTIME_DIR"
-echo "Runtime scripts prepared in: $SCRIPTS_RUNTIME_DIR"
-echo "clouds.yaml copied to: ${HOTSTACK_DATA_DIR}/clouds.yaml and $(pwd)/clouds.yaml"
+echo ""
+echo -e "${INFO} Runtime configs prepared in: $CONFIGS_RUNTIME_DIR"
+echo -e "${INFO} Runtime scripts prepared in: $SCRIPTS_RUNTIME_DIR"
+echo -e "${INFO} clouds.yaml copied to: ${HOTSTACK_DATA_DIR}/clouds.yaml and $(pwd)/clouds.yaml"
 echo ""

@@ -154,7 +154,7 @@ create-user:
 	$(call require-root,create-user)
 	@$(SCRIPT_DIR)/create-hotstack-user.sh
 
-install: install-deps create-user config
+install: create-user config
 	$(call require-root,install)
 	@$(SCRIPT_DIR)/install-systemd.sh
 

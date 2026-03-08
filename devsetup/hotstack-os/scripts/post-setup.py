@@ -34,6 +34,7 @@ class Colors:
     RED = "\033[0;31m"
     GREEN = "\033[0;32m"
     YELLOW = "\033[1;33m"
+    BLUE = "\033[0;34m"
     NC = "\033[0m"  # No Color
 
     # Status indicators
@@ -41,6 +42,7 @@ class Colors:
     WARNING = f"{YELLOW}[WARNING]{NC}"
     ERROR = f"{RED}[ERROR]{NC}"
     DONE = f"{GREEN}[DONE]{NC}"
+    INFO = f"{BLUE}[INFO]{NC}"
 
 
 # Cache directory for downloaded images
@@ -260,6 +262,12 @@ def print_success(message, indent=True):
 def print_warning(message):
     """Print warning message in yellow"""
     print(f"{Colors.WARNING} {message}")
+
+
+def print_info(message, indent=True):
+    """Print info message in blue"""
+    prefix = "  " if indent else ""
+    print(f"{prefix}{Colors.INFO} {message}")
 
 
 def print_error(message):
@@ -910,10 +918,8 @@ def download_images(conn, image_urls):
 def upload_images(conn, images_to_upload):
     """Upload images to Glance"""
     if not images_to_upload:
-        print("  No new images to upload")
+        print_info("No new images to upload")
         return
-
-    print("")
 
     for item in images_to_upload:
         spec = item["spec"]

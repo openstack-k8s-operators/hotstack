@@ -463,7 +463,7 @@ process_config_files() {
         return 1
     fi
 
-    echo -e "$OK Processed ${description}"
+    echo -e "  $OK Processed ${description}"
 }
 
 # Get upstream DNS servers from /etc/resolv.conf

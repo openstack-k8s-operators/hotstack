@@ -49,7 +49,7 @@ while [ $ELAPSED -lt $MAX_WAIT ]; do
 
     # Show progress every 10 seconds
     if [ $((ELAPSED % 10)) -eq 0 ] && [ $ELAPSED -gt 0 ]; then
-        echo "  Still waiting... ($ACTIVE_COUNT services stopping)"
+        echo -e "  $INFO Still waiting... ($ACTIVE_COUNT services stopping)"
     fi
 
     sleep 1
@@ -69,13 +69,11 @@ fi
 
 systemctl disable hotstack-os.target 2>/dev/null || true
 echo -e "  $OK Services stopped"
-echo ""
 
 # Note: Libvirt session is NOT stopped during uninstall to preserve running VMs
 # To clean up the libvirt session and VMs, run: sudo make clean
-echo "Libvirt session preserved (VMs will continue running)"
-echo "  To stop libvirt session and clean VMs: sudo make clean"
-echo ""
+echo -e "  $INFO Libvirt session preserved (VMs will continue running)"
+echo -e "  $INFO To stop libvirt session and clean VMs: sudo make clean"
 
 # Remove systemd units
 rm -f /etc/systemd/system/hotstack-os*.service
