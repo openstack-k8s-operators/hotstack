@@ -35,8 +35,27 @@
       Base job for Hotstack scenarios on Vexxhost
     vars:
       cloud_name: vexxhost
-      stack_parameter_overrides:
-        cdrom_disk_bus: sata
+      scenario_dir: >-
+        {{
+          [
+            ansible_user_dir,
+            zuul.projects['github.com/openstack-k8s-operators/hotstack'].src_dir,
+            'scenarios'
+          ] | ansible.builtin.path_join
+        }}
+      hotstack_overrides:
+        stack_parameters:
+          cdrom_disk_bus: sata
+          compute_params:
+            image: cs9stream-genericcloud
+          networker_params:
+            image: cs9stream-genericcloud
+          bmh_params:
+            image: cs9stream-genericcloud
+          ironic_params:
+            image: cs9stream-genericcloud
+            # vpu: 2 ram 4GB disk: 40GB
+            flavor: ci.m1.medium
       hotstack_enable_nova_console_poller: true
       hotstack_enable_nova_console_recorder: true
     pre-run:
@@ -83,271 +102,59 @@
 
 - job:
     name: vexxhost-hotstack-sno-2-bm
-    parent: base-hotstack
+    parent: base-hotstack-vexxhost
     nodeset: hotstack-image-vexxhost
     description: |
       Hotstack scenario: sno-2-bm
     timeout: 5400
     attempts: 1
     vars:
-      cloud_name: vexxhost
       scenario: sno-2-bm
-      scenario_dir: >-
-        {{
-          [
-            ansible_user_dir,
-            zuul.projects['github.com/openstack-k8s-operators/hotstack'].src_dir,
-            'scenarios'
-          ] | ansible.builtin.path_join
-        }}
-      hotstack_enable_nova_console_poller: true
-      hotstack_enable_nova_console_recorder: true
-      hotstack_overrides:
-        stack_parameters:
-          net_value_specs:
-            mtu: 1450
-          dns_servers:
-            - 199.204.44.24
-            - 199.204.47.54
-          ntp_servers: []
-          router_external_network: public
-          floating_ip_network: public
-          controller_params:
-            image: hotstack-controller
-            # vpu: 1 ram 2GB disk: 20GB
-            flavor: ci.m1.small
-          ocp_master_params:
-            image: ipxe-boot-usb
-            # vpu: 16 ram 48GB disk: 200GB
-            flavor: 16vcpu_48GB
-          ocp_worker_params:
-            image: ipxe-boot-usb
-            # vpu: 12 ram 32GB disk: 200GB
-            flavor: 12vcpu_32GB
-          compute_params:
-            image: cs9stream-genericcloud
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-          networker_params:
-            image: cs9stream-genericcloud
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-          bmh_params:
-            image: cs9stream-genericcloud
-            cd_image: sushy-tools-blank-image
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-          ironic_params:
-            image: cs9stream-genericcloud
-            cd_image: sushy-tools-blank-image
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-    pre-run:
-      - ci/playbooks/pre-deploy.yml
-    run:
-      - ci/playbooks/run-deploy.yml
-      - ci/playbooks/run-tests.yml
+      stack_template_path: "{{ scenario_dir }}/{{ scenario }}/heat_template_ipxe.yaml"
     files:
       - ^scenarios/sno-2-bm/.*
 
 - job:
     name: vexxhost-hotstack-3-nodes
-    parent: base-hotstack
+    parent: base-hotstack-vexxhost
     nodeset: hotstack-image-vexxhost
     description: |
       Hotstack scenario: 3-nodes
     timeout: 10800
     attempts: 1
     vars:
-      cloud_name: vexxhost
       scenario: 3-nodes
-      scenario_dir: >-
-        {{
-          [
-            ansible_user_dir,
-            zuul.projects['github.com/openstack-k8s-operators/hotstack'].src_dir,
-            'scenarios'
-          ] | ansible.builtin.path_join
-        }}
-      hotstack_enable_nova_console_poller: true
-      hotstack_enable_nova_console_recorder: true
-      hotstack_overrides:
-        stack_parameters:
-          dns_servers:
-            - 199.204.44.24
-            - 199.204.47.54
-          ntp_servers: []
-          router_external_network: public
-          floating_ip_network: public
-          controller_params:
-            image: hotstack-controller
-            # vpu: 1 ram 2GB disk: 20GB
-            flavor: ci.m1.small
-          ocp_master_params:
-            image: ipxe-boot-usb
-            # vpu: 16 ram 48GB disk: 200GB
-            flavor: 16vcpu_48GB
-          ocp_worker_params:
-            image: ipxe-boot-usb
-            # vpu: 12 ram 32GB disk: 200GB
-            flavor: 12vcpu_32GB
-          compute_params:
-            image: cs9stream-genericcloud
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-          networker_params:
-            image: cs9stream-genericcloud
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-          bmh_params:
-            image: cs9stream-genericcloud
-            cd_image: sushy-tools-blank-image
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-          ironic_params:
-            image: cs9stream-genericcloud
-            cd_image: sushy-tools-blank-image
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-    run:
-      - ci/playbooks/run-deploy.yml
-      - ci/playbooks/run-tests.yml
     files:
       - ^scenarios/3-nodes/.*
       - ^roles/.*
 
 - job:
     name: vexxhost-hotstack-3-nodes-update
-    parent: base-hotstack
+    parent: base-hotstack-vexxhost
     nodeset: hotstack-image-vexxhost
     description: |
       Hotstack scenario: 3-nodes
     timeout: 10800
     attempts: 1
     vars:
-      cloud_name: vexxhost
       scenario: 3-nodes
-      scenario_dir: >-
-        {{
-          [
-            ansible_user_dir,
-            zuul.projects['github.com/openstack-k8s-operators/hotstack'].src_dir,
-            'scenarios'
-          ] | ansible.builtin.path_join
-        }}
       openstack_operators_update: true
       openstack_update: true
       openstack_operators_image: quay.io/openstack-k8s-operators/openstack-operator-index-upgrade:latest
       openstack_operator_channel: alpha
       openstack_operator_starting_csv: v0.4.0
-      hotstack_enable_nova_console_poller: true
-      hotstack_enable_nova_console_recorder: true
-      hotstack_overrides:
-        stack_parameters:
-          dns_servers:
-            - 199.204.44.24
-            - 199.204.47.54
-          ntp_servers: []
-          router_external_network: public
-          floating_ip_network: public
-          controller_params:
-            image: hotstack-controller
-            # vpu: 1 ram 2GB disk: 20GB
-            flavor: ci.m1.small
-          ocp_master_params:
-            image: ipxe-boot-usb
-            # vpu: 16 ram 48GB disk: 200GB
-            flavor: 16vcpu_48GB
-          ocp_worker_params:
-            image: ipxe-boot-usb
-            # vpu: 12 ram 32GB disk: 200GB
-            flavor: 12vcpu_32GB
-          compute_params:
-            image: cs9stream-genericcloud
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-          networker_params:
-            image: cs9stream-genericcloud
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-          bmh_params:
-            image: cs9stream-genericcloud
-            cd_image: sushy-tools-blank-image
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-          ironic_params:
-            image: cs9stream-genericcloud
-            cd_image: sushy-tools-blank-image
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.small
-    run:
-      - ci/playbooks/run-deploy.yml
-      - ci/playbooks/run-tests.yml
     files:
       - ^scenarios/3-nodes/.*
 
 - job:
     name: vexxhost-hotstack-multi-nodeset
-    parent: base-hotstack
+    parent: base-hotstack-vexxhost
     nodeset: hotstack-image-vexxhost
     description: |
       Hotstack scenario: multi-nodeset
     timeout: 10800
     attempts: 1
     vars:
-      cloud_name: vexxhost
       scenario: multi-nodeset
-      scenario_dir: >-
-        {{
-          [
-            ansible_user_dir,
-            zuul.projects['github.com/openstack-k8s-operators/hotstack'].src_dir,
-            'scenarios'
-          ] | ansible.builtin.path_join
-        }}
-      hotstack_enable_nova_console_poller: true
-      hotstack_enable_nova_console_recorder: true
-      hotstack_overrides:
-        stack_parameters:
-          dns_servers:
-            - 199.204.44.24
-            - 199.204.47.54
-          ntp_servers: []
-          router_external_network: public
-          floating_ip_network: public
-          controller_params:
-            image: hotstack-controller
-            # vpu: 1 ram 2GB disk: 20GB
-            flavor: ci.m1.small
-          ocp_master_params:
-            image: ipxe-boot-usb
-            # vpu: 16 ram 48GB disk: 200GB
-            flavor: 16vcpu_48GB
-          ocp_worker_params:
-            image: ipxe-boot-usb
-            # vpu: 12 ram 32GB disk: 200GB
-            flavor: 12vcpu_32GB
-          compute_params:
-            image: cs9stream-genericcloud
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-          networker_params:
-            image: cs9stream-genericcloud
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-          bmh_params:
-            image: sushy-tools-blank-image
-            cd_image: sushy-tools-blank-image
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-          ironic_params:
-            image: sushy-tools-blank-image
-            cd_image: sushy-tools-blank-image
-            # vpu: 2 ram 4GB disk: 40GB
-            flavor: ci.m1.medium
-          cdrom_disk_bus: sata
-    run:
-      - ci/playbooks/run-deploy.yml
-      - ci/playbooks/run-tests.yml
     files:
       - ^scenarios/multi-nodeset/.*
