@@ -439,8 +439,6 @@ def main():
     project_dir = script_dir.parent
     containerfiles_dir = project_dir / "containerfiles"
 
-    print("=== Building HotsTac(k)os Container Images ===\n")
-
     # Load environment configuration from .env file (if not already in environment)
     load_env_file(args.env_file)
 

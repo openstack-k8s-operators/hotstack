@@ -29,9 +29,6 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-echo "Installing HotsTac(k)os systemd services..."
-echo ""
-
 # Check if container images are available
 echo "Checking for container images..."
 MISSING_IMAGES=()
@@ -110,7 +107,6 @@ echo ""
 
 # Run infra-setup to ensure hotstack user exists
 /usr/local/bin/hotstack-os-infra-setup.sh
-echo ""
 
 # Setup libvirt session for hotstack user
 echo "Setting up libvirt session for hotstack user..."
@@ -199,6 +195,7 @@ echo -e "  $OK Libvirt session setup complete"
 echo ""
 
 # Process and install systemd units
+echo "Installing systemd service units..."
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
@@ -245,12 +242,9 @@ process_config_files "$tmpdir" "systemd units" \
     "__GLOBAL_PHYSNET_MTU__" "${GLOBAL_PHYSNET_MTU:-1500}"
 
 install -m 644 "$tmpdir"/* /etc/systemd/system/
-echo -e "$OK Installed systemd units to /etc/systemd/system/"
-echo ""
-
-# Reload systemd
+echo -e "  $OK Installed systemd units to /etc/systemd/system/"
 systemctl daemon-reload
-echo -e "$OK Systemd reloaded"
+echo -e "  $OK Systemd reloaded"
 echo ""
 
 echo "Installation complete!"

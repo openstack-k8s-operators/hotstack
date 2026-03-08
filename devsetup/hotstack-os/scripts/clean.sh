@@ -60,8 +60,8 @@ else
     echo -e "  $WARNING No hotstack user found"
 fi
 
-podman network rm hotstack-os 2>/dev/null || true
-echo -e "  $OK Removed podman network"
+podman network rm hotstack-os >/dev/null 2>&1 || true
+echo -e "  $OK Removed podman network 'hotstack-os'"
 
 podman volume rm hotstack-os-mariadb hotstack-os-rabbitmq hotstack-os-ovn 2>/dev/null || true
 echo -e "  $OK Removed podman volumes"

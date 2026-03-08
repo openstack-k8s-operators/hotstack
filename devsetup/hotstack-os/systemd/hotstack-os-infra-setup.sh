@@ -58,18 +58,17 @@ SERVICE_DATA_DIRS=(
 echo "HotsTac(k)os Infrastructure Setup..."
 
 # Verify hotstack user exists (should be created by create-hotstack-user.sh)
-if ! id hotstack &>/dev/null; then
+if ! id hotstack &>/dev/null 2>&1; then
     echo "ERROR: hotstack user does not exist"
     echo "This should have been created by the install process"
     exit 1
 fi
-echo -e "  $OK hotstack user verified (UID: $(id -u hotstack))"
 
 # Create Podman network for containers
 if podman network exists hotstack-os 2>/dev/null; then
     echo -e "  $OK Podman network 'hotstack-os' already exists"
 else
-    podman network create --subnet="$CONTAINER_NETWORK" hotstack-os
+    podman network create --subnet="$CONTAINER_NETWORK" hotstack-os >/dev/null
     echo -e "  $OK Podman network 'hotstack-os' created with subnet $CONTAINER_NETWORK"
 fi
 
@@ -106,11 +105,11 @@ echo -e "  $OK hot-ex MTU set to $GLOBAL_PHYSNET_MTU"
 
 # Assign IP to hot-ex bridge internal interface
 if ip addr show hot-ex | grep -q "$BREX_IP"; then
-    echo -e "$OK hot-ex already has IP $BREX_IP configured"
+    echo -e "  $OK hot-ex already has IP $BREX_IP configured"
 else
     ip addr add "${BREX_IP}/25" dev hot-ex
     ip link set hot-ex up
-    echo -e "$OK Assigned IP $BREX_IP to hot-ex bridge"
+    echo -e "  $OK Assigned IP $BREX_IP to hot-ex bridge"
 fi
 
 # Ensure hot-ex is up
@@ -121,14 +120,14 @@ echo -e "  $OK hot-ex configured for provider networks ($PROVIDER_NETWORK)"
 # Configure firewall for provider network
 if command -v firewall-cmd >/dev/null 2>&1; then
     if ! firewall-cmd --zone=trusted --query-source="$PROVIDER_NETWORK" &>/dev/null; then
-        firewall-cmd --zone=trusted --add-source="$PROVIDER_NETWORK" --permanent
-        firewall-cmd --reload
+        firewall-cmd --zone=trusted --add-source="$PROVIDER_NETWORK" --permanent >/dev/null
+        firewall-cmd --reload >/dev/null
         echo -e "  $OK Provider network added to trusted firewall zone"
     else
         echo -e "  $OK Provider network already in trusted zone"
     fi
 else
-    echo -e "  $WARN firewalld not found, skipping firewall configuration"
+    echo -e "  $WARNING firewalld not found, skipping firewall configuration"
 fi
 
 # Configure /etc/hosts entries

@@ -55,16 +55,14 @@ fi
 
 install_queued_packages
 
-# Enable and start required system services
+echo "Enabling and starting required system services..."
 setup_libvirt_services || exit 1
 verify_libvirt || exit 1
 
 setup_openvswitch_service || exit 1
 
 echo ""
-echo "Dependencies installed!"
-echo ""
-echo "System packages and services are now ready."
+echo "Dependencies installed! System packages and services are now ready."
 echo ""
 echo "Next step: sudo make build && sudo make install"
 echo ""

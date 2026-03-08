@@ -51,14 +51,14 @@ fi
 if command -v firewall-cmd >/dev/null 2>&1; then
     if firewall-cmd --zone=trusted --query-source="$PROVIDER_NETWORK" &>/dev/null; then
         echo "Removing provider network from firewall trusted zone..."
-        firewall-cmd --zone=trusted --remove-source="$PROVIDER_NETWORK" --permanent
-        firewall-cmd --reload
+        firewall-cmd --zone=trusted --remove-source="$PROVIDER_NETWORK" --permanent >/dev/null
+        firewall-cmd --reload >/dev/null
         echo -e "$OK Provider network removed from trusted zone"
     else
         echo -e "$OK Provider network not in trusted zone"
     fi
 else
-    echo -e "$OK firewalld not found, skipping firewall cleanup"
+    echo -e "$WARNING firewalld not found, skipping firewall cleanup"
 fi
 
 echo "=== Infrastructure Cleanup Complete ==="
