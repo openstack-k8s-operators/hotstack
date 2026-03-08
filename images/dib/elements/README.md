@@ -27,7 +27,7 @@ Custom element for building the HotStack controller node image.
 
 ## Usage
 
-These elements are used automatically by the Makefiles when building images with diskimage-builder. They are referenced in the image configuration YAML files (e.g., `controller-image.yaml`).
+These elements are used automatically by the Makefiles when building images with diskimage-builder. They are referenced in the image configuration YAML files (e.g., `../controller-image.yaml`).
 
 ## Creating New Elements
 

@@ -12,7 +12,7 @@ deployments. The tasks are executed using the `make` utility.
 
 - **controller**: A customized CentOS 9 Stream image with packages needed for
   the hotstack controller node. Built using diskimage-builder (DIB) with custom
-  elements.
+  elements from the `dib/` subdirectory.
 - **blank**: A minimal blank image used for virtual baremetal node disks with
   Redfish virtual BMC
 - **nat64**: A NAT64 appliance image built using ci-framework for IPv6-only
@@ -102,8 +102,8 @@ directly use qcow2 images for VM disks.
   - `controller_dib_setup`: Creates a Python virtual environment and installs
     diskimage-builder.
   - `controller_dib_build`: Builds the controller image using DIB with the
-    configuration from `controller-image.yaml` and the custom `hotstack-controller`
-    element from `elements/`.
+    configuration from `dib/controller-image.yaml` and the custom `hotstack-controller`
+    element from `dib/elements/`.
   - `controller_convert`: Converts the image to the format specified by
     `CONTROLLER_IMAGE_FORMAT` (in-place conversion if `raw`).
   - `controller_clean`: Removes the controller image, virtual environment, and
@@ -151,7 +151,7 @@ make clean
    ```
 
    This will create a Python virtual environment, install diskimage-builder,
-   build the image using the configuration from `controller-image.yaml`, and
+   build the image using the configuration from `dib/controller-image.yaml`, and
    convert it to raw format (default).
 
 2. Upload the controller image to Glance:
