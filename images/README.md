@@ -13,6 +13,11 @@ deployments. The tasks are executed using the `make` utility.
 - **controller**: A customized CentOS 9 Stream image with packages needed for
   the hotstack controller node. Built using diskimage-builder (DIB) with custom
   elements from the `dib/` subdirectory.
+- **microshift**: A CentOS 9 Stream image with MicroShift packages installed
+  from GitHub releases. Built using diskimage-builder (DIB) with the
+  `hotstack-microshift` element. The image is intentionally unconfigured and
+  requires cloud-init or manual setup to enable services and configure runtime
+  settings.
 - **blank**: A minimal blank image used for virtual baremetal node disks with
   Redfish virtual BMC
 - **nat64**: A NAT64 appliance image built using ci-framework for IPv6-only
@@ -108,6 +113,18 @@ directly use qcow2 images for VM disks.
     `CONTROLLER_IMAGE_FORMAT` (in-place conversion if `raw`).
   - `controller_clean`: Removes the controller image, virtual environment, and
     build artifacts.
+- `microshift`: Builds the MicroShift image using diskimage-builder (DIB).
+  Depends on `microshift_dib_setup`, `microshift_dib_build`, and
+  `microshift_convert`.
+  - `microshift_dib_setup`: Creates a Python virtual environment and installs
+    diskimage-builder.
+  - `microshift_dib_build`: Builds the MicroShift image using DIB with the
+    configuration from `dib/microshift-image.yaml` and the custom
+    `hotstack-microshift` element from `dib/elements/`.
+  - `microshift_convert`: Converts the image to the format specified by
+    `MICROSHIFT_IMAGE_FORMAT` (in-place conversion if `raw`).
+  - `microshift_clean`: Removes the MicroShift image, virtual environment, and
+    build artifacts.
 - `blank`: A target that creates a blank image file of the specified size in the
   format specified by `BLANK_IMAGE_FORMAT`.
 - `blank_clean`: A target that removes the blank image file.
@@ -133,6 +150,26 @@ directly use qcow2 images for VM disks.
   - `switch-host_convert`: A target that converts the image to the format
     specified by `SWITCH_HOST_IMAGE_FORMAT` (in-place conversion if `raw`).
   - `switch-host_clean`: A target that removes the switch-host image file.
+
+### MicroShift Image Variables
+
+- `MICROSHIFT_IMAGE_NAME`: The name of the MicroShift image file to be created
+  (default: `microshift.qcow2`).
+- `MICROSHIFT_IMAGE_FORMAT`: The desired format for the MicroShift image
+  (default: `raw`). Set to `qcow2` to skip conversion and keep the original
+  DIB output format.
+- `MICROSHIFT_DIB_VENV`: Path to the Python virtual environment for
+  diskimage-builder (default: `~/microshift-dib-venv`).
+- `MICROSHIFT_DIB_WORKDIR`: Working directory for DIB build artifacts and cache
+  (default: `.microshift-build`).
+- `MICROSHIFT_VERSION`: MicroShift major.minor version for dependency
+  resolution (default: `4.20`). This determines which OpenShift mirror
+  repository to enable and which GitHub release to auto-discover.
+- `DIB_MICROSHIFT_RPM_ARCHIVE`: *Optional*. Direct URL to the MicroShift RPM
+  archive (tgz file) from a GitHub release. When not set, the latest release
+  matching `MICROSHIFT_VERSION` is auto-discovered from the
+  `microshift-io/microshift` GitHub releases. Example:
+  `https://github.com/microshift-io/microshift/releases/download/4.20.0_g153ff0ca9_4.20.0_okd_scos.16/microshift-rpms-x86_64.tgz`
 
 ### Examples
 
@@ -170,6 +207,45 @@ make clean
      --disk-format qcow2 \
      --file controller.qcow2
    ```
+
+#### Building and uploading the MicroShift image to glance
+
+1. Build the MicroShift image (using diskimage-builder):
+
+   The latest RPM archive for the configured version is auto-discovered from
+   GitHub releases:
+
+   ```shell
+   make microshift \
+     MICROSHIFT_VERSION=4.20 \
+     MICROSHIFT_IMAGE_FORMAT=raw  # Optional, defaults to raw
+   ```
+
+   To pin a specific release, set `DIB_MICROSHIFT_RPM_ARCHIVE` explicitly:
+
+   ```shell
+   make microshift \
+     DIB_MICROSHIFT_RPM_ARCHIVE=https://github.com/microshift-io/microshift/releases/download/4.20.0_g153ff0ca9_4.20.0_okd_scos.16/microshift-rpms-x86_64.tgz \
+     MICROSHIFT_VERSION=4.20
+   ```
+
+   This will create a Python virtual environment, install diskimage-builder,
+   build the image using the configuration from `dib/microshift-image.yaml`, and
+   convert it to raw format (default).
+
+2. Upload the MicroShift image to Glance:
+
+   ```shell
+   openstack image create hotstack-microshift \
+     --disk-format raw \
+     --file microshift.qcow2 \
+     --property hw_firmware_type=uefi \
+     --property hw_machine_type=q35
+   ```
+
+3. See `dib/elements/hotstack-microshift/README.rst` for detailed runtime
+   configuration instructions, including firewall setup, LVM configuration for
+   TopoLVM, kubeconfig setup, and service enablement.
 
 #### Building and uploading the blank image to glance
 

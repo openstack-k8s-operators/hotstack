@@ -2,6 +2,12 @@ CONTROLLER_IMAGE_NAME        ?= controller.qcow2
 CONTROLLER_IMAGE_FORMAT      ?= raw
 CONTROLLER_DIB_VENV          ?= $(HOME)/controller-dib-venv
 CONTROLLER_DIB_WORKDIR       ?= $(CURDIR)/.controller-build
+MICROSHIFT_IMAGE_NAME        ?= microshift.qcow2
+MICROSHIFT_IMAGE_FORMAT      ?= qcow2
+MICROSHIFT_DIB_VENV          ?= $(HOME)/microshift-dib-venv
+MICROSHIFT_DIB_WORKDIR       ?= $(CURDIR)/.microshift-build
+MICROSHIFT_VERSION           ?= 4.20
+MICROSHIFT_RPM_ARCHIVE       ?=
 BLANK_IMAGE_NAME             ?= blank-image.qcow2
 BLANK_IMAGE_FORMAT           ?= raw
 BLANK_IMAGE_SIZE             ?= 1M
@@ -22,9 +28,9 @@ FORCE10_9_IMAGE             ?=
 NXOS_IMAGE                  ?=
 SONIC_IMAGE                 ?=
 
-all: controller blank nat64
+all: controller microshift blank nat64
 
-clean: controller_clean blank_clean nat64_clean
+clean: controller_clean microshift_clean blank_clean nat64_clean
 
 controller: controller_dib_setup controller_dib_build controller_convert
 
@@ -68,6 +74,52 @@ controller_clean:
 	fi
 	@if [ -d "$(CONTROLLER_DIB_WORKDIR)" ]; then \
 		sudo rm -rf $(CONTROLLER_DIB_WORKDIR); \
+	fi
+
+microshift: microshift_dib_setup microshift_dib_build microshift_convert
+
+microshift_dib_setup:
+	@if [ ! -d "$(MICROSHIFT_DIB_VENV)" ]; then \
+		echo "Creating Python virtual environment at $(MICROSHIFT_DIB_VENV)..."; \
+		python3 -m venv $(MICROSHIFT_DIB_VENV); \
+		. $(MICROSHIFT_DIB_VENV)/bin/activate && \
+		pip install --upgrade pip setuptools wheel && \
+		pip install diskimage-builder; \
+	else \
+		echo "Virtual environment already exists at $(MICROSHIFT_DIB_VENV)"; \
+	fi
+
+microshift_dib_build: microshift_dib_setup
+	@echo "Building MicroShift image using diskimage-builder..."
+	@mkdir -p $(MICROSHIFT_DIB_WORKDIR)/cache
+	@. $(MICROSHIFT_DIB_VENV)/bin/activate && \
+		cd $(CURDIR) && \
+		ELEMENTS_PATH=$(CURDIR)/dib/elements \
+		DIB_IMAGE_CACHE=$(MICROSHIFT_DIB_WORKDIR)/cache \
+		DIB_DEBUG_TRACE=1 \
+		DIB_MICROSHIFT_VERSION=$(MICROSHIFT_VERSION) \
+		DIB_MICROSHIFT_RPM_ARCHIVE=$(MICROSHIFT_RPM_ARCHIVE) \
+		diskimage-builder dib/microshift-image.yaml
+	@echo "MicroShift image built successfully: $(MICROSHIFT_IMAGE_NAME)"
+
+microshift_convert:
+ifeq ($(MICROSHIFT_IMAGE_FORMAT),raw)
+	@echo "Converting MicroShift image to raw format (in-place)..."
+	qemu-img convert -p -f qcow2 -O raw $(MICROSHIFT_IMAGE_NAME) $(MICROSHIFT_IMAGE_NAME).tmp
+	mv $(MICROSHIFT_IMAGE_NAME).tmp $(MICROSHIFT_IMAGE_NAME)
+	@echo "MicroShift image converted to raw format: $(MICROSHIFT_IMAGE_NAME)"
+endif
+
+microshift_clean:
+	rm -f $(MICROSHIFT_IMAGE_NAME)
+	rm -f $(MICROSHIFT_IMAGE_NAME).tmp
+	rm -rf $(MICROSHIFT_DIB_VENV)
+	@if [ -z "$(MICROSHIFT_DIB_WORKDIR)" ] || [ "$(MICROSHIFT_DIB_WORKDIR)" = "/" ]; then \
+		echo "ERROR: MICROSHIFT_DIB_WORKDIR is not set or is dangerous: $(MICROSHIFT_DIB_WORKDIR)"; \
+		exit 1; \
+	fi
+	@if [ -d "$(MICROSHIFT_DIB_WORKDIR)" ]; then \
+		sudo rm -rf $(MICROSHIFT_DIB_WORKDIR); \
 	fi
 
 blank:
