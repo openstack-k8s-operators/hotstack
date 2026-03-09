@@ -14,52 +14,60 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-- name: Assert config is defined
-  ansible.builtin.assert:
-    that:
-      - pull_secret is defined
-      - pull_secret | length > 0
+- name: Skip OCP agent installer for MicroShift
+  when: ocp_installer_type == 'microshift'
+  ansible.builtin.debug:
+    msg: "Skipping OCP agent installer - ocp_installer_type is {{ ocp_installer_type }}"
 
-- name: Install using agent installer
-  when: not hotstack_revive_snapshot | bool
-  ansible.builtin.include_tasks: _install.yml
+- name: OCP agent installer
+  when: ocp_installer_type != 'microshift'
+  block:
+    - name: Assert config is defined
+      ansible.builtin.assert:
+        that:
+          - pull_secret is defined
+          - pull_secret | length > 0
 
-# NOTE(hjensas): The bootstrap certificate is used to bootstrap the cluster
-# and is valid for 24 hours. After 24 hours, the certificate is rotated and
-# the new certificate is valid for 30 days. The snapshot is taken after the
-# bootstrap certificate has rotated, so that no workarounds are needed to get
-# the cluster to a stable state. Snapshots will work without workarounds for
-# the next 30 days.
-- name: Wait for 25 hours to prepare for snapshot
-  when: hotstack_prepare_for_snapshot | bool
-  ansible.builtin.pause:
-    minutes: "{{ 25 * 60 }}"
+    - name: Install using agent installer
+      when: not hotstack_revive_snapshot | bool
+      ansible.builtin.include_tasks: _install.yml
 
-- name: Prepare for Snapshot - and shutdown
-  when: hotstack_prepare_for_snapshot | bool
-  ansible.builtin.command: >-
-    hotstack-snapset
-      --uncordon
-      --wait-cluster-stable 60s
-      --cordon
-      --shutdown
+    # NOTE(hjensas): The bootstrap certificate is used to bootstrap the cluster
+    # and is valid for 24 hours. After 24 hours, the certificate is rotated and
+    # the new certificate is valid for 30 days. The snapshot is taken after the
+    # bootstrap certificate has rotated, so that no workarounds are needed to get
+    # the cluster to a stable state. Snapshots will work without workarounds for
+    # the next 30 days.
+    - name: Wait for 25 hours to prepare for snapshot
+      when: hotstack_prepare_for_snapshot | bool
+      ansible.builtin.pause:
+        minutes: "{{ 25 * 60 }}"
 
-# NOTE(hjensas): Use the hotstack-snapset utility to wait for cluster
-# stability for 5 seconds, uncordon the nodes then wait for cluster stability,
-# wait for route.openshift.io API version to be available.
-#
-# The wait for cluster stability is repeated with a short stable state
-# requirement. This is faster than waiting one time for a longer time because
-# the timer is reset every time cluster stability is lost.
-#
-# Even if the cluster is stable, the route.openshift.io API version may not be
-# available, wait for it to appear in oc api-versions output.
-- name: Wait for cluster, uncordon, wait for cluster, wait for route API version ...
-  when: hotstack_revive_snapshot | bool
-  ansible.builtin.command: >-
-    hotstack-snapset
-      --wait-cluster-stable 5s
-      --uncordon
-      --wait-cluster-stable 60s
-      --wait-cluster-stable 60s
-      --wait-for-api-versions-route
+    - name: Prepare for Snapshot - and shutdown
+      when: hotstack_prepare_for_snapshot | bool
+      ansible.builtin.command: >-
+        hotstack-snapset
+          --uncordon
+          --wait-cluster-stable 60s
+          --cordon
+          --shutdown
+
+    # NOTE(hjensas): Use the hotstack-snapset utility to wait for cluster
+    # stability for 5 seconds, uncordon the nodes then wait for cluster stability,
+    # wait for route.openshift.io API version to be available.
+    #
+    # The wait for cluster stability is repeated with a short stable state
+    # requirement. This is faster than waiting one time for a longer time because
+    # the timer is reset every time cluster stability is lost.
+    #
+    # Even if the cluster is stable, the route.openshift.io API version may not be
+    # available, wait for it to appear in oc api-versions output.
+    - name: Wait for cluster, uncordon, wait for cluster, wait for route API version ...
+      when: hotstack_revive_snapshot | bool
+      ansible.builtin.command: >-
+        hotstack-snapset
+          --wait-cluster-stable 5s
+          --uncordon
+          --wait-cluster-stable 60s
+          --wait-cluster-stable 60s
+          --wait-for-api-versions-route

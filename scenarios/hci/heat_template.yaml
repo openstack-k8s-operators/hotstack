@@ -974,6 +974,10 @@ resources:
       config_drive: true
 
 outputs:
+  ocp_installer_type:
+    description: OpenShift installer type
+    value: agent
+
   controller_floating_ip:
     description: Controller Floating IP
     value: {get_attr: [controller-floating-ip, floating_ip_address]}
