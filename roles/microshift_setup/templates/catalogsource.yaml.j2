@@ -1,0 +1,13 @@
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: redhat-operators
+  namespace: openshift-marketplace
+spec:
+  displayName: Red Hat Operators
+  sourceType: grpc
+  image: {{ microshift_catalog_index_image }}:{{ microshift_catalog_index_tag }}
+  updateStrategy:
+    registryPoll:
+      interval: 30m
