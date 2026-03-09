@@ -1,0 +1,122 @@
+#!/bin/bash
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+set -eu -o pipefail
+
+if [ "${DIB_DEBUG_TRACE:-0}" -gt 0 ]; then
+    set -x
+fi
+
+YUM_REPOS_D=/etc/yum.repos.d
+USHIFT_LOCAL_REPO_FILE=microshift-local.repo
+OCP_MIRROR_REPO_FILE_PREFIX=microshift-deps
+MICROSHIFT_RPMS_DIR=/tmp/microshift-rpms
+MICROSHIFT_GITHUB_REPO="microshift-io/microshift"
+
+function resolve_rpm_archive_url() {
+    local -r version=$1
+    local -r arch=$(uname -m)
+    local tag
+
+    echo "INFO: Discovering latest MicroShift release for version ${version}..." >&2
+    tag=$(curl -s --retry 3 --max-time 30 \
+        "https://api.github.com/repos/${MICROSHIFT_GITHUB_REPO}/releases?per_page=50" | \
+        python3 -c "
+import json, sys
+version = sys.argv[1]
+matching = [r for r in json.load(sys.stdin) if r['tag_name'].startswith(version + '.')]
+if matching:
+    matching.sort(key=lambda r: r['published_at'], reverse=True)
+    print(matching[0]['tag_name'])
+" "${version}")
+
+    if [ -z "${tag}" ]; then
+        echo "ERROR: No release found for MicroShift version ${version}" >&2
+        exit 1
+    fi
+
+    echo "INFO: Found release tag: ${tag}" >&2
+    echo "https://github.com/${MICROSHIFT_GITHUB_REPO}/releases/download/${tag}/microshift-rpms-${arch}.tgz"
+}
+
+function download_rpms_from_archive() {
+    local -r archive_url=$1
+
+    echo "INFO: Downloading MicroShift RPMs from ${archive_url}..."
+    mkdir -p "${MICROSHIFT_RPMS_DIR}"
+
+    curl -L -s --retry 5 --max-time 300 "${archive_url}" | \
+        tar zxf - -C "${MICROSHIFT_RPMS_DIR}"
+
+    if [ ! -d "${MICROSHIFT_RPMS_DIR}" ] || [ -z "$(ls -A "${MICROSHIFT_RPMS_DIR}")" ]; then
+        echo "ERROR: Failed to download or extract MicroShift RPMs"
+        exit 1
+    fi
+
+    echo "INFO: Creating local RPM repository..."
+    createrepo_c "${MICROSHIFT_RPMS_DIR}"
+}
+
+function create_local_microshift_repo() {
+    local -r repo_path=$1
+
+    echo "INFO: Creating local MicroShift repository configuration..."
+    cat > "${YUM_REPOS_D}/${USHIFT_LOCAL_REPO_FILE}" <<EOF
+[microshift-local]
+name=MicroShift Local Repository
+baseurl=file://${repo_path}
+enabled=1
+gpgcheck=0
+skip_if_unavailable=0
+EOF
+}
+
+function create_rhocp_mirror_repo() {
+    local -r repo_version=$1
+
+    echo "INFO: Creating OpenShift mirror repository for version ${repo_version}..."
+    local -r file="${YUM_REPOS_D}/${OCP_MIRROR_REPO_FILE_PREFIX}-${repo_version}.repo"
+    cat > "${file}" <<EOF
+[openshift-mirror-beta]
+name=OpenShift Mirror Beta Repository
+baseurl=https://mirror.openshift.com/pub/openshift-v4/$(uname -m)/dependencies/rpms/${repo_version}-el9-beta/
+enabled=1
+gpgcheck=0
+skip_if_unavailable=0
+EOF
+}
+
+echo "INFO: Setting up MicroShift repositories..."
+
+if [ -z "${DIB_MICROSHIFT_VERSION}" ]; then
+    echo "ERROR: DIB_MICROSHIFT_VERSION must be set (e.g., 4.20)"
+    exit 1
+fi
+
+if [ -z "${DIB_MICROSHIFT_RPM_ARCHIVE}" ]; then
+    DIB_MICROSHIFT_RPM_ARCHIVE=
+    DIB_MICROSHIFT_RPM_ARCHIVE=$(resolve_rpm_archive_url "${DIB_MICROSHIFT_VERSION}")
+    if [ -z "${DIB_MICROSHIFT_RPM_ARCHIVE}" ]; then
+        echo "ERROR: Failed to resolve MicroShift RPM archive URL"
+        exit 1
+    fi
+fi
+
+download_rpms_from_archive "${DIB_MICROSHIFT_RPM_ARCHIVE}"
+create_local_microshift_repo "${MICROSHIFT_RPMS_DIR}"
+create_rhocp_mirror_repo "${DIB_MICROSHIFT_VERSION}"
+
+echo "INFO: MicroShift repository setup complete (version: ${DIB_MICROSHIFT_VERSION})"
