@@ -1,5 +1,5 @@
 # Build stage - includes all dev tools for building OpenStack services
-FROM debian:bookworm-slim AS builder
+FROM quay.io/opendevmirror/debian:bookworm AS builder
 
 # Optional build argument for apt caching proxy
 ARG APT_PROXY=""
@@ -31,7 +31,7 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Runtime stage - lean image with only runtime dependencies
-FROM debian:bookworm-slim AS runtime
+FROM quay.io/opendevmirror/debian:bookworm AS runtime
 
 # Optional build argument for apt caching proxy
 ARG APT_PROXY=""
