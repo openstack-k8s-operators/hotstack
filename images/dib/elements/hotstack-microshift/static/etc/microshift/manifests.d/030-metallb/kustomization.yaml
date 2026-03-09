@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml
   - scc-bindings.yaml
+  - metallb-excludel2.yaml
