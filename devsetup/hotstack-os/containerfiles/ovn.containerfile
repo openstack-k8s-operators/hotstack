@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM quay.io/opendevmirror/debian:bookworm
 
 ARG SERVICE_TYPE=northd
 ARG APT_PROXY=""
