@@ -14,13 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-- name: Install NFS server packages
-  become: true
-  ansible.builtin.dnf:
-    name:
-      - nfs-utils
-    state: present
-
 - name: Create NFS export directories
   become: true
   ansible.builtin.file:
