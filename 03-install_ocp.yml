@@ -36,6 +36,7 @@
     - role: ocp_agent_installer
       delegate_to: controller-0
       vars:
+        ocp_installer_type: "{{ stack_outputs.ocp_installer_type | default('agent') }}"
         install_config: "{{ stack_outputs.ocp_install_config }}"
         agent_config: "{{  stack_outputs.ocp_agent_config }}"
         pull_secret: "{{ slurp_pull_secret.content }}"
