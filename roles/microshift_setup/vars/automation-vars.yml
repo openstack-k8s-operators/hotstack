@@ -1,0 +1,9 @@
+---
+stages:
+  - name: "Red Hat Operators CatalogSource"
+    manifest: catalogsource.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openshift-marketplace catalogsource/redhat-operators
+        --for jsonpath='{.status.connectionState.lastObservedState}'=READY
+        --timeout=600s

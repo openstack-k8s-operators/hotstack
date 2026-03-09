@@ -1,0 +1,51 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Skip MicroShift setup for OCP
+  when: ocp_installer_type != 'microshift'
+  ansible.builtin.debug:
+    msg: "Skipping MicroShift setup - ocp_installer_type is {{ ocp_installer_type }}"
+
+- name: MicroShift setup
+  when: ocp_installer_type == 'microshift'
+  block:
+    - name: Install pull secret on MicroShift node
+      ansible.builtin.include_tasks: pull_secret.yml
+
+    - name: Ensure directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ bin_dir }}"
+        - "{{ microshift_kube_config_dir }}"
+
+    - name: Install OpenShift client
+      ansible.builtin.include_tasks: install_client.yml
+
+    - name: Wait for MicroShift and fetch kubeconfig
+      ansible.builtin.include_tasks: fetch_kubeconfig.yml
+
+    - name: Wait for MicroShift cluster to be ready
+      ansible.builtin.include_tasks: wait_for_ready.yml
+
+    - name: Add MicroShift CA to trust
+      when: microshift_add_ca_to_trust | bool
+      ansible.builtin.include_tasks: ca_cert.yml
+
+    - name: Bootstrap MicroShift cluster with OLM catalog
+      ansible.builtin.include_tasks: bootstrap_cluster.yml
