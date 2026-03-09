@@ -14,6 +14,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+ocp_installer_type: agent
+
 hotstack_prepare_for_snapshot: false
 hotstack_revive_snapshot: false
 
