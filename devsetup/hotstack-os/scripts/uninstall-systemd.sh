@@ -36,7 +36,7 @@ systemctl stop hotstack-os.target 2>/dev/null || true
 # Wait for all services to fully stop (not just deactivating)
 # Give services a moment to start deactivating before checking status
 sleep 2
-MAX_WAIT=90
+MAX_WAIT=180
 ELAPSED=0
 while [ $ELAPSED -lt $MAX_WAIT ]; do
     # Check if any hotstack-os services are still active or deactivating
@@ -57,7 +57,7 @@ while [ $ELAPSED -lt $MAX_WAIT ]; do
 done
 
 if [ $ELAPSED -ge $MAX_WAIT ]; then
-    echo -e "  $WARNING Some services did not stop within ${MAX_WAIT}s"
+    echo -e "  $ERROR Some services did not stop within ${MAX_WAIT}s"
     echo "  Services still active or deactivating:"
     systemctl list-units 'hotstack-os-*.service' --state=active,deactivating --no-legend 2>/dev/null || true
     echo ""
@@ -65,6 +65,8 @@ if [ $ELAPSED -ge $MAX_WAIT ]; then
     podman ps --filter "name=hotstack-os-" --format "{{.Names}}" 2>/dev/null || true
     echo ""
     echo "  You may need to manually stop containers: podman stop <container-name>"
+    echo "  Or force kill them: podman kill <container-name>"
+    exit 1
 fi
 
 systemctl disable hotstack-os.target 2>/dev/null || true

@@ -1,6 +1,6 @@
 FROM localhost/hotstack-os-base-builder:latest AS builder
 
-ARG OPENSTACK_BRANCH=stable/2025.1
+ARG OPENSTACK_BRANCH=stable/2025.2
 
 # Clone and build Keystone from source
 RUN git clone --depth 1 --branch ${OPENSTACK_BRANCH} \
@@ -8,27 +8,24 @@ RUN git clone --depth 1 --branch ${OPENSTACK_BRANCH} \
     cd /tmp/keystone && \
     pip3 install --no-cache-dir --break-system-packages \
         -c https://opendev.org/openstack/requirements/raw/branch/${OPENSTACK_BRANCH}/upper-constraints.txt \
-        . uwsgi pymysql python-memcached python-openstackclient
+        . pymysql python-memcached python-openstackclient gunicorn
 
 # Runtime stage
 FROM localhost/hotstack-os-base:latest
 
-ARG OPENSTACK_BRANCH=stable/2025.1
+ARG OPENSTACK_BRANCH=stable/2025.2
 
 # Copy installed packages from builder
 COPY --from=builder /usr/local /usr/local
 
-# Create directories with proper ownership
+# Create directories
 RUN mkdir -p /etc/keystone /etc/keystone/fernet-keys /etc/keystone/credential-keys \
-        /var/log/keystone && \
-    chown -R openstack:openstack /etc/keystone
-
-# Copy uwsgi configuration with ownership
-COPY --chown=openstack:openstack configs/keystone-uwsgi.ini /etc/keystone/keystone-uwsgi.ini
+        /var/log/keystone
 
 # Copy scripts with permissions
 COPY --chmod=755 scripts/keystone-entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY --chmod=755 scripts/keystone-healthcheck.sh /usr/local/bin/keystone-healthcheck.sh
+COPY --chmod=644 scripts/keystone_wsgi_wrapper.py /usr/local/lib/python3.13/site-packages/keystone_wsgi_wrapper.py
 
 EXPOSE 5000
 

@@ -48,6 +48,7 @@ Wants=hotstack-os-neutron-metadata.service
 
 # Nova services
 Wants=hotstack-os-nova-api.service
+Wants=hotstack-os-nova-api-metadata.service
 Wants=hotstack-os-nova-conductor.service
 Wants=hotstack-os-nova-scheduler.service
 Wants=hotstack-os-nova-compute.service

@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+"""HotsTac(k)os Health Check Helper.
+
+Polls container health checks until healthy or timeout.
+Executes health check commands inside containers and reports status
+with intelligent error output on failure.
+
+Usage:
+------
+hotstack-healthcheck.py CONTAINER_NAME INTERVAL TIMEOUT RETRIES START_PERIOD [HEALTHCHECK_CMD...]
+
+Arguments:
+    CONTAINER_NAME: Name of the container to health check
+    INTERVAL: Seconds between health check attempts
+    TIMEOUT: Timeout for each health check command (currently unused)
+    RETRIES: Maximum number of health check attempts
+    START_PERIOD: Seconds to wait before starting health checks
+    HEALTHCHECK_CMD: Command to execute inside the container
+
+Example:
+    hotstack-healthcheck.py hotstack-os-mariadb 5 5 10 10 mysqladmin --socket=/run/mysqld/mysqld.sock -uroot -pPASS ping
+"""
+
+import subprocess
+import sys
+import time
+from typing import List
+
+
+def run_healthcheck(container_name: str, healthcheck_cmd: List[str],
+                    timeout: int) -> tuple[bool, str, str]:
+    """Run health check command inside container.
+
+    :param container_name: Name of the container to check
+    :param healthcheck_cmd: Command to execute as a list of strings
+    :param timeout: Timeout in seconds for the command execution
+    :returns: Tuple of (success, stdout, stderr)
+    """
+    cmd = ["podman", "exec", container_name] + healthcheck_cmd
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout
+        )
+        return result.returncode == 0, result.stdout, result.stderr
+    except subprocess.TimeoutExpired:
+        return False, "", f"Health check command timed out after {timeout}s"
+    except Exception as e:
+        return False, "", f"Failed to execute health check: {e}"
+
+
+def poll_health(container_name: str, healthcheck_cmd: List[str],
+                timeout: int, interval: int, retries: int) -> bool:
+    """Poll container health until healthy or retries exhausted.
+
+    :param container_name: Name of the container to check
+    :param healthcheck_cmd: Command to execute for health check
+    :param timeout: Timeout in seconds for each health check command
+    :param interval: Seconds between attempts
+    :param retries: Maximum number of attempts
+    :returns: True if container became healthy, False otherwise
+    """
+    for attempt in range(1, retries + 1):
+        print(f"  Attempt {attempt}/{retries}...")
+
+        success, stdout, stderr = run_healthcheck(container_name, healthcheck_cmd, timeout)
+
+        if success:
+            print(f"✓ {container_name} is healthy")
+            return True
+
+        # Health check failed - show error details
+        print(f"  Health check failed with exit code 1", file=sys.stderr)
+        if stderr.strip():
+            print(f"  Error: {stderr.strip()}", file=sys.stderr)
+        if stdout.strip():
+            print(f"  Output: {stdout.strip()}", file=sys.stderr)
+
+        # Sleep before next attempt (except on last attempt)
+        if attempt < retries:
+            time.sleep(interval)
+
+    return False
+
+
+def main():
+    if len(sys.argv) < 6:
+        print("ERROR: Insufficient arguments", file=sys.stderr)
+        print(f"Usage: {sys.argv[0]} CONTAINER_NAME INTERVAL TIMEOUT RETRIES START_PERIOD [HEALTHCHECK_CMD...]", file=sys.stderr)
+        sys.exit(1)
+
+    container_name = sys.argv[1]
+    interval = int(sys.argv[2])
+    timeout = int(sys.argv[3])
+    retries = int(sys.argv[4])
+    start_period = int(sys.argv[5])
+    healthcheck_cmd = sys.argv[6:]
+
+    if not healthcheck_cmd:
+        print(f"INFO: No healthcheck command provided for {container_name}, skipping health check")
+        sys.exit(0)
+
+    print(f"Waiting for {container_name} to become healthy...")
+
+    # Wait for start period before beginning health checks
+    if start_period > 0:
+        time.sleep(start_period)
+
+    # Perform health checks
+    if poll_health(container_name, healthcheck_cmd, timeout, interval, retries):
+        sys.exit(0)
+
+    # All retries exhausted
+    print(f"ERROR: {container_name} failed to become healthy after {retries} attempts", file=sys.stderr)
+    sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

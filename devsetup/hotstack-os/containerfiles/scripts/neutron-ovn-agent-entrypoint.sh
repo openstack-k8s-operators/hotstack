@@ -40,6 +40,6 @@ for _ in {1..30}; do
     sleep 2
 done
 
-# Start Neutron OVN Metadata Agent
-echo "Starting Neutron OVN Metadata Agent..."
-exec neutron-ovn-metadata-agent --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/neutron_ovn_metadata_agent.ini
+# Start Neutron OVN Agent with metadata extension
+echo "Starting Neutron OVN Agent with metadata extension..."
+exec neutron-ovn-agent --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/neutron_ovn_agent.ini

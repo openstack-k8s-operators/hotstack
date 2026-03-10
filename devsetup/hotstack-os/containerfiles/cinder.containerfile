@@ -1,6 +1,6 @@
 FROM localhost/hotstack-os-base-builder:latest AS builder
 
-ARG OPENSTACK_BRANCH=stable/2025.1
+ARG OPENSTACK_BRANCH=stable/2025.2
 
 # Clone and build Cinder from source
 RUN git clone --depth 1 --branch ${OPENSTACK_BRANCH} \
@@ -18,20 +18,13 @@ RUN git clone --depth 1 --branch ${OPENSTACK_BRANCH} \
 # Runtime stage
 FROM localhost/hotstack-os-base:latest
 
-ARG OPENSTACK_BRANCH=stable/2025.1
+ARG OPENSTACK_BRANCH=stable/2025.2
 ARG SERVICE_TYPE=api
-ARG APT_PROXY=""
-
-# Configure apt proxy if provided (for apt-cacher-ng)
-RUN if [ -n "$APT_PROXY" ]; then \
-        echo "Acquire::http::Proxy \"$APT_PROXY\";" > /etc/apt/apt.conf.d/01proxy; \
-    fi
 
 # Install Cinder-specific runtime dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+RUN microdnf install -y --nodocs \
         kmod \
-    && rm -rf /var/lib/apt/lists/*
+    && microdnf clean all
 
 # Copy installed packages and config from builder
 COPY --from=builder /usr/local /usr/local
@@ -40,7 +33,6 @@ COPY --from=builder /etc/cinder /etc/cinder
 # Create directories and user
 RUN mkdir -p /var/lib/cinder /var/lock/cinder /etc/cinder/rootwrap.d && \
     (useradd -m -d /var/lib/cinder -s /bin/bash cinder || true) && \
-    chown -R cinder:cinder /var/lib/cinder /var/lock/cinder && \
     echo 'cinder ALL=(root) NOPASSWD: /usr/local/bin/cinder-rootwrap /etc/cinder/rootwrap.conf *' > /etc/sudoers.d/cinder-rootwrap && \
     chmod 0440 /etc/sudoers.d/cinder-rootwrap
 
@@ -68,9 +60,6 @@ COPY --chmod=755 scripts/mount.nfs-wrapper.py /sbin/mount.nfs
 # Test the mount.nfs wrapper to ensure it works correctly (fails build if broken)
 COPY --chmod=755 scripts/test-mount-wrapper.sh /tmp/test-mount-wrapper.sh
 RUN /tmp/test-mount-wrapper.sh && rm /tmp/test-mount-wrapper.sh
-
-USER cinder
-WORKDIR /var/lib/cinder
 
 # Entrypoint will be overridden in compose file
 ENTRYPOINT ["/usr/local/bin/cinder-api-entrypoint.sh"]

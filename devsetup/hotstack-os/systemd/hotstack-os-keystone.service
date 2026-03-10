@@ -51,7 +51,7 @@ ExecStart=/usr/bin/podman run \
     localhost/hotstack-os-keystone:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-keystone 5 5 5 15 /usr/local/bin/keystone-healthcheck.sh
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-keystone 5 5 5 15 /usr/local/bin/keystone-healthcheck.sh
 ExecStop=/usr/bin/podman stop -t 30 hotstack-os-keystone
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-keystone
 

@@ -63,6 +63,16 @@ if [ "${OS_BOOTSTRAP:-true}" = "true" ]; then
     echo "Nova service registered! (Service ID: ${NOVA_SERVICE_ID})"
 fi
 
-# Start Nova API
-echo "Starting Nova API service..."
-exec nova-api --config-file=/etc/nova/nova.conf
+# Start Nova API via gunicorn
+echo "Starting Nova API service with gunicorn..."
+exec /usr/local/bin/gunicorn \
+    --bind 0.0.0.0:8774 \
+    --workers 1 \
+    --worker-class eventlet \
+    --worker-connections 1000 \
+    --timeout 180 \
+    --graceful-timeout 30 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info \
+    nova_wsgi_wrapper:application

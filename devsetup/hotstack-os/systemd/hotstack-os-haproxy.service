@@ -24,7 +24,7 @@ PartOf=hotstack-os.target
 Type=simple
 Restart=on-failure
 RestartSec=10
-TimeoutStopSec=30
+TimeoutStopSec=10
 SuccessExitStatus=143
 
 ExecStartPre=-/usr/bin/podman rm -f hotstack-os-haproxy
@@ -34,7 +34,8 @@ ExecStart=/usr/bin/podman run \
     --hostname haproxy \
     --network hotstack-os \
     --ip __HAPROXY_IP__ \
-    --volume __HOTSTACK_DATA_DIR__/runtime/config/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro,z \
+    --env SERVICE_NAME=haproxy \
+    --volume __HOTSTACK_DATA_DIR__/runtime/config/haproxy/haproxy.cfg:/etc/haproxy/haproxy.cfg:ro,z \
     --publish __BREX_IP__:5000:5000 \
     --publish __BREX_IP__:9292:9292 \
     --publish __BREX_IP__:8778:8778 \
@@ -45,11 +46,11 @@ ExecStart=/usr/bin/podman run \
     --publish __BREX_IP__:8004:8004 \
     --publish __BREX_IP__:6080:6080 \
     --publish __BREX_IP__:8404:8404 \
-    localhost/hotstack-os-haproxy:latest
+    localhost/hotstack-os-infra:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-haproxy 10 5 3 0 nc -z 127.0.0.1 8404
-ExecStop=/usr/bin/podman stop -t 30 hotstack-os-haproxy
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-haproxy 10 5 3 0 nc -z 127.0.0.1 8404
+ExecStop=/usr/bin/podman stop -t 10 hotstack-os-haproxy
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-haproxy
 
 StandardOutput=journal

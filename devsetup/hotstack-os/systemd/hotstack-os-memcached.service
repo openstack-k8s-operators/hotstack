@@ -33,11 +33,12 @@ ExecStart=/usr/bin/podman run \
     --name hotstack-os-memcached \
     --network hotstack-os \
     --ip __MEMCACHED_IP__ \
-    docker.io/library/memcached:1.6-alpine \
+    --env SERVICE_NAME=memcached \
+    localhost/hotstack-os-infra:latest \
     memcached -m 64
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-memcached 10 5 3 0 nc -z localhost 11211
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-memcached 10 5 3 0 nc -z localhost 11211
 ExecStop=/usr/bin/podman stop -t 30 hotstack-os-memcached
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-memcached
 

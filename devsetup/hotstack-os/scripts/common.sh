@@ -513,14 +513,16 @@ prepare_all_configs() {
     local compute_hostname
     compute_hostname=$(hostname -f 2>/dev/null || hostname)
 
-    # Get hotstack user UID (must exist before config generation)
+    # Get hotstack user UID and GID (must exist before config generation)
     if ! id hotstack &>/dev/null; then
         echo "ERROR: hotstack user does not exist"
         echo "Run 'sudo make create-user' first or use 'sudo make install' which handles this automatically"
         exit 1
     fi
     local hotstack_uid
+    local hotstack_gid
     hotstack_uid=$(id -u hotstack)
+    hotstack_gid=$(id -g hotstack)
 
     # Process ALL config files in one pass
     process_config_files \
@@ -549,6 +551,7 @@ prepare_all_configs() {
         "__NFS_SHARE__" "$NFS_SHARE" \
         "__NFS_LOCAL_PATH__" "$NFS_LOCAL_PATH" \
         "__HOTSTACK_UID__" "$hotstack_uid" \
+        "__HOTSTACK_GID__" "$hotstack_gid" \
         "# UPSTREAM_DNS_SERVERS" "$upstream_dns" \
         "MARIADB_IP" "$MARIADB_IP" \
         "RABBITMQ_IP" "$RABBITMQ_IP" \
@@ -557,6 +560,7 @@ prepare_all_configs() {
         "GLANCE_IP" "$GLANCE_IP" \
         "PLACEMENT_IP" "$PLACEMENT_IP" \
         "NOVA_API_IP" "$NOVA_API_IP" \
+        "NOVA_METADATA_IP" "$NOVA_METADATA_IP" \
         "NEUTRON_SERVER_IP" "$NEUTRON_SERVER_IP" \
         "CINDER_API_IP" "$CINDER_API_IP" \
         "HEAT_API_IP" "$HEAT_API_IP" \

@@ -46,7 +46,7 @@ ExecStart=/usr/bin/podman run \
     localhost/hotstack-os-cinder:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-cinder-scheduler 10 5 5 20 test -f /proc/1/exe
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-cinder-scheduler 10 5 5 20 test -f /proc/1/exe
 ExecStop=/usr/bin/podman stop -t 30 hotstack-os-cinder-scheduler
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-cinder-scheduler
 

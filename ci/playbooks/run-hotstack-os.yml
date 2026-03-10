@@ -17,15 +17,7 @@
         name:
           - podman
           - make
-          - apt-cacher-ng
         state: present
-
-    - name: Start and enable apt-cacher-ng service
-      become: true
-      ansible.builtin.systemd:
-        name: apt-cacher-ng
-        state: started
-        enabled: true
 
     - name: Generate SSH keypair for smoke test
       ansible.builtin.command:
@@ -45,12 +37,6 @@
         remote_src: true
         force: false
         mode: '0644'
-
-    - name: Configure APT_PROXY for CI build
-      ansible.builtin.lineinfile:
-        path: "{{ hotstack_os_dir }}/.env"
-        regexp: '^APT_PROXY='
-        line: 'APT_PROXY=http://host.containers.internal:3142'
 
     - name: Configure BUILD_PARALLEL for CI build
       ansible.builtin.lineinfile:
@@ -108,22 +94,6 @@
     - name: Build, setup, and start hotstack-os services
       become: true
       block:
-        - name: Test apt-cacher-ng connectivity from container context
-          ansible.builtin.command:
-            cmd: >-
-              podman run --rm docker.io/curlimages/curl:latest
-              curl -f -s -o /dev/null -w "%{http_code}"
-              http://host.containers.internal:3142/acng-report.html
-          register: container_proxy_test
-          changed_when: false
-          retries: 10
-          delay: 10
-          until: container_proxy_test.stdout == "200"
-
-        - name: Display container proxy test result
-          ansible.builtin.debug:
-            msg: "{{ container_proxy_test.stdout }}"
-
         - name: Build container images (with retry logic)
           args:
             chdir: "{{ hotstack_os_dir }}"

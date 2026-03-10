@@ -14,9 +14,10 @@
 # under the License.
 
 [Unit]
-Description=HotsTac(k)os Heat API Service
+Description=HotsTac(k)os Nova Metadata API Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
-After=hotstack-os-mariadb.service hotstack-os-rabbitmq.service hotstack-os-keystone.service hotstack-os-dnsmasq.service hotstack-os-haproxy.service hotstack-os-infra-setup.service
+After=hotstack-os-mariadb.service hotstack-os-nova-api.service hotstack-os-dnsmasq.service hotstack-os-haproxy.service hotstack-os-infra-setup.service
+Wants=hotstack-os-mariadb.service hotstack-os-nova-api.service hotstack-os-dnsmasq.service
 Requires=hotstack-os-infra-setup.service
 PartOf=hotstack-os.target
 StartLimitIntervalSec=120
@@ -27,31 +28,28 @@ Type=simple
 Restart=on-failure
 RestartSec=10
 TimeoutStartSec=300
-TimeoutStopSec=10
+TimeoutStopSec=30
 SuccessExitStatus=143
 
-ExecStartPre=-/usr/bin/podman stop -t 2 hotstack-os-heat-api
-ExecStartPre=-/usr/bin/podman rm -f hotstack-os-heat-api
+ExecStartPre=-/usr/bin/podman stop -t 2 hotstack-os-nova-api-metadata
+ExecStartPre=-/usr/bin/podman rm -f hotstack-os-nova-api-metadata
 ExecStart=/usr/bin/podman run \
     --pull=never \
-    --name hotstack-os-heat-api \
-    --hostname heat \
+    --name hotstack-os-nova-api-metadata \
+    --hostname nova-metadata \
     --network hotstack-os \
-    --ip __HEAT_API_IP__ \
-    --env HEAT_DB_PASSWORD=__DB_PASSWORD__ \
+    --ip __NOVA_METADATA_IP__ \
+    --env NOVA_DB_PASSWORD=__DB_PASSWORD__ \
     --env SERVICE_PASSWORD=__SERVICE_PASSWORD__ \
-    --env KEYSTONE_ADMIN_PASSWORD=__KEYSTONE_ADMIN_PASSWORD__ \
-    --env RABBITMQ_USER=__RABBITMQ_DEFAULT_USER__ \
-    --env RABBITMQ_PASS=__RABBITMQ_DEFAULT_PASS__ \
-    --env REGION_NAME=__REGION_NAME__ \
-    --volume __HOTSTACK_DATA_DIR__/runtime/config/heat/heat.conf:/etc/heat/heat.conf:ro,z \
-    --entrypoint /usr/local/bin/heat-api-entrypoint.sh \
-    localhost/hotstack-os-heat:latest
+    --env METADATA_SECRET=__SERVICE_PASSWORD__ \
+    --volume __HOTSTACK_DATA_DIR__/runtime/config/nova/nova.conf:/etc/nova/nova.conf:ro,z \
+    --entrypoint /usr/local/bin/nova-api-metadata-entrypoint.sh \
+    localhost/hotstack-os-nova:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-heat-api 10 5 15 10 curl -f http://localhost:8004/
-ExecStop=/usr/bin/podman stop -t 10 hotstack-os-heat-api
-ExecStopPost=-/usr/bin/podman rm -f hotstack-os-heat-api
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-nova-api-metadata 10 5 15 10 curl -f http://localhost:8775/
+ExecStop=/usr/bin/podman stop -t 30 hotstack-os-nova-api-metadata
+ExecStopPost=-/usr/bin/podman rm -f hotstack-os-nova-api-metadata
 
 StandardOutput=journal
 StandardError=journal

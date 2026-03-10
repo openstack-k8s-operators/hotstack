@@ -33,11 +33,12 @@ ExecStart=/usr/bin/podman run \
     --name hotstack-os-dnsmasq \
     --hostname dnsmasq \
     --network host \
+    --env SERVICE_NAME=dnsmasq \
     --volume __HOTSTACK_DATA_DIR__/runtime/config/dnsmasq/dnsmasq.conf:/etc/dnsmasq.conf:ro,z \
-    localhost/hotstack-os-dnsmasq:latest
+    localhost/hotstack-os-infra:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-dnsmasq 10 5 3 0 nc -z 127.0.0.1 53
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-dnsmasq 10 5 3 0 nc -z 127.0.0.1 53
 ExecStop=/usr/bin/podman stop -t 30 hotstack-os-dnsmasq
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-dnsmasq
 

@@ -62,6 +62,16 @@ if [ "${OS_BOOTSTRAP:-true}" = "true" ]; then
     echo "Heat service registered! (Service ID: ${HEAT_SERVICE_ID})"
 fi
 
-# Start Heat API
-echo "Starting Heat API service..."
-exec heat-api --config-file=/etc/heat/heat.conf
+# Start Heat API via gunicorn
+echo "Starting Heat API service with gunicorn..."
+exec /usr/local/bin/gunicorn \
+    --bind 0.0.0.0:8004 \
+    --workers 1 \
+    --worker-class eventlet \
+    --worker-connections 1000 \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info \
+    heat_wsgi_wrapper:application

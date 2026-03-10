@@ -34,14 +34,13 @@ ExecStart=/usr/bin/podman run \
     --hostname rabbitmq \
     --network hotstack-os \
     --ip __RABBITMQ_IP__ \
-    --env RABBITMQ_DEFAULT_USER=__RABBITMQ_DEFAULT_USER__ \
-    --env RABBITMQ_DEFAULT_PASS=__RABBITMQ_DEFAULT_PASS__ \
+    --env SERVICE_NAME=rabbitmq \
     --volume __HOTSTACK_DATA_DIR__/rabbitmq:/var/lib/rabbitmq:z \
     --volume __HOTSTACK_DATA_DIR__/runtime/config/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro,z \
-    docker.io/library/rabbitmq:3.13
+    localhost/hotstack-os-infra:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-rabbitmq 10 5 5 0 rabbitmq-diagnostics ping
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-rabbitmq 10 5 5 0 rabbitmq-diagnostics ping
 ExecStop=/usr/bin/podman stop -t 30 hotstack-os-rabbitmq
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-rabbitmq
 

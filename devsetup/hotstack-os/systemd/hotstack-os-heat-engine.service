@@ -45,7 +45,7 @@ ExecStart=/usr/bin/podman run \
     localhost/hotstack-os-heat:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-heat-engine 10 5 10 20 test -f /proc/1/exe
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-heat-engine 10 5 10 20 test -f /proc/1/exe
 ExecStop=/usr/bin/podman stop -t 30 hotstack-os-heat-engine
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-heat-engine
 

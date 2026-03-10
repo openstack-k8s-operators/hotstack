@@ -9,7 +9,7 @@ HotsTac(k)os uses a hybrid architecture where the OpenStack control plane runs i
 - **Networking**: Uses host OpenvSwitch with OVN for SDN (Geneve overlays, VLAN trunking)
 - **Storage**: Local filesystem storage with mount.nfs wrapper optimization (no NFS overhead)
 - **Access**: Unified DNS + load balancer at 172.31.0.129 for all services
-- **Release**: OpenStack `stable/2025.1` (Epoxy) by default
+- **Release**: OpenStack `stable/2025.2` (Flamingo) by default
 
 ```
 Host Machine
@@ -20,8 +20,8 @@ Host Machine
     ├── Identity: keystone
     ├── Images: glance
     ├── Placement: placement
-    ├── Compute (5): nova-api, nova-conductor, nova-scheduler, nova-compute, nova-novncproxy
-    ├── Networking (4): ovn-northd, ovn-controller, neutron-server, neutron-ovn-metadata-agent
+    ├── Compute (6): nova-api, nova-api-metadata, nova-conductor, nova-scheduler, nova-compute, nova-novncproxy
+    ├── Networking (4): ovn-northd, ovn-controller, neutron-server, neutron-ovn-agent
     ├── Block Storage (3): cinder-api, cinder-scheduler, cinder-volume
     └── Orchestration (2): heat-api, heat-engine
 ```
@@ -39,6 +39,7 @@ Host Machine
 | glance | (default) | bridge | no | Image service |
 | placement | (default) | bridge | no | Placement service |
 | nova-api | (default) | bridge | no | Compute API |
+| nova-api-metadata | (default) | bridge | no | Metadata API for instances |
 | nova-conductor | (default) | bridge | no | Database proxy |
 | nova-scheduler | (default) | bridge | no | VM scheduler |
 | nova-compute | root | host | yes | Requires host libvirt/KVM access |
@@ -46,7 +47,7 @@ Host Machine
 | ovn-northd | (default) | bridge | yes | OVN central controller |
 | ovn-controller | root | host | yes | OVN local controller, OVS access |
 | neutron-server | (default) | bridge | no | Networking API |
-| neutron-ovn-metadata-agent | root | host | yes | Metadata service, network namespaces |
+| neutron-ovn-agent | root | host | yes | OVN agent with metadata extension |
 | cinder-api | (default) | bridge | no | Block storage API |
 | cinder-scheduler | (default) | bridge | no | Volume scheduler |
 | cinder-volume | root | host | yes | Volume management, storage mounting |

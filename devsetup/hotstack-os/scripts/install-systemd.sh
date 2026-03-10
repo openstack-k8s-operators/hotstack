@@ -101,7 +101,7 @@ echo "Installing scripts..."
 install -m 644 "$SCRIPT_DIR/colors.sh" /usr/local/lib/hotstack-colors.sh
 install -m 755 "$PROJECT_DIR/systemd/hotstack-os-infra-setup.sh" /usr/local/bin/
 install -m 755 "$PROJECT_DIR/systemd/hotstack-os-infra-cleanup.sh" /usr/local/bin/
-install -m 755 "$PROJECT_DIR/systemd/hotstack-healthcheck.sh" /usr/local/bin/
+install -m 755 "$PROJECT_DIR/systemd/hotstack-healthcheck" /usr/local/bin/
 echo -e "  $OK Installed scripts to /usr/local/bin/ and /usr/local/lib/"
 echo ""
 
@@ -117,6 +117,7 @@ if ! id hotstack &>/dev/null; then
     exit 1
 fi
 HOTSTACK_UID=$(id -u hotstack)
+HOTSTACK_GID=$(id -g hotstack)
 
 # Create libvirt config directory
 LIBVIRT_CONFIG_DIR="/var/lib/hotstack/.config/libvirt"
@@ -212,6 +213,7 @@ process_config_files "$tmpdir" "systemd units" \
     "__NFS_SHARE__" "$NFS_SHARE" \
     "__NFS_LOCAL_PATH__" "$NFS_LOCAL_PATH" \
     "__HOTSTACK_UID__" "$HOTSTACK_UID" \
+    "__HOTSTACK_GID__" "$HOTSTACK_GID" \
     "__MARIADB_IP__" "$MARIADB_IP" \
     "__RABBITMQ_IP__" "$RABBITMQ_IP" \
     "__MEMCACHED_IP__" "$MEMCACHED_IP" \
@@ -223,6 +225,7 @@ process_config_files "$tmpdir" "systemd units" \
     "__NOVA_CONDUCTOR_IP__" "$NOVA_CONDUCTOR_IP" \
     "__NOVA_SCHEDULER_IP__" "$NOVA_SCHEDULER_IP" \
     "__NOVA_COMPUTE_IP__" "$NOVA_COMPUTE_IP" \
+    "__NOVA_METADATA_IP__" "$NOVA_METADATA_IP" \
     "__NOVA_NOVNCPROXY_IP__" "$NOVA_NOVNCPROXY_IP" \
     "__OVN_NORTHD_IP__" "$OVN_NORTHD_IP" \
     "__NEUTRON_SERVER_IP__" "$NEUTRON_SERVER_IP" \

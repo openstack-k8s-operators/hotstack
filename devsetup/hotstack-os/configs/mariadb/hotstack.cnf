@@ -1,0 +1,7 @@
+[mysqld]
+innodb_buffer_pool_size = 32M
+max_connections = 250
+# MariaDB 11.8 enables innodb_snapshot_isolation by default, causing error
+# 1020 on concurrent transactions. oslo.db 17.4.0 added retry handling
+# (LP#2116186) but disabling it avoids the overhead entirely.
+innodb_snapshot_isolation = OFF

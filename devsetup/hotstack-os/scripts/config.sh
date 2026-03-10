@@ -21,8 +21,12 @@ set -e
 # Source common utilities
 # shellcheck source=scripts/common.sh
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
+
+# Change to project directory (required for relative paths in prepare_all_configs)
+pushd "$PROJECT_DIR" > /dev/null
 
 echo "Preparing HotsTac(k)os runtime configuration..."
 
@@ -32,10 +36,12 @@ load_env_file
 # Prepare runtime configurations
 prepare_all_configs
 
+popd > /dev/null
+
 echo ""
 echo "Configuration complete!"
 echo ""
 echo -e "${INFO} Runtime configs prepared in: $CONFIGS_RUNTIME_DIR"
 echo -e "${INFO} Runtime scripts prepared in: $SCRIPTS_RUNTIME_DIR"
-echo -e "${INFO} clouds.yaml copied to: ${HOTSTACK_DATA_DIR}/clouds.yaml and $(pwd)/clouds.yaml"
+echo -e "${INFO} clouds.yaml copied to: ${HOTSTACK_DATA_DIR}/clouds.yaml and $PROJECT_DIR/clouds.yaml"
 echo ""

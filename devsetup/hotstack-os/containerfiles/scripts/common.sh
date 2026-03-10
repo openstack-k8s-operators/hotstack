@@ -49,8 +49,34 @@ validate_required_env() {
     fi
 }
 
+# Ensures a directory has the correct ownership, only running chown if needed.
+# This avoids slow recursive chown operations on subsequent container starts.
+#
+# Parameters:
+#   $1 - Directory path
+#   $2 - Expected owner (format: "user:group")
+#
+# Example:
+#   ensure_directory_ownership "/var/lib/mysql/data" "mysql:mysql"
+ensure_directory_ownership() {
+    local dir="$1"
+    local expected_owner="$2"
+
+    if [ ! -d "$dir" ]; then
+        echo "ERROR: Directory does not exist: $dir"
+        return 1
+    fi
+
+    local current_owner
+    current_owner=$(stat -c '%U:%G' "$dir")
+
+    if [ "$current_owner" != "$expected_owner" ]; then
+        chown "$expected_owner" "$dir"
+    fi
+}
+
 # Waits for a MariaDB/MySQL database to become available and responsive.
-# Uses the 'mariadb' client command provided by default-mysql-client package.
+# Uses the 'mariadb' client command provided by the mariadb package.
 #
 # Parameters:
 #   $1 - Database host (e.g., "mariadb" or "127.0.0.1")

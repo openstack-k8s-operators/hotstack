@@ -68,7 +68,7 @@ fi
 if podman network exists hotstack-os 2>/dev/null; then
     echo -e "  $OK Podman network 'hotstack-os' already exists"
 else
-    podman network create --subnet="$CONTAINER_NETWORK" hotstack-os >/dev/null
+    podman network create --subnet="$CONTAINER_NETWORK" --interface-name=hotstack-os hotstack-os >/dev/null
     echo -e "  $OK Podman network 'hotstack-os' created with subnet $CONTAINER_NETWORK"
 fi
 
@@ -179,6 +179,10 @@ done
 # Set ownership only on the base directory (not recursive to preserve service-specific permissions)
 chown root:root "$HOTSTACK_DATA_DIR"
 chmod 755 "$HOTSTACK_DATA_DIR"
+
+# MariaDB container runs as root, switches to mysql user internally
+# Data dir ownership will be set by the container entrypoint
+chmod 755 "$HOTSTACK_DATA_DIR/mysql"
 
 # Nova instances directory needs special handling for libvirt session access
 # Since we use libvirt session mode (running as hotstack user), the directory
