@@ -56,11 +56,9 @@ if [ "${OS_BOOTSTRAP:-true}" = "true" ]; then
     echo "Placement service registered! (Service ID: ${PLACEMENT_SERVICE_ID})"
 fi
 
-# Verify files exist
-echo "Verifying WSGI setup..."
+# Verify config exists
+echo "Verifying setup..."
 echo "  Config file: $(ls -lh /etc/placement/placement.conf 2>&1)"
-echo "  WSGI file: $(ls -lh /usr/local/bin/placement-wsgi.py 2>&1)"
-echo "  uWSGI config: $(ls -lh /etc/placement/placement-uwsgi.ini 2>&1)"
 
 # Test Python can find placement module
 echo "Testing placement module import..."
@@ -69,6 +67,15 @@ python3 -c "import placement; print('  Placement module OK:', placement.__file__
     exit 1
 }
 
-# Start Placement service with uwsgi
-echo "Starting Placement service with uwsgi..."
-exec uwsgi --ini /etc/placement/placement-uwsgi.ini
+# Start Placement service with gunicorn
+echo "Starting Placement service with gunicorn..."
+exec /usr/local/bin/gunicorn \
+    --bind 0.0.0.0:8778 \
+    --workers 1 \
+    --threads 4 \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info \
+    placement_wsgi_wrapper:application

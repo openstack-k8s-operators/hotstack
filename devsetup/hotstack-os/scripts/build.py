@@ -45,7 +45,8 @@ class Colors:
 
 # Default image lists
 # Infrastructure images (no OPENSTACK_BRANCH build arg needed)
-DEFAULT_INFRA_IMAGES = ["dnsmasq", "haproxy", "ovn"]
+# Note: infra is a unified image containing dnsmasq, haproxy, mariadb, memcached, rabbitmq
+DEFAULT_INFRA_IMAGES = ["infra", "ovn"]
 
 # OpenStack service images (require OPENSTACK_BRANCH build arg)
 DEFAULT_OPENSTACK_IMAGES = [
@@ -65,8 +66,7 @@ class ImageBuilder:
     def __init__(
         self,
         context: Path,
-        apt_proxy: Optional[str] = None,
-        openstack_branch: str = "stable/2025.1",
+        openstack_branch: str = "stable/2025.2",
         parallel_jobs: int = 1,
         infra_images: Optional[List[str]] = None,
         openstack_images: Optional[List[str]] = None,
@@ -75,7 +75,6 @@ class ImageBuilder:
         """Initialize the image builder.
 
         :param context: Containerfiles directory
-        :param apt_proxy: Optional apt caching proxy URL
         :param openstack_branch: OpenStack branch to build
         :param parallel_jobs: Number of parallel builds
         :param infra_images: Infrastructure images to build (or None for defaults)
@@ -83,7 +82,6 @@ class ImageBuilder:
         :param verbose: Show verbose build output
         """
         self.context = context
-        self.apt_proxy = apt_proxy
         self.openstack_branch = openstack_branch
         self.parallel_jobs = parallel_jobs
         self.verbose = verbose
@@ -132,12 +130,11 @@ class ImageBuilder:
         print("\n" + "=" * 60)
         print(f"Build Plan (Total: {total} images, Parallelism: {self.parallel_jobs})")
         print("=" * 60)
-        print(f"Base images (2): base-builder, base-runtime")
         print(
-            f"Infrastructure images ({len(self.infra_images)}): {', '.join(self.infra_images)}"
+            f"Phase 1 - Fedora-based images ({2 + len(self.infra_images)}): base-builder, base-runtime, {', '.join(self.infra_images)}"
         )
         print(
-            f"OpenStack images ({len(self.openstack_images)}): {', '.join(self.openstack_images)}"
+            f"Phase 2 - OpenStack service images ({len(self.openstack_images)}): {', '.join(self.openstack_images)}"
         )
         print("=" * 60)
 
@@ -208,45 +205,74 @@ class ImageBuilder:
             error_msg = e.stderr if e.stderr else e.stdout
             return (image, False, error_msg)
 
-    def build_base_images(self) -> bool:
-        """Build base builder and runtime images.
+    def pull_base_image(self) -> bool:
+        """Pull the Fedora base image to avoid parallel pulls during build.
 
         :returns: True if successful, False otherwise
         """
-        print("Building base images...")
+        print("Pre-pulling base image...")
+        print("  quay.io/fedora/fedora-minimal:42")
+        try:
+            subprocess.run(
+                ["buildah", "pull", "quay.io/fedora/fedora-minimal:42"],
+                check=True,
+                capture_output=not self.verbose,
+                text=True,
+            )
+            print(f"  {Colors.DONE} Base image pulled\n")
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"  {Colors.FAILED} Failed to pull base image")
+            if self.verbose:
+                print(f"Error: {e.stderr if e.stderr else e.stdout}")
+            return False
 
-        build_args = {"APT_PROXY": self.apt_proxy} if self.apt_proxy else {}
+    def build_fedora_based_images(self) -> bool:
+        """Build base and infrastructure images (all based on fedora-minimal).
+
+        :returns: True if successful, False otherwise
+        """
+        print("Building Fedora-based images (base + infrastructure)...")
+
+        build_args = {}
         containerfile = self.context / "base-openstack.containerfile"
 
-        # Prepare base image builds
-        base_builds = [
+        # Prepare all Fedora-based image builds
+        all_builds = [
             {
                 "image": "base-builder",
+                "containerfile": containerfile,
                 "tag": "localhost/hotstack-os-base-builder:latest",
                 "target": "builder",
+                "build_args": build_args,
             },
             {
                 "image": "base-runtime",
+                "containerfile": containerfile,
                 "tag": "localhost/hotstack-os-base:latest",
                 "target": "runtime",
+                "build_args": build_args,
             },
         ]
 
+        # Add infrastructure images
+        all_builds.extend(self._prepare_infra_image_builds())
+
         failed_builds = []
         completed = 0
-        total = len(base_builds)
+        total = len(all_builds)
 
-        # Build base images (can be parallel since they're independent stages)
-        with ThreadPoolExecutor(max_workers=min(2, self.parallel_jobs)) as executor:
+        # Build all Fedora-based images in parallel
+        with ThreadPoolExecutor(max_workers=self.parallel_jobs) as executor:
             future_to_image = {}
-            for build in base_builds:
+            for build in all_builds:
                 future = executor.submit(
                     self.build_image,
                     build["image"],
-                    containerfile,
+                    build["containerfile"],
                     build["tag"],
-                    build_args=build_args,
-                    target=build["target"],
+                    build_args=build.get("build_args"),
+                    target=build.get("target"),
                 )
                 future_to_image[future] = build["image"]
 
@@ -296,13 +322,12 @@ class ImageBuilder:
         """
         builds = []
         for image in self.infra_images:
-            build_args = {"APT_PROXY": self.apt_proxy} if self.apt_proxy else {}
             builds.append(
                 {
                     "image": image,
                     "containerfile": self.context / f"{image}.containerfile",
                     "tag": f"localhost/hotstack-os-{image}:latest",
-                    "build_args": build_args,
+                    "build_args": {},
                 }
             )
         return builds
@@ -315,8 +340,6 @@ class ImageBuilder:
         builds = []
         for image in self.openstack_images:
             build_args = {}
-            if self.apt_proxy:
-                build_args["APT_PROXY"] = self.apt_proxy
             if self.openstack_branch:
                 build_args["OPENSTACK_BRANCH"] = self.openstack_branch
 
@@ -330,17 +353,15 @@ class ImageBuilder:
             )
         return builds
 
-    def build_service_images(self) -> bool:
-        """Build all service container images.
+    def build_openstack_service_images(self) -> bool:
+        """Build OpenStack service container images (depend on base images).
 
         :returns: True if successful, False otherwise
         """
-        print(f"\nBuilding service container images...")
+        print(f"\nBuilding OpenStack service images...")
 
-        # Prepare all image builds
-        all_images = []
-        all_images.extend(self._prepare_infra_image_builds())
-        all_images.extend(self._prepare_openstack_image_builds())
+        # Prepare OpenStack image builds only
+        all_images = self._prepare_openstack_image_builds()
 
         # Build images using ThreadPoolExecutor (works for both serial and parallel)
         failed_builds = []
@@ -381,7 +402,7 @@ class ImageBuilder:
             self._report_build_failures(failed_builds)
             return False
 
-        print(f"\n{Colors.DONE} All service images built successfully")
+        print(f"\n{Colors.DONE} All OpenStack service images built successfully")
         return True
 
 
@@ -443,8 +464,7 @@ def main():
     load_env_file(args.env_file)
 
     # Get build parameters from environment variables
-    apt_proxy = os.environ.get("APT_PROXY")
-    openstack_branch = os.environ.get("OPENSTACK_BRANCH", "stable/2025.1")
+    openstack_branch = os.environ.get("OPENSTACK_BRANCH", "stable/2025.2")
 
     # Determine parallel jobs (CLI arg > env var > default)
     if args.parallel is not None:
@@ -470,7 +490,6 @@ def main():
     # Create builder instance
     builder = ImageBuilder(
         context=containerfiles_dir,
-        apt_proxy=apt_proxy,
         openstack_branch=openstack_branch,
         parallel_jobs=parallel_jobs,
         infra_images=infra_images,
@@ -481,13 +500,18 @@ def main():
     # Print build plan
     builder.print_build_plan()
 
-    # Build base images first
-    if not builder.build_base_images():
-        print(f"\n{Colors.RED}Base image build failed!{Colors.NC}")
+    # Pre-pull base image to avoid parallel pulls
+    if not builder.pull_base_image():
+        print(f"\n{Colors.RED}Failed to pull base image!{Colors.NC}")
         return 1
 
-    # Build service images
-    if not builder.build_service_images():
+    # Phase 1: Build Fedora-based images (base + infrastructure) in parallel
+    if not builder.build_fedora_based_images():
+        print(f"\n{Colors.RED}Fedora-based image build failed!{Colors.NC}")
+        return 1
+
+    # Phase 2: Build OpenStack service images (depend on base images)
+    if not builder.build_openstack_service_images():
         return 1
 
     print(f"\n{Colors.GREEN}[DONE]{Colors.NC} Build complete!")

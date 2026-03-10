@@ -15,15 +15,15 @@
 # under the License.
 
 # Initialize all OpenStack databases
-# This script is mounted to /docker-entrypoint-initdb.d/ in the MariaDB container
-# and runs automatically during first startup when the database is being initialized
+# This script is sourced by the MariaDB container entrypoint
+# from /usr/share/container-scripts/mysql/init/ during first startup
 
 set -e
 
 echo "Creating OpenStack databases..."
 
-mariadb -uroot -p"${MYSQL_ROOT_PASSWORD}" <<-EOSQL
-    -- Create OpenStack user first
+mysql $mysql_flags <<-EOSQL
+    -- Create OpenStack user (container may already create MYSQL_USER, but ensure '%' host)
     CREATE USER IF NOT EXISTS 'openstack'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
 
     -- Keystone

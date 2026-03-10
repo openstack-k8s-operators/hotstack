@@ -34,15 +34,18 @@ ExecStart=/usr/bin/podman run \
     --network hotstack-os \
     --network-alias mariadb \
     --ip __MARIADB_IP__ \
+    --env SERVICE_NAME=mariadb \
     --env MYSQL_ROOT_PASSWORD=__MYSQL_ROOT_PASSWORD__ \
     --env MYSQL_PASSWORD=__DB_PASSWORD__ \
-    --volume __HOTSTACK_DATA_DIR__/mysql:/var/lib/mysql:z \
-    --volume __HOTSTACK_DATA_DIR__/runtime/scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro,z \
-    docker.io/library/mariadb:11.4 \
-    --innodb-buffer-pool-size=32M --max-connections=250
+    --env MYSQL_USER=openstack \
+    --env MYSQL_DATABASE=keystone \
+    --volume __HOTSTACK_DATA_DIR__/mysql:/var/lib/mysql/data:z \
+    --volume __HOTSTACK_DATA_DIR__/runtime/scripts/init-db.sh:/usr/share/container-scripts/mysql/init/init-db.sh:ro,z \
+    --volume __HOTSTACK_DATA_DIR__/runtime/config/mariadb/hotstack.cnf:/etc/my.cnf.d/hotstack.cnf:ro,z \
+    localhost/hotstack-os-infra:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-mariadb 10 5 5 0 healthcheck.sh --connect --innodb_initialized
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-mariadb 5 5 10 10 mysqladmin --socket=/run/mysqld/mysqld.sock -uroot -p__MYSQL_ROOT_PASSWORD__ ping
 ExecStop=/usr/bin/podman stop -t 30 hotstack-os-mariadb
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-mariadb
 

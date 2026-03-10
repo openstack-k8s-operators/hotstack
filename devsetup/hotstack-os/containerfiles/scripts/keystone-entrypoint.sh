@@ -30,18 +30,20 @@ wait_for_database "mariadb" "openstack" "${KEYSTONE_DB_PASSWORD}" "keystone"
 echo "Syncing Keystone database..."
 keystone-manage db_sync
 
-# Setup Fernet keys (required for uwsgi to start)
+# Setup Fernet keys (required for Keystone to start)
 if [ ! -f /etc/keystone/fernet-keys/0 ]; then
     echo "Setting up Fernet keys..."
-    chown openstack:openstack /etc/keystone/fernet-keys
-    keystone-manage fernet_setup --keystone-user openstack --keystone-group openstack
+    ensure_directory_ownership /etc/keystone/fernet-keys "root:root"
+    chmod 755 /etc/keystone/fernet-keys
+    keystone-manage fernet_setup --keystone-user root --keystone-group root
 fi
 
-# Setup credential keys (required for uwsgi to start)
+# Setup credential keys (required for Keystone to start)
 if [ ! -f /etc/keystone/credential-keys/0 ]; then
     echo "Setting up credential keys..."
-    chown openstack:openstack /etc/keystone/credential-keys
-    keystone-manage credential_setup --keystone-user openstack --keystone-group openstack
+    ensure_directory_ownership /etc/keystone/credential-keys "root:root"
+    chmod 755 /etc/keystone/credential-keys
+    keystone-manage credential_setup --keystone-user root --keystone-group root
 fi
 
 # Bootstrap Keystone (idempotent - creates admin user, domain, roles, endpoints)
@@ -82,6 +84,15 @@ if [ "${OS_BOOTSTRAP:-true}" = "true" ]; then
     ) &
 fi
 
-# Start uwsgi in the foreground (main process)
-echo "Starting Keystone service with uwsgi..."
-exec uwsgi --ini /etc/keystone/keystone-uwsgi.ini
+# Start gunicorn in the foreground (main process)
+echo "Starting Keystone service with gunicorn..."
+exec /usr/local/bin/gunicorn \
+    --bind 0.0.0.0:5000 \
+    --workers 1 \
+    --threads 8 \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info \
+    keystone_wsgi_wrapper:application

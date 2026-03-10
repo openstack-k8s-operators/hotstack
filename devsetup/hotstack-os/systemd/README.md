@@ -34,8 +34,8 @@ Services are organized in dependency layers:
 2. **Infrastructure**: dnsmasq, haproxy, mariadb, rabbitmq, memcached
 3. **Identity**: keystone
 4. **Core Services**: glance, placement
-5. **Networking**: ovn-northd, ovn-controller, neutron-server, neutron-metadata
-6. **Compute**: nova-api, nova-conductor, nova-scheduler, nova-compute, nova-novncproxy
+5. **Networking**: ovn-northd, ovn-controller, neutron-server, neutron-ovn-agent
+6. **Compute**: nova-api, nova-api-metadata, nova-conductor, nova-scheduler, nova-compute, nova-novncproxy
 7. **Block Storage**: cinder-api, cinder-scheduler, cinder-volume
 8. **Orchestration**: heat-api, heat-engine
 

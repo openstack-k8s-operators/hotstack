@@ -1,23 +1,16 @@
-FROM quay.io/opendevmirror/debian:bookworm
+FROM quay.io/fedora/fedora-minimal:42
 
 ARG SERVICE_TYPE=northd
-ARG APT_PROXY=""
-
-# Configure apt proxy if provided (for apt-cacher-ng)
-RUN if [ -n "$APT_PROXY" ]; then \
-        echo "Acquire::http::Proxy \"$APT_PROXY\";" > /etc/apt/apt.conf.d/01proxy; \
-    fi
 
 # Install OVN and OpenvSwitch
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+RUN microdnf install -y --nodocs \
         ovn-central \
         ovn-host \
-        openvswitch-common \
-        iproute2 \
+        openvswitch \
+        iproute \
         curl \
-        netcat-openbsd \
-    && rm -rf /var/lib/apt/lists/*
+        nmap-ncat \
+    && microdnf clean all
 
 # Create directories (rootful containers run as root, no permission issues)
 RUN mkdir -p /etc/ovn /var/lib/ovn /run/ovn

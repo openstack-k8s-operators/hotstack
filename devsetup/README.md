@@ -49,7 +49,7 @@ deployment in a single node.
 |---------|-------------|------------------------|
 | **Deployment Time** | ~10 minutes | 60-120 minutes |
 | **Host OS** | Fedora/RHEL/CentOS | CentOS Stream 9 or 10 |
-| **OpenStack Release** | stable/2025.1 (Epoxy) | Epoxy or later |
+| **OpenStack Release** | stable/2025.2 (Flamingo) | Epoxy or later |
 | **Resource Overhead** | Low (containers) | High |
 | **Requires Dedicated Machine** | No | Yes |
 

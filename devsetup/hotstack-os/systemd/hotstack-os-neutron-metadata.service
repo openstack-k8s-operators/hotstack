@@ -14,7 +14,7 @@
 # under the License.
 
 [Unit]
-Description=HotsTac(k)os Neutron Metadata Agent Service
+Description=HotsTac(k)os Neutron OVN Agent Service
 Documentation=https://github.com/openstack-k8s-operators/hotstack
 After=hotstack-os-neutron-server.service hotstack-os-ovn-controller.service hotstack-os-infra-setup.service
 Wants=hotstack-os-neutron-server.service hotstack-os-ovn-controller.service
@@ -42,13 +42,13 @@ ExecStart=/usr/bin/podman run \
     --env NEUTRON_URL=http://__NEUTRON_SERVER_IP__:9696/ \
     --env OVN_SB_IP=__OVN_NORTHD_IP__ \
     --volume __HOTSTACK_DATA_DIR__/runtime/config/neutron/neutron.conf:/etc/neutron/neutron.conf:ro,z \
-    --volume __HOTSTACK_DATA_DIR__/runtime/config/neutron/neutron_ovn_metadata_agent.ini:/etc/neutron/neutron_ovn_metadata_agent.ini:ro,z \
+    --volume __HOTSTACK_DATA_DIR__/runtime/config/neutron/neutron_ovn_agent.ini:/etc/neutron/neutron_ovn_agent.ini:ro,z \
     --volume /run/openvswitch:/run/openvswitch \
-    --entrypoint /usr/local/bin/neutron-ovn-metadata-agent-entrypoint.sh \
+    --entrypoint /usr/local/bin/neutron-ovn-agent-entrypoint.sh \
     localhost/hotstack-os-neutron:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-neutron-metadata 10 5 5 20 test -f /proc/1/exe
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-neutron-metadata 10 5 5 20 test -f /proc/1/exe
 ExecStop=/usr/bin/podman stop -t 10 hotstack-os-neutron-metadata
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-neutron-metadata
 

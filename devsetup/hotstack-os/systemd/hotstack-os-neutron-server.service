@@ -51,7 +51,7 @@ ExecStart=/usr/bin/podman run \
     localhost/hotstack-os-neutron:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-neutron-server 10 5 5 5 curl -f http://localhost:9696/
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-neutron-server 10 5 5 5 curl -f http://localhost:9696/
 ExecStop=/usr/bin/podman stop -t 30 hotstack-os-neutron-server
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-neutron-server
 

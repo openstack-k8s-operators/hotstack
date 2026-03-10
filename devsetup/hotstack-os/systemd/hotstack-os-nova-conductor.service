@@ -47,7 +47,7 @@ ExecStart=/usr/bin/podman run \
     localhost/hotstack-os-nova:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-nova-conductor 10 5 5 20 test -f /proc/1/exe
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-nova-conductor 10 5 5 20 test -f /proc/1/exe
 ExecStop=/usr/bin/podman stop -t 30 hotstack-os-nova-conductor
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-nova-conductor
 

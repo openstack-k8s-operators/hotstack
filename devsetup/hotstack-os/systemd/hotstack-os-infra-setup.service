@@ -20,6 +20,7 @@ After=openvswitch.service network-online.target
 Wants=network-online.target
 Requires=openvswitch.service
 PartOf=hotstack-os.target
+Before=hotstack-os-mariadb.service hotstack-os-rabbitmq.service hotstack-os-memcached.service hotstack-os-haproxy.service hotstack-os-dnsmasq.service hotstack-os-keystone.service hotstack-os-placement.service hotstack-os-glance.service hotstack-os-nova-api.service hotstack-os-nova-conductor.service hotstack-os-nova-scheduler.service hotstack-os-nova-compute.service hotstack-os-nova-novncproxy.service hotstack-os-ovn-northd.service hotstack-os-ovn-controller.service hotstack-os-neutron-server.service hotstack-os-neutron-metadata.service hotstack-os-cinder-api.service hotstack-os-cinder-scheduler.service hotstack-os-cinder-volume.service hotstack-os-heat-api.service hotstack-os-heat-engine.service
 
 [Service]
 Type=oneshot

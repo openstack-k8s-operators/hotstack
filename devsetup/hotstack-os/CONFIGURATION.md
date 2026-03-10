@@ -59,15 +59,15 @@ Control which OpenStack release to use:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `OPENSTACK_BRANCH` | `stable/2025.1` | OpenStack release branch |
+| `OPENSTACK_BRANCH` | `stable/2025.2` | OpenStack release branch |
 
 Available options:
-- `stable/2025.1` - Epoxy (latest stable, recommended)
+- `stable/2025.2` - Flamingo (latest stable, recommended)
 - `master` - Development branch (not recommended for stability)
 
 Example:
 ```bash
-OPENSTACK_BRANCH=stable/2025.1
+OPENSTACK_BRANCH=stable/2025.2
 ```
 
 ## Logging Configuration
@@ -125,6 +125,7 @@ NOVA_API_IP=172.31.0.21
 NOVA_CONDUCTOR_IP=172.31.0.22
 NOVA_SCHEDULER_IP=172.31.0.23
 NOVA_COMPUTE_IP=172.31.0.24
+NOVA_METADATA_IP=172.31.0.25
 NOVA_NOVNCPROXY_IP=172.31.0.26
 ```
 

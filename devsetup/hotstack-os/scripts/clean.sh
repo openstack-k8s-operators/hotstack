@@ -60,11 +60,47 @@ else
     echo -e "  $WARNING No hotstack user found"
 fi
 
-podman network rm hotstack-os >/dev/null 2>&1 || true
-echo -e "  $OK Removed podman network 'hotstack-os'"
+# Remove podman network - this ensures clean state for next install
+# The network must be removed before we can recreate it with the same subnet
+if podman network exists hotstack-os 2>/dev/null; then
+    podman network rm hotstack-os >/dev/null 2>&1 || true
+    echo -e "  $OK Removed podman network 'hotstack-os'"
+else
+    echo -e "  $OK Podman network 'hotstack-os' already removed"
+fi
+
+# Remove the hotstack-os network interface if it still exists
+# This handles cases where podman didn't fully clean up the bridge
+if ip link show hotstack-os &>/dev/null; then
+    ip link delete hotstack-os 2>/dev/null || true
+    echo -e "  $OK Removed hotstack-os network interface"
+fi
 
 podman volume rm hotstack-os-mariadb hotstack-os-rabbitmq hotstack-os-ovn 2>/dev/null || true
 echo -e "  $OK Removed podman volumes"
+
+# Clean up OVS bridges and IP addresses to prevent subnet conflicts
+# Remove IP from hot-ex bridge if it exists
+if command -v ovs-vsctl >/dev/null 2>&1; then
+    if ovs-vsctl br-exists hot-ex 2>/dev/null; then
+        # Remove all IP addresses from hot-ex
+        ip addr flush dev hot-ex 2>/dev/null || true
+        # Delete the bridge
+        ovs-vsctl del-br hot-ex 2>/dev/null || true
+        echo -e "  $OK Removed hot-ex bridge and IP addresses"
+    else
+        echo -e "  $OK hot-ex bridge already removed"
+    fi
+
+    if ovs-vsctl br-exists hot-int 2>/dev/null; then
+        ovs-vsctl del-br hot-int 2>/dev/null || true
+        echo -e "  $OK Removed hot-int bridge"
+    else
+        echo -e "  $OK hot-int bridge already removed"
+    fi
+else
+    echo -e "  $WARNING OVS not found, skipping bridge cleanup"
+fi
 
 # Unmount any bind mounts in nova-mnt before cleaning
 if [ -d "$HOTSTACK_DATA_DIR/nova-mnt" ]; then

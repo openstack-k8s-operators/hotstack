@@ -47,7 +47,7 @@ ExecStart=/usr/bin/podman run \
     localhost/hotstack-os-placement:latest
 
 # Health check: CONTAINER INTERVAL TIMEOUT RETRIES START_PERIOD COMMAND
-ExecStartPost=-/usr/local/bin/hotstack-healthcheck.sh hotstack-os-placement 10 5 5 5 curl -f http://localhost:8778/
+ExecStartPost=-/usr/local/bin/hotstack-healthcheck hotstack-os-placement 10 5 5 5 curl -f http://localhost:8778/
 ExecStop=/usr/bin/podman stop -t 30 hotstack-os-placement
 ExecStopPost=-/usr/bin/podman rm -f hotstack-os-placement
 

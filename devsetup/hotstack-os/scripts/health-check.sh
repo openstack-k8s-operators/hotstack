@@ -50,7 +50,7 @@ check_service "Nova NoVNC Proxy" "hotstack-os-nova-novncproxy" || increment_erro
 check_service "OVN Northd" "hotstack-os-ovn-northd" || increment_errors
 check_service "OVN Controller" "hotstack-os-ovn-controller" || increment_errors
 check_service "Neutron Server" "hotstack-os-neutron-server" || increment_errors
-check_service "Neutron Metadata" "hotstack-os-neutron-metadata" || increment_errors
+check_service "Neutron OVN Agent" "hotstack-os-neutron-metadata" || increment_errors
 check_service "Cinder API" "hotstack-os-cinder-api" || increment_errors
 check_service "Cinder Scheduler" "hotstack-os-cinder-scheduler" || increment_errors
 check_service "Cinder Volume" "hotstack-os-cinder-volume" || increment_errors

@@ -252,6 +252,8 @@ def test_ssh_access(floating_ip, private_key_path, username="cirros", timeout=12
                     "-i",
                     str(private_key_path),
                     "-o",
+                    "BatchMode=yes",
+                    "-o",
                     "StrictHostKeyChecking=no",
                     "-o",
                     "UserKnownHostsFile=/dev/null",
@@ -386,6 +388,8 @@ def run_smoke_test(args):
         else:
             print(f"  {key}: {value}")
 
+    test_failures = []
+
     # Test connectivity
     if args.test_connectivity:
         print()
@@ -396,21 +400,17 @@ def run_smoke_test(args):
         time.sleep(30)
 
         # Test both floating IPs
-        connectivity_passed = True
         if "instance1_floating_ip" in outputs:
             if not test_connectivity(outputs["instance1_floating_ip"], timeout=60):
-                connectivity_passed = False
+                test_failures.append(
+                    f"ICMP connectivity to instance1 ({outputs['instance1_floating_ip']})"
+                )
 
         if "instance2_floating_ip" in outputs:
             if not test_connectivity(outputs["instance2_floating_ip"], timeout=60):
-                connectivity_passed = False
-
-        if connectivity_passed:
-            print_success("All connectivity tests passed")
-        else:
-            print_warning(
-                "Some connectivity tests failed (this may be expected if instances are still booting)"
-            )
+                test_failures.append(
+                    f"ICMP connectivity to instance2 ({outputs['instance2_floating_ip']})"
+                )
 
     # Test SSH access (verifies metadata service)
     if args.test_ssh:
@@ -431,7 +431,6 @@ def run_smoke_test(args):
             print_warning(f"Private key not found: {private_key_path}")
             print_warning("Skipping SSH test")
         else:
-            ssh_passed = True
             if "instance1_floating_ip" in outputs:
                 if not test_ssh_access(
                     outputs["instance1_floating_ip"],
@@ -439,7 +438,9 @@ def run_smoke_test(args):
                     username=args.ssh_username,
                     timeout=120,
                 ):
-                    ssh_passed = False
+                    test_failures.append(
+                        f"SSH access to instance1 ({outputs['instance1_floating_ip']})"
+                    )
 
             if "instance2_floating_ip" in outputs:
                 if not test_ssh_access(
@@ -448,14 +449,9 @@ def run_smoke_test(args):
                     username=args.ssh_username,
                     timeout=120,
                 ):
-                    ssh_passed = False
-
-            if ssh_passed:
-                print_success("All SSH tests passed")
-            else:
-                print_warning(
-                    "Some SSH tests failed (metadata service may have issues)"
-                )
+                    test_failures.append(
+                        f"SSH access to instance2 ({outputs['instance2_floating_ip']})"
+                    )
 
     # Cleanup
     if not args.keep_stack:
@@ -469,6 +465,14 @@ def run_smoke_test(args):
 
     # Final result
     print()
+    if test_failures:
+        print_error(
+            "Smoke test FAILED! The following tests did not pass:", indent=False
+        )
+        for failure in test_failures:
+            print_error(f"  - {failure}")
+        sys.exit(1)
+
     print(f"{Colors.DONE} Smoke test completed successfully!")
 
 

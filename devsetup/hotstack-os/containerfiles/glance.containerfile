@@ -1,6 +1,6 @@
 FROM localhost/hotstack-os-base-builder:latest AS builder
 
-ARG OPENSTACK_BRANCH=stable/2025.1
+ARG OPENSTACK_BRANCH=stable/2025.2
 
 # Clone and build Glance from source with optional dependencies
 RUN git clone --depth 1 --branch ${OPENSTACK_BRANCH} \
@@ -15,7 +15,7 @@ RUN git clone --depth 1 --branch ${OPENSTACK_BRANCH} \
 # Runtime stage
 FROM localhost/hotstack-os-base:latest
 
-ARG OPENSTACK_BRANCH=stable/2025.1
+ARG OPENSTACK_BRANCH=stable/2025.2
 
 # Copy installed packages and config from builder
 COPY --from=builder /usr/local /usr/local
@@ -23,15 +23,11 @@ COPY --from=builder /etc/glance /etc/glance
 
 # Create directories and user
 RUN mkdir -p /var/lib/glance/images && \
-    (useradd -m -d /var/lib/glance -s /bin/bash glance || true) && \
-    chown -R glance:glance /var/lib/glance
+    (useradd -m -d /var/lib/glance -s /bin/bash glance || true)
 
 # Copy entrypoint scripts with permissions
 COPY --chmod=755 scripts/glance-entrypoint.sh /usr/local/bin/entrypoint.sh
 
 EXPOSE 9292
-
-USER glance
-WORKDIR /var/lib/glance
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

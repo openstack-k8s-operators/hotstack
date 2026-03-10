@@ -56,6 +56,10 @@ if [ "${OS_BOOTSTRAP:-true}" = "true" ]; then
     echo "Neutron service registered! (Service ID: ${NEUTRON_SERVICE_ID})"
 fi
 
-# Start Neutron Server
-echo "Starting Neutron Server..."
-exec neutron-server --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini
+# Start Neutron RPC server in the background
+echo "Starting Neutron RPC server..."
+neutron-rpc-server --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini &
+
+# Start Neutron API via uwsgi
+echo "Starting Neutron API with uwsgi..."
+exec uwsgi --ini /etc/neutron/neutron-uwsgi.ini
