@@ -49,7 +49,6 @@ HotsTac(k)os is designed to coexist safely with other podman containers and work
 **⚠️ WARNING about `make clean`:**
 - Removes all HotsTac(k)os containers, images, and persistent data
 - **Destroys ALL libvirt VMs matching pattern `notapet-<uuid>` in the session**
-- **Removes ALL network namespaces matching pattern `netns-*`**
 - Removes libvirt session service and hotstack user
 - Removes podman network
 - Removes OVS bridges

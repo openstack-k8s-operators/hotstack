@@ -615,13 +615,6 @@ remove_libvirt_vms() {
 }
 
 # ============================================================================
-# Network Namespace Cleanup
-# ============================================================================
-
-# Remove network namespaces created by Neutron/OVN
-# Usage: remove_network_namespaces
-# Returns: 0 on success, 1 if ip command not available
-# ============================================================================
 # Auto-initialization
 # ============================================================================
 
