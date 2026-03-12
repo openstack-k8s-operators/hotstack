@@ -26,6 +26,12 @@ sushy_emulator_manifests: /home/zuul/manifests/sushy_emulator_manifests
 hotstack_enable_nova_console_poller: false
 hotstack_enable_nova_console_recorder: false
 
+# Override disk format for virtual media images. Use when OpenStack cloud
+# restricts Glance disk formats (e.g., only 'raw' and 'qcow2' allowed).
+# Leave undefined to use auto-detected format. Set to 'raw' if cloud rejects
+# 'iso' format images.
+sushy_emulator_os_vmedia_disk_format_override: null
+
 # Rescue-based virtual media (SUSHY_EMULATOR_OS_VMEDIA_USE_RESCUE)
 # Enable virtual media (CD/DVD) boot via Nova rescue mode. This provides an
 # alternative to volume-based virtual media for environments where OpenStack

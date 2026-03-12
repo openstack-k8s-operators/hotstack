@@ -26,7 +26,7 @@ redfish_vbmc_podman_password: password
 redfish_vbmc_podman_instances_uuids: []
 
 # Container configuration
-redfish_vbmc_podman_image: quay.io/rhn_gps_hjensas/sushy-tools:dev-1773311841
+redfish_vbmc_podman_image: quay.io/rhn_gps_hjensas/sushy-tools:dev-1773346205
 redfish_vbmc_podman_listen_port: 8000
 
 # Paths
@@ -38,6 +38,11 @@ redfish_vbmc_podman_debug: true
 redfish_vbmc_podman_vmedia_file_upload: true
 redfish_vbmc_podman_vmedia_delay_eject: true
 redfish_vbmc_podman_ignore_boot_device: false
+# Override disk format for virtual media images. Use when OpenStack cloud
+# restricts Glance disk formats (e.g., only 'raw' and 'qcow2' allowed).
+# Leave undefined to use auto-detected format. Set to 'raw' if cloud rejects
+# 'iso' format images.
+redfish_vbmc_podman_os_vmedia_disk_format_override: null
 
 # Rescue-based virtual media (SUSHY_EMULATOR_OS_VMEDIA_USE_RESCUE)
 # Enable virtual media (CD/DVD) boot via Nova rescue mode. This provides an
