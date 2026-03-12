@@ -46,6 +46,27 @@ data:
     # It is useful in a tenant environment where only some instances represent
     # virtual baremetal.
     SUSHY_EMULATOR_ALLOWED_INSTANCES = {{ instances_uuids }}
+
+{% if sushy_emulator_os_vmedia_use_rescue | bool or
+      (stack_outputs.sushy_tools_vmedia_type | default('volumeRebuild') == 'rescue') %}
+
+    # Enable virtual media (CD/DVD) boot via Nova rescue mode. This provides an
+    # alternative to volume-based virtual media for environments where:
+    # - OpenStack cloud lacks Nova API microversion 2.93 (Zed+)
+    # - OVMF firmware has issues with volume-backed CD-ROM attachment
+    # - Image-backed instances are preferred or required
+    # Note: Mutually exclusive with volume-based virtual media implementation
+    SUSHY_EMULATOR_OS_VMEDIA_USE_RESCUE = True
+
+    # Specify rescue device bus type (default: 'sata'). Use 'scsi' if instances
+    # enter RESCUE state but don't boot from CD-ROM, as different OVMF UEFI
+    # firmware implementations may require specific bus types for bootable ISOs
+    SUSHY_EMULATOR_OS_VMEDIA_RESCUE_BUS = '{{ sushy_emulator_os_vmedia_rescue_bus }}'
+
+    # Specify rescue device type for virtual media (default: 'cdrom')
+    SUSHY_EMULATOR_OS_VMEDIA_RESCUE_DEVICE = '{{ sushy_emulator_os_vmedia_rescue_device }}'
+{% endif %}
+
 {% if sushy_emulator_os_rescue_pxe_boot | bool or
       (stack_outputs.ironic_boot_interface | default('redfish-virtual-media')
        in ['pxe', 'ipxe', 'mixed']) %}
