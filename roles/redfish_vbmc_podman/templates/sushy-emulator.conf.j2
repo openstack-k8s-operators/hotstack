@@ -27,6 +27,12 @@ SUSHY_EMULATOR_OS_VMEDIA_IMAGE_FILE_UPLOAD = {{ redfish_vbmc_podman_vmedia_file_
 # is delayed until the next a RedFish power action.
 SUSHY_EMULATOR_OS_VMEDIA_DELAY_EJECT = {{ redfish_vbmc_podman_vmedia_delay_eject | bool }}
 
+{% if redfish_vbmc_podman_os_vmedia_disk_format_override is not none %}
+# Override disk format for virtual media images. Use when OpenStack cloud
+# restricts Glance disk formats (e.g., only 'raw' and 'qcow2' allowed).
+SUSHY_EMULATOR_OS_VMEDIA_DISK_FORMAT_OVERRIDE = '{{ redfish_vbmc_podman_os_vmedia_disk_format_override }}'
+{% endif %}
+
 # Instruct the libvirt driver to ignore any instructions to
 # set the boot device. Allowing the UEFI firmware to instead
 # rely on the EFI Boot Manager
