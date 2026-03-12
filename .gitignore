@@ -9,3 +9,5 @@ hotstack_overrides.yaml
 images/*.qcow2
 images/.*-build/
 images/*.d/
+*.gz.b64
+*.tar.gz
