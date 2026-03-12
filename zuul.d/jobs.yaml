@@ -110,9 +110,12 @@
     attempts: 1
     vars:
       scenario: sno-2-bm
-      stack_template_path: "{{ scenario_dir }}/{{ scenario }}/heat_template_ipxe.yaml"
     files:
       - ^scenarios/sno-2-bm/.*
+      - ^roles/redfish_virtual_bmc/.*
+      - ^roles/redfish_vbmc_podman/.*
+      - ^roles/nova_console_recorder/.*
+      - ^roles/nova_console_poller/.*
 
 - job:
     name: vexxhost-hotstack-3-nodes
@@ -126,7 +129,12 @@
       scenario: 3-nodes
     files:
       - ^scenarios/3-nodes/.*
-      - ^roles/.*
+      - ^roles/controller/.*
+      - ^roles/dataplane_ssh_keys/.*
+      - ^roles/heat_stack/.*
+      - ^roles/hotlogs/.*
+      - ^roles/hotloop/.*
+      - ^roles/ocp_agent_installer/.*
 
 - job:
     name: vexxhost-hotstack-3-nodes-update
