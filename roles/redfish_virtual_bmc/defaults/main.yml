@@ -26,6 +26,20 @@ sushy_emulator_manifests: /home/zuul/manifests/sushy_emulator_manifests
 hotstack_enable_nova_console_poller: false
 hotstack_enable_nova_console_recorder: false
 
+# Rescue-based virtual media (SUSHY_EMULATOR_OS_VMEDIA_USE_RESCUE)
+# Enable virtual media (CD/DVD) boot via Nova rescue mode. This provides an
+# alternative to volume-based virtual media for environments where OpenStack
+# cloud lacks Nova API microversion 2.93 (Zed+) or OVMF firmware has issues
+# with volume-backed CD-ROM attachment. Mutually exclusive with volume-based
+# virtual media implementation.
+sushy_emulator_os_vmedia_use_rescue: false
+# Rescue device bus type (default: 'sata'). Use 'scsi' if instances enter
+# RESCUE state but don't boot from CD-ROM, as different OVMF UEFI firmware
+# implementations may require specific bus types for bootable ISOs.
+sushy_emulator_os_vmedia_rescue_bus: scsi
+# Rescue device type for virtual media (default: 'cdrom')
+sushy_emulator_os_vmedia_rescue_device: cdrom
+
 # Rescue-based PXE boot (SUSHY_EMULATOR_OS_RESCUE_PXE_BOOT)
 # When enabled, sushy-emulator uses Nova rescue mode for network boot instead
 # of the legacy libvirt metadata approach. Set to true when ironic_boot_interface

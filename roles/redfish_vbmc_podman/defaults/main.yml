@@ -26,7 +26,7 @@ redfish_vbmc_podman_password: password
 redfish_vbmc_podman_instances_uuids: []
 
 # Container configuration
-redfish_vbmc_podman_image: quay.io/rhn_gps_hjensas/sushy-tools:dev-1761151453
+redfish_vbmc_podman_image: quay.io/rhn_gps_hjensas/sushy-tools:dev-1773311841
 redfish_vbmc_podman_listen_port: 8000
 
 # Paths
@@ -38,3 +38,25 @@ redfish_vbmc_podman_debug: true
 redfish_vbmc_podman_vmedia_file_upload: true
 redfish_vbmc_podman_vmedia_delay_eject: true
 redfish_vbmc_podman_ignore_boot_device: false
+
+# Rescue-based virtual media (SUSHY_EMULATOR_OS_VMEDIA_USE_RESCUE)
+# Enable virtual media (CD/DVD) boot via Nova rescue mode. This provides an
+# alternative to volume-based virtual media for environments where OpenStack
+# cloud lacks Nova API microversion 2.93 (Zed+) or OVMF firmware has issues
+# with volume-backed CD-ROM attachment. Mutually exclusive with volume-based
+# virtual media implementation.
+redfish_vbmc_podman_os_vmedia_use_rescue: false
+# Rescue device bus type (default: 'sata'). Use 'scsi' if instances enter
+# RESCUE state but don't boot from CD-ROM, as different OVMF UEFI firmware
+# implementations may require specific bus types for bootable ISOs.
+redfish_vbmc_podman_os_vmedia_rescue_bus: scsi
+# Rescue device type for virtual media (default: 'cdrom')
+redfish_vbmc_podman_os_vmedia_rescue_device: cdrom
+
+# Rescue-based PXE boot (SUSHY_EMULATOR_OS_RESCUE_PXE_BOOT)
+# When enabled, sushy-emulator uses Nova rescue mode for network boot instead
+# of the legacy libvirt metadata approach. Set to true when ironic_boot_interface
+# is 'pxe' or 'ipxe'. Requires iPXE rescue images in Glance.
+redfish_vbmc_podman_os_rescue_pxe_boot: false
+redfish_vbmc_podman_os_rescue_pxe_image_bios: ipxe-rescue-bios
+redfish_vbmc_podman_os_rescue_pxe_image_uefi: ipxe-rescue-uefi
