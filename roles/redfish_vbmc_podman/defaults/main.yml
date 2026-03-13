@@ -26,7 +26,7 @@ redfish_vbmc_podman_password: password
 redfish_vbmc_podman_instances_uuids: []
 
 # Container configuration
-redfish_vbmc_podman_image: quay.io/rhn_gps_hjensas/sushy-tools:dev-1773346205
+redfish_vbmc_podman_image: quay.io/rhn_gps_hjensas/sushy-tools:dev-1773400388
 redfish_vbmc_podman_listen_port: 8000
 
 # Paths
