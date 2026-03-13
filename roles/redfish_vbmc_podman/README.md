@@ -31,7 +31,7 @@ and management.
 | `redfish_vbmc_podman_cloud_config_dir` | `/home/zuul/.hotcloud` | Path to directory containing clouds.yaml |
 | `redfish_vbmc_podman_username` | `admin` | RedFish API username |
 | `redfish_vbmc_podman_password` | `password` | RedFish API password |
-| `redfish_vbmc_podman_image` | `quay.io/rhn_gps_hjensas/sushy-tools:dev-1761151453` | Container image to use |
+| `redfish_vbmc_podman_image` | `quay.io/rhn_gps_hjensas/sushy-tools:dev-1773400388` | Container image to use |
 | `redfish_vbmc_podman_listen_port` | `8000` | Port to expose on the host |
 | `redfish_vbmc_podman_config_dir` | `/etc/sushy-emulator` | Configuration directory on host |
 | `redfish_vbmc_podman_openstack_config_dir` | `/etc/openstack` | OpenStack config mount point in container |
