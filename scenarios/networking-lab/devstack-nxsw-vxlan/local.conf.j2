@@ -1,0 +1,158 @@
+[[local|localrc]]
+# Credentials
+ADMIN_PASSWORD=secret
+DATABASE_PASSWORD=$ADMIN_PASSWORD
+RABBIT_PASSWORD=$ADMIN_PASSWORD
+SERVICE_PASSWORD=$ADMIN_PASSWORD
+
+# Service timeouts
+SERVICE_TIMEOUT=120
+
+# MTU - running inside an encapsulated environment, restrict to 1442 on the
+# physical network so VXLAN tenant networks get 1442 - 50 = 1392 effective MTU.
+PUBLIC_BRIDGE_MTU=1442
+
+# Networking
+HOST_IP=192.168.32.20
+SERVICE_HOST=$HOST_IP
+MYSQL_HOST=$HOST_IP
+RABBIT_HOST=$HOST_IP
+GLANCE_HOSTPORT=$HOST_IP:9292
+
+# Network ranges (avoiding Heat template allocations)
+FIXED_RANGE=172.20.100.0/24
+IPV4_ADDRS_SAFE_TO_USE=172.20.100.0/24
+FLOATING_RANGE=172.20.200.0/24
+PUBLIC_NETWORK_GATEWAY=172.20.200.1
+
+# Disable IPv6 - use IPv4 only
+IP_VERSION=4
+
+# Enable Neutron with OVN
+enable_plugin neutron https://opendev.org/openstack/neutron
+disable_service n-net
+enable_service q-svc
+# Disable traditional neutron agents
+disable_service q-agt
+disable_service q-dhcp
+disable_service q-l3
+disable_service q-meta
+# Enable OVN services
+enable_service ovn-northd
+enable_service ovn-controller
+enable_service q-ovn-metadata-agent
+# Enable Neutron trunk service
+enable_service neutron-trunk
+# Enable Neutron segments service
+enable_service neutron-segments
+
+enable_service ir-api
+enable_service ir-cond
+enable_service ir-neutronagt
+
+# Ironic configuration
+VIRT_DRIVER=ironic
+DEFAULT_INSTANCE_TYPE=baremetal
+IRONIC_BAREMETAL_BASIC_OPS=True
+IRONIC_IS_HARDWARE=True
+IRONIC_VM_COUNT=0
+IRONIC_NETWORK_SIMULATOR=none
+IRONIC_BUILD_DEPLOY_RAMDISK=False
+IRONIC_DEPLOY_DRIVER=redfish
+IRONIC_ENABLED_HARDWARE_TYPES=redfish
+IRONIC_ENABLED_BOOT_INTERFACES=ipxe,redfish-virtual-media,http-ipxe
+IRONIC_ENABLED_POWER_INTERFACES=redfish
+IRONIC_ENABLED_MANAGEMENT_INTERFACES=redfish
+IRONIC_ENABLED_DEPLOY_INTERFACES=direct,ramdisk
+IRONIC_NETWORK_INTERFACE=neutron
+IRONIC_ENABLED_NETWORK_INTERFACES=neutron
+IRONIC_AUTOMATED_CLEAN_ENABLED=True
+FORCE_CONFIG_DRIVE=True
+
+# Ironic network configuration - use provisioning vxlan network for all operations
+IRONIC_PROVISION_NETWORK_NAME=provisioning
+IRONIC_PROVISION_PROVIDER_NETWORK_TYPE=vxlan
+IRONIC_PROVISION_SUBNET_PREFIX=10.0.5.0/24
+IRONIC_PROVISION_SUBNET_GATEWAY=10.0.5.1
+IRONIC_CLEAN_NET_NAME=provisioning
+IRONIC_RESCUE_NET_NAME=provisioning
+IRONIC_INSPECTION_NET_NAME=provisioning
+
+# Networking configuration for ML2 with OVN and Generic Switch
+Q_PLUGIN=ml2
+Q_ML2_TENANT_NETWORK_TYPE=vxlan
+Q_ML2_PLUGIN_MECHANISM_DRIVERS=ovn,baremetal-l2vni,genericswitch,baremetal
+Q_ML2_PLUGIN_TYPE_DRIVERS=vxlan,geneve,vlan,flat
+ENABLE_TENANT_VLANS=True
+TENANT_VLAN_RANGE=103:105
+PHYSICAL_NETWORK=public
+
+# Physical interface mapping
+# The second interface (trunk port) will be added to br-ex
+# trunk0 is matched by MAC address fa:16:9e:81:f6:21 and renamed by netplan
+PUBLIC_INTERFACE=trunk0
+OVS_PHYSICAL_BRIDGE=br-ex
+PUBLIC_BRIDGE=br-ex
+
+# OVN Configuration
+Q_USE_PROVIDERNET_FOR_PUBLIC=True
+OVN_L3_CREATE_PUBLIC_NETWORK=True
+OVN_BRIDGE_MAPPINGS=public:br-ex
+
+# Enable Ironic
+enable_plugin ironic https://opendev.org/openstack/ironic
+
+# Enable networking-generic-switch plugin
+enable_plugin networking-generic-switch https://opendev.org/openstack/networking-generic-switch
+
+# Enable networking-baremetal plugin
+enable_plugin networking-baremetal https://opendev.org/openstack/networking-baremetal refs/changes/75/980375/2
+
+
+
+# Disable Swift (optional, not needed for this setup)
+disable_service s-proxy s-object s-container s-account
+
+# Disable Horizon dashboard
+disable_service horizon
+
+[[post-config|$NEUTRON_CONF]]
+[DEFAULT]
+global_physnet_mtu = 1442
+
+[baremetal_l2vni]
+# Set to False for pure EVPN deployments where switches handle VXLAN via BGP
+# Set to True if you need OVN localnet ports for overlay-to-physical bridging
+create_localnet_ports = True
+default_physical_network = public
+
+[l2vni]
+# Enable L2VNI trunk reconciliation for network nodes
+enable_l2vni_trunk_reconciliation = True
+l2vni_reconciliation_interval = 300
+l2vni_auto_create_networks = True
+l2vni_subport_anchor_network = l2vni-subport-anchor
+l2vni_subport_anchor_network_type = vxlan
+l2vni_startup_jitter_max = 60
+l2vni_network_nodes_config = /etc/neutron/l2vni_network_nodes.yaml
+
+[[post-config|/etc/neutron/plugins/ml2/ml2_conf_genericswitch.ini]]
+[genericswitch:leaf01]
+device_type = netmiko_cisco_nxos
+ip = 192.168.32.13
+username = admin
+password = password
+ngs_mac_address = 22:57:f8:dd:03:01
+ngs_disable_inactive_ports = true
+ngs_physical_networks = public
+ngs_nve_interface = nve1
+
+[genericswitch:leaf02]
+device_type = netmiko_cisco_nxos
+ip = 192.168.32.14
+username = admin
+password = password
+ngs_mac_address = 22:57:f8:dd:04:01
+ngs_disable_inactive_ports = true
+ngs_physical_networks = public
+ngs_nve_interface = nve1
