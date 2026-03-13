@@ -51,14 +51,15 @@
           networker_params:
             image: cs9stream-genericcloud
           bmh_params:
-            image: cs9stream-genericcloud
+            image: sushy-tools-blank-image
           ironic_params:
-            image: cs9stream-genericcloud
+            image: sushy-tools-blank-image
             # vpu: 2 ram 4GB disk: 40GB
             flavor: ci.m1.medium
       hotstack_enable_nova_console_poller: true
       hotstack_enable_nova_console_recorder: true
       sushy_emulator_os_vmedia_disk_format_override: raw
+      sushy_emulator_os_vmedia_rescue_bus: sata
     pre-run:
       - ci/playbooks/pre-deploy.yml
     run:
