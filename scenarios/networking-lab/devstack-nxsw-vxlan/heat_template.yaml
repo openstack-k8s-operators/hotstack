@@ -37,7 +37,7 @@ parameters:
     type: json
     default:
       image: ubuntu-noble-server
-      flavor: hotstack.xxlarge
+      flavor: hotstack.large
   ironic_params:
     type: json
     default:
@@ -123,63 +123,33 @@ resources:
       port_security_enabled: false
       value_specs: {get_param: net_value_specs}
 
-  # Leaf01 trunk networks for tenant VLANs
+  # Trunk network for leaf01 switch
   leaf01-trunk-net:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
       value_specs: {get_param: net_value_specs}
 
-  leaf01-public-vlan100:
+  # Shared VLAN networks for physical network connectivity
+  public-vlan100:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
       value_specs: {get_param: net_value_specs}
 
-  leaf01-tenant-vlan103:
+  tenant-vlan103:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
       value_specs: {get_param: net_value_specs}
 
-  leaf01-tenant-vlan104:
+  tenant-vlan104:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
       value_specs: {get_param: net_value_specs}
 
-  leaf01-tenant-vlan105:
-    type: OS::Neutron::Net
-    properties:
-      port_security_enabled: false
-      value_specs: {get_param: net_value_specs}
-
-  # Leaf02 trunk networks for tenant VLANs
-  leaf02-trunk-net:
-    type: OS::Neutron::Net
-    properties:
-      port_security_enabled: false
-      value_specs: {get_param: net_value_specs}
-
-  leaf02-public-vlan100:
-    type: OS::Neutron::Net
-    properties:
-      port_security_enabled: false
-      value_specs: {get_param: net_value_specs}
-
-  leaf02-tenant-vlan103:
-    type: OS::Neutron::Net
-    properties:
-      port_security_enabled: false
-      value_specs: {get_param: net_value_specs}
-
-  leaf02-tenant-vlan104:
-    type: OS::Neutron::Net
-    properties:
-      port_security_enabled: false
-      value_specs: {get_param: net_value_specs}
-
-  leaf02-tenant-vlan105:
+  tenant-vlan105:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
@@ -270,7 +240,7 @@ resources:
       enable_dhcp: false
       gateway_ip: null
 
-  # Leaf01 trunk subnets
+  # Leaf01 trunk subnet
   leaf01-trunk-subnet:
     type: OS::Neutron::Subnet
     properties:
@@ -278,91 +248,42 @@ resources:
       ip_version: 4
       cidr: 172.20.20.0/24
       enable_dhcp: false
-      allocation_pools:
-        - start: 172.20.20.100
-          end: 172.20.20.150
+      gateway_ip: null
 
-  leaf01-public-vlan100-subnet:
+  # Shared VLAN subnets
+  public-vlan100-subnet:
     type: OS::Neutron::Subnet
     properties:
-      network: {get_resource: leaf01-public-vlan100}
+      network: {get_resource: public-vlan100}
       ip_version: 4
       cidr: 172.20.0.0/24
       gateway_ip: 172.20.0.1
       enable_dhcp: false
 
-  leaf01-tenant-vlan103-subnet:
+  tenant-vlan103-subnet:
     type: OS::Neutron::Subnet
     properties:
-      network: {get_resource: leaf01-tenant-vlan103}
+      network: {get_resource: tenant-vlan103}
       ip_version: 4
       cidr: 172.20.3.0/24
       gateway_ip: null
       enable_dhcp: false
 
-  leaf01-tenant-vlan104-subnet:
+  tenant-vlan104-subnet:
     type: OS::Neutron::Subnet
     properties:
-      network: {get_resource: leaf01-tenant-vlan104}
+      network: {get_resource: tenant-vlan104}
       ip_version: 4
       cidr: 172.20.4.0/24
       gateway_ip: null
       enable_dhcp: false
 
-  leaf01-tenant-vlan105-subnet:
+  tenant-vlan105-subnet:
     type: OS::Neutron::Subnet
     properties:
-      network: {get_resource: leaf01-tenant-vlan105}
+      network: {get_resource: tenant-vlan105}
       ip_version: 4
       cidr: 172.20.5.0/24
-      gateway_ip: null
-      enable_dhcp: false
-
-  # Leaf02 trunk subnets
-  leaf02-trunk-subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      network: {get_resource: leaf02-trunk-net}
-      ip_version: 4
-      cidr: 172.20.21.0/24
-      enable_dhcp: false
-      allocation_pools:
-        - start: 172.20.21.100
-          end: 172.20.21.150
-
-  leaf02-public-vlan100-subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      network: {get_resource: leaf02-public-vlan100}
-      ip_version: 4
-      cidr: 172.20.1.0/24
-      gateway_ip: 172.20.1.1
-      enable_dhcp: false
-
-  leaf02-tenant-vlan103-subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      network: {get_resource: leaf02-tenant-vlan103}
-      ip_version: 4
-      cidr: 172.20.6.0/24
-      gateway_ip: null
-      enable_dhcp: false
-
-  leaf02-tenant-vlan104-subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      network: {get_resource: leaf02-tenant-vlan104}
-      ip_version: 4
-      cidr: 172.20.7.0/24
-      gateway_ip: null
-      enable_dhcp: false
-
-  leaf02-tenant-vlan105-subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      network: {get_resource: leaf02-tenant-vlan105}
-      ip_version: 4
-      cidr: 172.20.8.0/24
       gateway_ip: null
       enable_dhcp: false
 
@@ -425,12 +346,12 @@ resources:
               str_replace:
                 template: |
                   # Host records
-                  host-record=controller-0.netlab.example.com,$controller0
-                  host-record=spine01.netlab.example.com,$spine01
-                  host-record=spine02.netlab.example.com,$spine02
-                  host-record=leaf01.netlab.example.com,$leaf01
-                  host-record=leaf02.netlab.example.com,$leaf02
-                  host-record=devstack.netlab.example.com,$devstack
+                  host-record=controller-0.stack.lab,$controller0
+                  host-record=spine01.stack.lab,$spine01
+                  host-record=spine02.stack.lab,$spine02
+                  host-record=leaf01.stack.lab,$leaf01
+                  host-record=leaf02.stack.lab,$leaf02
+                  host-record=devstack.stack.lab,$devstack
                 params:
                   $controller0: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
                   $spine01: {get_attr: [spine01-machine-port, fixed_ips, 0, ip_address]}
@@ -698,28 +619,28 @@ resources:
   leaf01-trunk-public-vlan100-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: leaf01-public-vlan100}
+      network: {get_resource: public-vlan100}
       port_security_enabled: false
       mac_address: "22:57:f8:dd:03:06"
 
   leaf01-trunk-tenant-vlan103-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: leaf01-tenant-vlan103}
+      network: {get_resource: tenant-vlan103}
       port_security_enabled: false
       mac_address: "22:57:f8:dd:03:07"
 
   leaf01-trunk-tenant-vlan104-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: leaf01-tenant-vlan104}
+      network: {get_resource: tenant-vlan104}
       port_security_enabled: false
       mac_address: "22:57:f8:dd:03:08"
 
   leaf01-trunk-tenant-vlan105-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: leaf01-tenant-vlan105}
+      network: {get_resource: tenant-vlan105}
       port_security_enabled: false
       mac_address: "22:57:f8:dd:03:09"
 
@@ -741,12 +662,12 @@ resources:
           segmentation_id: 105
           segmentation_type: vlan
 
-  leaf01-ironic0-br-port:
+  leaf02-ironic0-br-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: ironic0-br-net}
       port_security_enabled: false
-      mac_address: "22:57:f8:dd:03:0a"
+      mac_address: "22:57:f8:dd:04:0a"
 
   leaf01:
     type: OS::Nova::Server
@@ -761,7 +682,6 @@ resources:
         - port: {get_resource: leaf01-spine01-port}
         - port: {get_resource: leaf01-spine02-port}
         - port: {get_attr: [leaf01-trunk, port_id]}
-        - port: {get_resource: leaf01-ironic0-br-port}
         - port: {get_resource: leaf01-devstack-br-port}
 
   # Leaf02 Switch
@@ -806,59 +726,6 @@ resources:
       port_security_enabled: false
       mac_address: "22:57:f8:dd:04:03"
 
-  leaf02-trunk-parent-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf02-trunk-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:04:04"
-
-  leaf02-trunk-public-vlan100-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf02-public-vlan100}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:04:05"
-
-  leaf02-trunk-tenant-vlan103-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf02-tenant-vlan103}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:04:06"
-
-  leaf02-trunk-tenant-vlan104-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf02-tenant-vlan104}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:04:07"
-
-  leaf02-trunk-tenant-vlan105-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf02-tenant-vlan105}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:04:08"
-
-  leaf02-trunk:
-    type: OS::Neutron::Trunk
-    properties:
-      port: {get_resource: leaf02-trunk-parent-port}
-      sub_ports:
-        - port: {get_resource: leaf02-trunk-public-vlan100-port}
-          segmentation_id: 100
-          segmentation_type: vlan
-        - port: {get_resource: leaf02-trunk-tenant-vlan103-port}
-          segmentation_id: 103
-          segmentation_type: vlan
-        - port: {get_resource: leaf02-trunk-tenant-vlan104-port}
-          segmentation_id: 104
-          segmentation_type: vlan
-        - port: {get_resource: leaf02-trunk-tenant-vlan105-port}
-          segmentation_id: 105
-          segmentation_type: vlan
-
   leaf02-ironic1-br-port:
     type: OS::Neutron::Port
     properties:
@@ -878,7 +745,7 @@ resources:
         - port: {get_resource: leaf02-machine-port}
         - port: {get_resource: leaf02-spine01-port}
         - port: {get_resource: leaf02-spine02-port}
-        - port: {get_attr: [leaf02-trunk, port_id]}
+        - port: {get_resource: leaf02-ironic0-br-port}
         - port: {get_resource: leaf02-ironic1-br-port}
 
   #
@@ -904,7 +771,7 @@ resources:
     properties:
       cloud_config:
         hostname: devstack
-        fqdn: devstack.netlab.example.com
+        fqdn: devstack.stack.lab
 
 
   devstack-write-files:
@@ -950,25 +817,25 @@ resources:
   devstack-public-vlan100-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: leaf01-public-vlan100}
+      network: {get_resource: public-vlan100}
       port_security_enabled: false
 
   devstack-tenant-vlan103-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: leaf01-tenant-vlan103}
+      network: {get_resource: tenant-vlan103}
       port_security_enabled: false
 
   devstack-tenant-vlan104-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: leaf01-tenant-vlan104}
+      network: {get_resource: tenant-vlan104}
       port_security_enabled: false
 
   devstack-tenant-vlan105-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: leaf01-tenant-vlan105}
+      network: {get_resource: tenant-vlan105}
       port_security_enabled: false
 
   devstack-trunk:
@@ -1107,21 +974,6 @@ outputs:
             dhcp6: false
             set-name: trunk0
             mtu: 1442
-        vlans:
-          trunk0.100:
-            id: 100
-            link: trunk0
-            mtu: 1442
-            dhcp4: false
-            addresses:
-              - list_join:
-                  - ''
-                  - - {get_attr: [devstack-public-vlan100-port, fixed_ips, 0, ip_address]}
-                    - '/'
-                    - str_split:
-                        - '/'
-                        - {get_attr: [devstack-public-vlan100-port, subnets, 0, cidr]}
-                        - 1
 
   sushy_emulator_uuids:
     description: UUIDs of instances to manage with sushy-tools - RedFish virtual BMC
@@ -1143,7 +995,7 @@ outputs:
           boot_interface: redfish-virtual-media
           network_interface: neutron
           driver_info:
-            redfish_address: http://controller-0.netlab.example.com:8000
+            redfish_address: http://controller-0.stack.lab:8000
             redfish_system_id:
               str_replace:
                 template: "/redfish/v1/Systems/$SYS_ID"
@@ -1161,16 +1013,16 @@ outputs:
             - address: {get_attr: [ironic0-port, mac_address]}
               physical_network: public
               local_link_connection:
-                switch_info: leaf01.netlab.example.com
-                switch_id: "22:57:f8:dd:03:01"
-                port_id: "ethernet1/4"
+                switch_info: leaf02.stack.lab
+                switch_id: "22:57:f8:dd:04:01"
+                port_id: "ethernet1/3"
         - name: ironic1
           driver: redfish
           bios_interface: no-bios
           boot_interface: redfish-virtual-media
           network_interface: neutron
           driver_info:
-            redfish_address: http://controller-0.netlab.example.com:8000
+            redfish_address: http://controller-0.stack.lab:8000
             redfish_system_id:
               str_replace:
                 template: "/redfish/v1/Systems/$SYS_ID"
@@ -1188,7 +1040,7 @@ outputs:
             - address: {get_attr: [ironic1-port, mac_address]}
               physical_network: public
               local_link_connection:
-                switch_info: leaf02.netlab.example.com
+                switch_info: leaf02.stack.lab
                 switch_id: "22:57:f8:dd:04:01"
                 port_id: "ethernet1/4"
 

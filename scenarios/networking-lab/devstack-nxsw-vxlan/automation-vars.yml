@@ -32,7 +32,7 @@ stages:
         exit 1
       fi
 
-      ssh -o StrictHostKeyChecking=no stack@devstack.netlab.example.com "
+      ssh -o StrictHostKeyChecking=no stack@devstack.stack.lab "
         ROUTES=\$(ip -j r)
         ROUTE_EXISTS=\$(echo \"\$ROUTES\" | python3 -c '
       import sys, json
@@ -102,28 +102,15 @@ stages:
       Transitions nodes from 'enroll' to 'manageable' state. This validates
       basic hardware connectivity and prepares nodes for further operations.
     shell: |
-      set -xe -o pipefail
+      set -x -o pipefail
 
       # Get list of node UUIDs
       node_uuids=$(openstack --os-cloud devstack-admin baremetal node list -f value -c UUID)
 
-      # Manage each node
+      # Manage each node with --wait (300 second timeout)
       for uuid in $node_uuids; do
         echo "Managing node: $uuid"
-        openstack --os-cloud devstack-admin baremetal node manage $uuid
-      done
-
-      # Wait for manageable state
-      counter=0
-      max_retries=60
-      until ! openstack --os-cloud devstack-admin baremetal node list -f value -c "Provisioning State" | grep -v "manageable"; do
-        ((counter++))
-        if (( counter > max_retries )); then
-          echo "ERROR: Timeout waiting for nodes to reach manageable state"
-          openstack --os-cloud devstack-admin baremetal node list
-          exit 1
-        fi
-        sleep 5
+        openstack --os-cloud devstack-admin baremetal node manage --wait 300 $uuid
       done
 
       echo "All nodes successfully reached manageable state"

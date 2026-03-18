@@ -1,8 +1,9 @@
 # Troubleshooting Guide: Cisco NX-OS VXLAN EVPN
 
-This guide provides useful Cisco NX-OS commands for troubleshooting the spine-and-leaf VXLAN EVPN topology.
+This guide provides useful Cisco NX-OS commands for troubleshooting the spine-and-leaf VXLAN EVPN topology, as well as packet capture techniques for debugging network connectivity.
 
 ## Table of Contents
+- [Packet Capture and Traffic Analysis](#packet-capture-and-traffic-analysis)
 - [BGP EVPN Control Plane](#bgp-evpn-control-plane)
 - [VXLAN Overlay](#vxlan-overlay)
 - [VLAN Configuration](#vlan-configuration)
@@ -11,6 +12,122 @@ This guide provides useful Cisco NX-OS commands for troubleshooting the spine-an
 - [MAC Address Tables](#mac-address-tables)
 - [Port Configuration](#port-configuration)
 - [General System Information](#general-system-information)
+
+## Packet Capture and Traffic Analysis
+
+### Devstack Node - Monitoring ARP Traffic
+
+Monitor ARP traffic on the devstack node to troubleshoot connectivity between the overcloud and baremetal nodes.
+
+#### Monitor ARP on br-ex (OVS Bridge)
+```bash
+stack@devstack:~$ sudo tcpdump -i br-ex -envv arp
+```
+Shows ARP traffic on the OVS external bridge. You should see VLAN-tagged ARP requests from baremetal nodes coming in, and ARP replies from the router going out.
+
+**Expected output:**
+```
+22:dd:04:01:1b:08 > ff:ff:ff:ff:ff:ff, ethertype 802.1Q (0x8100), length 78: vlan 103, p 0, ethertype ARP (0x0806), Request who-has 10.0.5.1 tell 10.0.5.87
+fa:16:3e:12:24:7c > 22:dd:04:01:1b:08, ethertype 802.1Q (0x8100), length 78: vlan 103, p 0, ethertype ARP (0x0806), Reply 10.0.5.1 is-at fa:16:3e:12:24:7c
+```
+
+#### Monitor ARP on trunk0 (Physical Interface)
+```bash
+stack@devstack:~$ sudo tcpdump -i trunk0 -envv arp
+```
+Shows ARP traffic on the physical trunk interface that connects to leaf01. This helps verify if packets are actually leaving/entering the physical interface with correct VLAN tags.
+
+**What to look for:**
+- **Ingress**: ARP requests from baremetal nodes should arrive with VLAN tags
+- **Egress**: ARP replies from router should leave with VLAN tags
+- If you see traffic on br-ex but NOT on trunk0, there's an OVS flow issue
+- If VLAN tags are present on trunk0 but missing when they arrive at the switch, there's an undercloud Neutron trunk issue
+
+#### Monitor All Traffic on trunk0
+```bash
+stack@devstack:~$ sudo tcpdump -i trunk0 -envv
+```
+Shows all traffic including STP, LLDP, and data packets. Useful for verifying physical connectivity.
+
+### Cisco Switch - Monitoring Traffic
+
+Monitor traffic on Cisco NX-OS switches using the built-in ethanalyzer tool.
+
+#### Monitor ARP on a Specific Interface
+```bash
+leaf01# ethanalyzer local interface front-panel eth1/3 display-filter arp
+leaf01# ethanalyzer local interface front-panel eth1/4 display-filter arp
+```
+Captures and displays ARP traffic on the specified front-panel interface (e.g., Ethernet1/3, Ethernet1/4).
+
+**Expected output:**
+```
+2026-03-17 23:16:05.641404 fa:16:3e:12:24:7c -> 22:dd:04:01:1b:08 ARP 10.0.5.1 is at fa:16:3e:12:24:7c
+```
+
+**What to check:**
+- Are ARP packets arriving at the switch?
+- Are VLAN tags present or stripped?
+- Is bidirectional ARP traffic visible (both requests and replies)?
+
+#### Monitor All Traffic on an Interface
+```bash
+leaf01# ethanalyzer local interface front-panel eth1/3
+```
+Shows all traffic including STP, ARP, and data packets. Press Ctrl+C to stop.
+
+#### Limit Number of Packets Captured
+```bash
+leaf01# ethanalyzer local interface front-panel eth1/3 limit-captured-frames 20
+```
+Captures only 20 frames and then stops automatically.
+
+#### Monitor Specific Protocol
+```bash
+# Monitor only ICMP traffic
+leaf01# ethanalyzer local interface front-panel eth1/3 display-filter icmp
+
+# Monitor only IPv4 traffic
+leaf01# ethanalyzer local interface front-panel eth1/3 display-filter ip
+```
+
+### Debugging VLAN Tag Issues
+
+If you suspect VLAN tags are being stripped or not applied correctly:
+
+1. **On devstack, capture on trunk0:**
+   ```bash
+   sudo tcpdump -i trunk0 -envv 'vlan 103'
+   ```
+   Verify that outbound traffic has VLAN tags
+
+2. **On leaf01, capture on the corresponding interface:**
+   ```bash
+   ethanalyzer local interface front-panel eth1/4 display-filter arp
+   ```
+   Check if the same traffic arrives with or without tags
+
+3. **Compare**:
+   - If traffic leaves trunk0 tagged but arrives at the switch untagged → undercloud Neutron trunk issue
+   - If traffic doesn't leave trunk0 at all → OVS flow issue on devstack
+   - If traffic arrives tagged but isn't forwarded → switch VLAN configuration issue
+
+### Check MAC Learning on Switches
+
+After seeing ARP traffic, verify that the switches learned the MAC addresses:
+
+```bash
+# Check specific VLAN
+show mac address-table vlan 103
+
+# Check specific interface
+show mac address-table interface ethernet 1/3
+```
+
+If MAC addresses aren't being learned, check:
+- Interface is in correct VLAN
+- VLAN exists in NVE peer list
+- BGP EVPN is advertising the routes
 
 ## BGP EVPN Control Plane
 

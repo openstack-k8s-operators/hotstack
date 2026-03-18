@@ -10,7 +10,10 @@ network_nodes:
   - hostname: "devstack"
     trunks:
       - physical_network: public
-        local_link_connection:
-          switch_id: "22:57:f8:dd:03:01"
-          port_id: "Ethernet1/5"
-          switch_info: "leaf01.netlab.example.com"
+        local_link_information:
+          - switch_id: "22:57:f8:dd:03:01"
+            port_id: "Ethernet1/3"
+            switch_info: "leaf01.stack.lab"
+          - switch_id: "22:57:f8:dd:03:01"
+            port_id: "Ethernet1/5"
+            switch_info: "leaf01.stack.lab"
