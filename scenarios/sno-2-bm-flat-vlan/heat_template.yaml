@@ -488,6 +488,7 @@ resources:
 
   master0:
     type: OS::Nova::Server
+    depends_on: master0-trunk0
     properties:
       image: {get_param: [ocp_master_params, image]}
       flavor: {get_param: [ocp_master_params, flavor]}

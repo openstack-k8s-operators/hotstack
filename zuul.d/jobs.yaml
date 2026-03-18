@@ -58,7 +58,6 @@
             flavor: ci.m1.medium
       hotstack_enable_nova_console_poller: true
       hotstack_enable_nova_console_recorder: true
-      sushy_emulator_os_vmedia_disk_format_override: raw
     pre-run:
       - ci/playbooks/pre-deploy.yml
     run:
