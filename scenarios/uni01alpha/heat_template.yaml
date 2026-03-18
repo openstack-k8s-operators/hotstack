@@ -503,6 +503,7 @@ resources:
       - master0-cinder-vol0
       - master0-cinder-vol1
       - master0-cinder-vol2
+      - master0-trunk0
     type: OS::Nova::Server
     properties:
       image: {get_param: [ocp_master_params, image]}
@@ -622,6 +623,7 @@ resources:
       - master1-cinder-vol0
       - master1-cinder-vol1
       - master1-cinder-vol2
+      - master1-trunk0
     type: OS::Nova::Server
     properties:
       image: {get_param: [ocp_master_params, image]}
@@ -741,6 +743,7 @@ resources:
       - master2-cinder-vol0
       - master2-cinder-vol1
       - master2-cinder-vol2
+      - master2-trunk0
     type: OS::Nova::Server
     properties:
       image: {get_param: [ocp_master_params, image]}
@@ -842,6 +845,7 @@ resources:
 
   compute0:
     type: OS::Nova::Server
+    depends_on: compute0-trunk0
     properties:
       image: {get_param: [compute_params, image]}
       flavor: {get_param: [compute_params, flavor]}
@@ -911,6 +915,7 @@ resources:
 
   compute1:
     type: OS::Nova::Server
+    depends_on: compute1-trunk0
     properties:
       image: {get_param: [compute_params, image]}
       flavor: {get_param: [compute_params, flavor]}
@@ -965,6 +970,7 @@ resources:
 
   networker0:
     type: OS::Nova::Server
+    depends_on: networker0-trunk0
     properties:
       image: {get_param: [networker_params, image]}
       flavor: {get_param: [networker_params, flavor]}
@@ -1010,6 +1016,7 @@ resources:
 
   networker1:
     type: OS::Nova::Server
+    depends_on: networker1-trunk0
     properties:
       image: {get_param: [networker_params, image]}
       flavor: {get_param: [networker_params, flavor]}
@@ -1055,6 +1062,7 @@ resources:
 
   networker2:
     type: OS::Nova::Server
+    depends_on: networker2-trunk0
     properties:
       image: {get_param: [networker_params, image]}
       flavor: {get_param: [networker_params, flavor]}

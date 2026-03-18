@@ -513,6 +513,7 @@ resources:
 
   master0:
     type: OS::Nova::Server
+    depends_on: master0-trunk0
     properties:
       image: {get_param: [ocp_master_params, image]}
       flavor: {get_param: [ocp_master_params, flavor]}
@@ -583,6 +584,7 @@ resources:
 
   master1:
     type: OS::Nova::Server
+    depends_on: master1-trunk0
     properties:
       image: {get_param: [ocp_master_params, image]}
       flavor: {get_param: [ocp_master_params, flavor]}
@@ -653,6 +655,7 @@ resources:
 
   master2:
     type: OS::Nova::Server
+    depends_on: master2-trunk0
     properties:
       image: {get_param: [ocp_master_params, image]}
       flavor: {get_param: [ocp_master_params, flavor]}
@@ -747,6 +750,7 @@ resources:
 
   worker0:
     type: OS::Nova::Server
+    depends_on: worker0-trunk0
     properties:
       image: {get_param: [ocp_worker_params, image]}
       flavor: {get_param: [ocp_worker_params, flavor]}
@@ -850,6 +854,7 @@ resources:
 
   worker1:
     type: OS::Nova::Server
+    depends_on: worker1-trunk0
     properties:
       image: {get_param: [ocp_worker_params, image]}
       flavor: {get_param: [ocp_worker_params, flavor]}
@@ -953,6 +958,7 @@ resources:
 
   worker2:
     type: OS::Nova::Server
+    depends_on: worker2-trunk0
     properties:
       image: {get_param: [ocp_worker_params, image]}
       flavor: {get_param: [ocp_worker_params, flavor]}

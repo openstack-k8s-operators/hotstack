@@ -675,6 +675,7 @@ resources:
 
   master0:
     type: OS::Nova::Server
+    depends_on: master0-trunk0
     properties:
       image: {get_param: [ocp_master_params, image]}
       flavor: {get_param: [ocp_master_params, flavor]}
@@ -756,6 +757,7 @@ resources:
 
   bmh-a-0:
     type: OS::Nova::Server
+    depends_on: bmh-a-0-trunk0
     properties:
       flavor: {get_param: [bmh_params, flavor]}
       block_device_mapping_v2:
@@ -832,6 +834,7 @@ resources:
 
   bmh-b-0:
     type: OS::Nova::Server
+    depends_on: bmh-b-0-trunk0
     properties:
       flavor: {get_param: [bmh_params, flavor]}
       block_device_mapping_v2:
