@@ -29,7 +29,7 @@ PUBLIC_NETWORK_GATEWAY=172.20.200.1
 IP_VERSION=4
 
 # Enable Neutron with OVN
-enable_plugin neutron https://opendev.org/openstack/neutron
+NEUTRON_BRANCH=refs/changes/37/980637/1
 disable_service n-net
 enable_service q-svc
 # Disable traditional neutron agents
@@ -103,10 +103,10 @@ OVN_BRIDGE_MAPPINGS=public:br-ex
 enable_plugin ironic https://opendev.org/openstack/ironic
 
 # Enable networking-generic-switch plugin
-enable_plugin networking-generic-switch https://opendev.org/openstack/networking-generic-switch
+enable_plugin networking-generic-switch https://opendev.org/openstack/networking-generic-switch refs/changes/62/981262/2
 
 # Enable networking-baremetal plugin
-enable_plugin networking-baremetal https://opendev.org/openstack/networking-baremetal refs/changes/75/980375/2
+enable_plugin networking-baremetal https://opendev.org/openstack/networking-baremetal
 
 
 
