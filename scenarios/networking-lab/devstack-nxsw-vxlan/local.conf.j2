@@ -120,6 +120,10 @@ disable_service horizon
 [DEFAULT]
 global_physnet_mtu = 1442
 
+[baremetal_agent]
+enable_ha_chassis_group_alignment = False
+enable_router_ha_binding_events = True
+
 [baremetal_l2vni]
 # Set to False for pure EVPN deployments where switches handle VXLAN via BGP
 # Set to True if you need OVN localnet ports for overlay-to-physical bridging
