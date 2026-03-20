@@ -554,18 +554,7 @@ resources:
     depends_on: bmh0-trunk0
     properties:
       flavor: {get_param: [bmh_params, flavor]}
-      block_device_mapping_v2:
-        - device_type: disk
-          boot_index: 1
-          image_id: {get_param: [bmh_params, image]}
-          volume_size: 60
-          delete_on_termination: true
-        - device_type: cdrom
-          disk_bus: {get_param: cdrom_disk_bus}
-          boot_index: 0
-          image_id: {get_param: [bmh_params, cd_image]}
-          volume_size: 5
-          delete_on_termination: true
+      image: {get_param: [bmh_params, image]}
       networks:
         - port: {get_resource: bmh0-provisioning-port}
         - port: {get_resource: bmh0-ctlplane-trunk-parent-port}
@@ -620,18 +609,7 @@ resources:
     depends_on: bmh1-trunk0
     properties:
       flavor: {get_param: [bmh_params, flavor]}
-      block_device_mapping_v2:
-        - device_type: disk
-          boot_index: 1
-          image_id: {get_param: [bmh_params, image]}
-          volume_size: 60
-          delete_on_termination: true
-        - device_type: cdrom
-          disk_bus: {get_param: cdrom_disk_bus}
-          boot_index: 0
-          image_id: {get_param: [bmh_params, cd_image]}
-          volume_size: 5
-          delete_on_termination: true
+      image: {get_param: [bmh_params, image]}
       networks:
         - port: {get_resource: bmh1-provisioning-port}
         - port: {get_resource: bmh1-ctlplane-trunk-parent-port}
@@ -650,6 +628,14 @@ outputs:
     value:
       bmh0: {get_resource: bmh0}
       bmh1: {get_resource: bmh1}
+
+  ironic_boot_interface:
+    description: Ironic boot interface configured for the redfish nodes
+    value: redfish-virtual-media
+
+  sushy_tools_vmedia_type:
+    description: Sushy-tools virtual media implementation type
+    value: rescue
 
   ironic_nodes:
     description: Ironic nodes YAML, for enroll in ironic or Metal3 BaremetalHost
