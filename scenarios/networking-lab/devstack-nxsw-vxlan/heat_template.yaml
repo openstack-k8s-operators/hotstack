@@ -735,7 +735,6 @@ resources:
 
   leaf02:
     type: OS::Nova::Server
-    depends_on: leaf02-trunk
     properties:
       image: {get_param: [switch_params, image]}
       flavor: {get_param: [switch_params, flavor]}
