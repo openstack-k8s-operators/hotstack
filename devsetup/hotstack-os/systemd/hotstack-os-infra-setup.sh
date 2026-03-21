@@ -146,6 +146,14 @@ if command -v firewall-cmd >/dev/null 2>&1; then
             echo -e "  $OK Provider network already in hotstack-external zone"
         fi
 
+        # Add hot-ex interface to hotstack-external zone (required for masquerade to work)
+        if ! firewall-cmd --permanent --zone=hotstack-external --query-interface=hot-ex &>/dev/null; then
+            firewall-cmd --permanent --zone=hotstack-external --add-interface=hot-ex >/dev/null
+            echo -e "  $OK Added hot-ex interface to hotstack-external zone"
+        else
+            echo -e "  $OK hot-ex interface already in hotstack-external zone"
+        fi
+
         # Reload firewall to apply changes
         firewall-cmd --reload >/dev/null
         echo -e "  $OK Firewall configured for provider network"
