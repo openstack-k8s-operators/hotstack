@@ -117,7 +117,7 @@ ip link set hot-ex up
 
 echo -e "  $OK hot-ex configured for provider networks ($PROVIDER_NETWORK)"
 
-# Configure firewall for provider network
+# Configure firewall zones for HotsTac(k)os networks
 if command -v firewall-cmd >/dev/null 2>&1; then
     # Check if firewalld service is enabled
     if systemctl is-enabled firewalld.service &>/dev/null; then
@@ -128,14 +128,27 @@ if command -v firewall-cmd >/dev/null 2>&1; then
             echo "  Or disable it if not needed: systemctl disable firewalld.service"
             exit 1
         fi
-        # Service is running, configure it
-        if ! firewall-cmd --zone=trusted --query-source="$PROVIDER_NETWORK" &>/dev/null; then
-            firewall-cmd --zone=trusted --add-source="$PROVIDER_NETWORK" --permanent >/dev/null
-            firewall-cmd --reload >/dev/null
-            echo -e "  $OK Provider network added to trusted firewall zone"
-        else
-            echo -e "  $OK Provider network already in trusted zone"
+
+        # Service is running, configure zones
+        # Create hotstack-external zone for provider network (with masquerading for VM external access)
+        if ! firewall-cmd --get-zones | grep -q hotstack-external; then
+            firewall-cmd --permanent --new-zone=hotstack-external >/dev/null
+            firewall-cmd --permanent --zone=hotstack-external --set-target=ACCEPT >/dev/null
+            firewall-cmd --permanent --zone=hotstack-external --add-masquerade >/dev/null
+            echo -e "  $OK Created hotstack-external firewall zone with masquerading"
         fi
+
+        # Add provider network to hotstack-external zone
+        if ! firewall-cmd --permanent --zone=hotstack-external --query-source="$PROVIDER_NETWORK" &>/dev/null; then
+            firewall-cmd --permanent --zone=hotstack-external --add-source="$PROVIDER_NETWORK" >/dev/null
+            echo -e "  $OK Added provider network to hotstack-external zone"
+        else
+            echo -e "  $OK Provider network already in hotstack-external zone"
+        fi
+
+        # Reload firewall to apply changes
+        firewall-cmd --reload >/dev/null
+        echo -e "  $OK Firewall configured for provider network"
     else
         # Service is disabled, skip with warning
         echo -e "  $WARNING firewalld is disabled, skipping firewall configuration"
