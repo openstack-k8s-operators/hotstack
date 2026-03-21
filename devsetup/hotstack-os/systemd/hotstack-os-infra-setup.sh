@@ -119,12 +119,26 @@ echo -e "  $OK hot-ex configured for provider networks ($PROVIDER_NETWORK)"
 
 # Configure firewall for provider network
 if command -v firewall-cmd >/dev/null 2>&1; then
-    if ! firewall-cmd --zone=trusted --query-source="$PROVIDER_NETWORK" &>/dev/null; then
-        firewall-cmd --zone=trusted --add-source="$PROVIDER_NETWORK" --permanent >/dev/null
-        firewall-cmd --reload >/dev/null
-        echo -e "  $OK Provider network added to trusted firewall zone"
+    # Check if firewalld service is enabled
+    if systemctl is-enabled firewalld.service &>/dev/null; then
+        # Service is enabled, so it should be running
+        if ! firewall-cmd --state &>/dev/null; then
+            echo -e "  $ERROR firewalld service is enabled but not running"
+            echo "  Please start firewalld: systemctl start firewalld.service"
+            echo "  Or disable it if not needed: systemctl disable firewalld.service"
+            exit 1
+        fi
+        # Service is running, configure it
+        if ! firewall-cmd --zone=trusted --query-source="$PROVIDER_NETWORK" &>/dev/null; then
+            firewall-cmd --zone=trusted --add-source="$PROVIDER_NETWORK" --permanent >/dev/null
+            firewall-cmd --reload >/dev/null
+            echo -e "  $OK Provider network added to trusted firewall zone"
+        else
+            echo -e "  $OK Provider network already in trusted zone"
+        fi
     else
-        echo -e "  $OK Provider network already in trusted zone"
+        # Service is disabled, skip with warning
+        echo -e "  $WARNING firewalld is disabled, skipping firewall configuration"
     fi
 else
     echo -e "  $WARNING firewalld not found, skipping firewall configuration"
