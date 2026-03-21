@@ -69,14 +69,14 @@ HotsTac(k)os uses a dedicated `172.31.0.0/24` address space split into two subne
 - Podman bridge network (auto-managed)
 - All OpenStack service containers
 - Gateway assigned by podman
-- Firewall zone: `hotstack-os`
+- Firewall: Managed automatically by podman
 
 ### 2. Provider Network (`172.31.0.128/25` - 128 IPs: .128 to .255)
 
 - OVS bridge: `hot-ex` (for Neutron external/provider networks)
 - Bridge IP: `172.31.0.129/25` assigned directly to hot-ex for host connectivity
 - Used for: Floating IPs and external VM connectivity
-- Firewall zone: `hotstack-external`
+- Firewall zone: `hotstack-external` (with masquerading enabled for VM external access)
 
 The IP is assigned directly to the `hot-ex` bridge internal interface, which acts as the gateway for the provider network and enables host-to-VM connectivity.
 

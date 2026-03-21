@@ -47,15 +47,19 @@ else
 fi
 
 
-# Remove provider network from firewall trusted zone
+# Remove HotsTac(k)os firewall zone
 if command -v firewall-cmd >/dev/null 2>&1; then
-    if firewall-cmd --zone=trusted --query-source="$PROVIDER_NETWORK" &>/dev/null; then
-        echo "Removing provider network from firewall trusted zone..."
-        firewall-cmd --zone=trusted --remove-source="$PROVIDER_NETWORK" --permanent >/dev/null
-        firewall-cmd --reload >/dev/null
-        echo -e "$OK Provider network removed from trusted zone"
+    if systemctl is-enabled firewalld.service &>/dev/null && firewall-cmd --state &>/dev/null; then
+        if firewall-cmd --get-zones | grep -q hotstack-external; then
+            echo "Removing hotstack-external firewall zone..."
+            firewall-cmd --permanent --delete-zone=hotstack-external >/dev/null
+            firewall-cmd --reload >/dev/null
+            echo -e "$OK Removed hotstack-external zone"
+        else
+            echo -e "$OK hotstack-external zone not found"
+        fi
     else
-        echo -e "$OK Provider network not in trusted zone"
+        echo -e "$WARNING firewalld not running, skipping firewall cleanup"
     fi
 else
     echo -e "$WARNING firewalld not found, skipping firewall cleanup"
