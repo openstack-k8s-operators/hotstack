@@ -130,12 +130,11 @@ if command -v firewall-cmd >/dev/null 2>&1; then
         fi
 
         # Service is running, configure zones
-        # Create hotstack-external zone for provider network (with masquerading for VM external access)
+        # Create hotstack-external zone for provider network
         if ! firewall-cmd --get-zones | grep -q hotstack-external; then
             firewall-cmd --permanent --new-zone=hotstack-external >/dev/null
             firewall-cmd --permanent --zone=hotstack-external --set-target=ACCEPT >/dev/null
-            firewall-cmd --permanent --zone=hotstack-external --add-masquerade >/dev/null
-            echo -e "  $OK Created hotstack-external firewall zone with masquerading"
+            echo -e "  $OK Created hotstack-external firewall zone"
         fi
 
         # Add provider network to hotstack-external zone
@@ -152,6 +151,17 @@ if command -v firewall-cmd >/dev/null 2>&1; then
             echo -e "  $OK Added hot-ex interface to hotstack-external zone"
         else
             echo -e "  $OK hot-ex interface already in hotstack-external zone"
+        fi
+
+        # Enable masquerade on default zone for internet access from provider network
+        # The default zone (usually 'public') contains the host's uplink interface
+        # Masquerade is needed to NAT provider network traffic to the internet
+        DEFAULT_ZONE=$(firewall-cmd --get-default-zone)
+        if ! firewall-cmd --zone="$DEFAULT_ZONE" --query-masquerade &>/dev/null; then
+            firewall-cmd --permanent --zone="$DEFAULT_ZONE" --add-masquerade >/dev/null
+            echo -e "  $OK Enabled masquerade on $DEFAULT_ZONE zone for internet access"
+        else
+            echo -e "  $OK Masquerade already enabled on $DEFAULT_ZONE zone"
         fi
 
         # Reload firewall to apply changes
