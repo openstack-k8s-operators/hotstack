@@ -1,0 +1,11 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Reference the remote architecture repo (includes upstream edpm values)
+components:
+  - https://github.com/openstack-k8s-operators/architecture/examples/dt/uni01alpha/edpm?ref=main
+
+# Merge hotstack-specific overrides
+patchesStrategicMerge:
+  - hotstack-values.yaml

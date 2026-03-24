@@ -1,0 +1,22 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: edpm-nodeset-values
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+data:
+  # Hotstack-specific additions/overrides
+  nodeset:
+    ansible:
+      ansibleVars:
+        # Bootstrap command - will be replaced by hotstack patches at deploy time
+        edpm_bootstrap_command: >-
+          {{
+            lookup('ansible.builtin.template', hotstack_edpm_bootstrap_command)
+          }}
+        # Additional SSH access for hotstack controller
+        edpm_sshd_allowed_ranges:
+          - 192.168.122.0/24
+          - 192.168.32.3/32
