@@ -35,17 +35,14 @@ stages:
                "common/stages/olm-openstack-stages.yaml.j2")
       }}
 
-  - name: NodeNetworkConfigurationPolicy (nncp)
-    manifest: manifests/control-plane/nncp/nncp.yaml
+  - name: Control Plane (NNCP and OpenStackControlPlane)
+    kustomize:
+      directory: scenarios/uni01alpha/kustomize/control-plane
     wait_conditions:
       - >-
         oc wait -n openstack nncp -l osp/nncm-config-type=standard
         --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
         --timeout=180s
-
-  - name: OpenstackControlPlane
-    manifest: manifests/control-plane/control-plane.yaml
-    wait_conditions:
       - >-
         oc wait -n openstack openstackcontrolplane controlplane
         --for condition=Ready --timeout=30m
@@ -77,56 +74,58 @@ stages:
         --timeout=30s
 
   - name: Networker nodeset
-    manifest: manifests/networker/nodeset/nodeset.yaml
-    patches: "{{ hotstack_default_nodeset_patches }}"
+    kustomize:
+      directory: scenarios/uni01alpha/kustomize/networker
 
   - name: EDPM nodeset
-    manifest: manifests/edpm/edpm.yaml
-    patches: "{{ hotstack_default_nodeset_patches }}"
+    kustomize:
+      directory: scenarios/uni01alpha/kustomize/edpm
 
   - name: Wait for nodesets (Networker and EDPM)
     wait_conditions:
       - >-
-        oc wait -n openstack openstackdataplanenodeset networkers
+        oc wait -n openstack openstackdataplanenodeset networker-nodes
         --for condition=SetupReady --timeout=10m
       - >-
-        oc -n openstack wait openstackdataplanenodeset edpm
+        oc -n openstack wait openstackdataplanenodeset openstack-edpm
         --for condition=SetupReady --timeout=10m
 
   - name: Networker deployment
-    manifest: manifests/networker/networker.yaml
+    kustomize:
+      directory: scenarios/uni01alpha/kustomize/networker-deployment
 
   - name: EDPM deployment
-    manifest: manifests/dataplane.yaml
+    kustomize:
+      directory: scenarios/uni01alpha/kustomize/dataplane-deployment
 
   - name: Wait for deployments (Networker and EDPM)
     wait_conditions:
-      - oc wait -n openstack jobs.batch bootstrap-networker-deploy-networkers --for condition=Complete --timeout=10m
-      - oc wait -n openstack jobs.batch bootstrap-dataplane-edpm --for condition=Complete --timeout=10m
-      - oc wait -n openstack jobs.batch configure-network-networker-deploy-networkers --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch configure-network-dataplane-edpm --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch validate-network-networker-deploy-networkers --for condition=Complete --timeout=1m
-      - oc wait -n openstack jobs.batch validate-network-dataplane-edpm --for condition=Complete --timeout=1m
-      - oc wait -n openstack jobs.batch install-os-networker-deploy-networkers --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch install-os-dataplane-edpm --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch configure-os-networker-deploy-networkers --for condition=Complete --timeout=3m
-      - oc wait -n openstack jobs.batch configure-os-dataplane-edpm --for condition=Complete --timeout=3m
-      - oc wait -n openstack jobs.batch ssh-known-hosts-dataplane --for condition=Complete --timeout=1m
-      - oc wait -n openstack jobs.batch run-os-networker-deploy-networkers --for condition=Complete --timeout=3m
-      - oc wait -n openstack jobs.batch run-os-dataplane-edpm --for condition=Complete --timeout=3m
-      - oc wait -n openstack jobs.batch reboot-os-networker-deploy-networkers --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch reboot-os-dataplane-edpm --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch install-certs-networker-deploy-networkers --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch install-certs-dataplane-edpm --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch ovn-networker-deploy-networkers --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch ovn-dataplane-edpm --for condition=Complete --timeout=5m
-      - oc wait -n openstack jobs.batch neutron-metadata-networker-deploy-networkers --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch bootstrap-networker-deploy-networker-nodes --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch bootstrap-edpm-deployment-openstack-edpm --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch configure-network-networker-deploy-networker-nodes --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch configure-network-edpm-deployment-openstack-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch validate-network-networker-deploy-networker-nodes --for condition=Complete --timeout=1m
+      - oc wait -n openstack jobs.batch validate-network-edpm-deployment-openstack-edpm --for condition=Complete --timeout=1m
+      - oc wait -n openstack jobs.batch install-os-networker-deploy-networker-nodes --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch install-os-edpm-deployment-openstack-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch configure-os-networker-deploy-networker-nodes --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch configure-os-edpm-deployment-openstack-edpm --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch ssh-known-hosts-edpm-deployment --for condition=Complete --timeout=1m
+      - oc wait -n openstack jobs.batch run-os-networker-deploy-networker-nodes --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch run-os-edpm-deployment-openstack-edpm --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch reboot-os-networker-deploy-networker-nodes --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch reboot-os-edpm-deployment-openstack-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch install-certs-networker-deploy-networker-nodes --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch install-certs-edpm-deployment-openstack-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch ovn-networker-deploy-networker-nodes --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch ovn-edpm-deployment-openstack-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch neutron-metadata-networker-deploy-networker-nodes --for condition=Complete --timeout=10m
       - oc wait -n openstack openstackdataplanedeployment networker-deploy --for condition=Ready --timeout=10m
-      - oc wait -n openstack jobs.batch neutron-metadata-dataplane-edpm --for condition=Complete --timeout=10m
-      - oc wait -n openstack jobs.batch libvirt-dataplane-edpm --for condition=Complete --timeout=20m
-      - oc wait -n openstack jobs.batch nova-dataplane-edpm --for condition=Complete --timeout=20m
-      - oc wait -n openstack jobs.batch telemetry-dataplane-edpm --for condition=Complete --timeout=10m
-      - oc -n openstack wait openstackdataplanedeployment dataplane --for condition=Ready --timeout=10m
+      - oc wait -n openstack jobs.batch neutron-metadata-edpm-deployment-openstack-edpm --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch libvirt-edpm-deployment-openstack-edpm --for condition=Complete --timeout=20m
+      - oc wait -n openstack jobs.batch nova-edpm-deployment-openstack-edpm --for condition=Complete --timeout=20m
+      - oc wait -n openstack jobs.batch telemetry-edpm-deployment-openstack-edpm --for condition=Complete --timeout=10m
+      - oc -n openstack wait openstackdataplanedeployment edpm-deployment --for condition=Ready --timeout=10m
       - timeout --foreground 15m hotstack-nova-discover-hosts --namespace openstack --num-computes 2
 
   - name: "Minor update :: openstack-operators OLM"
