@@ -19,6 +19,10 @@ ocp_installer_type: microshift
 microshift_host: microshift-0
 microshift_user: shift
 
+# Optional pull secret for authenticated registries (not needed for OKD/community images)
+# Must be base64 encoded if provided
+pull_secret: ""
+
 base_dir: /home/zuul
 bin_dir: "{{ base_dir }}/bin"
 microshift_kube_config_dir: "{{ base_dir }}/.kube"
@@ -33,5 +37,11 @@ microshift_ca_cert_path: /var/lib/microshift/certs/ca-bundle/client-ca.crt
 
 microshift_manifests_dir: /home/zuul/manifests/microshift_setup
 
-microshift_catalog_index_image: registry.redhat.io/redhat/redhat-operator-index
-microshift_catalog_index_tag: v4.20
+# MicroShift configuration deployment toggles
+microshift_deploy_config_multus: true      # Use built-in Multus with CRI-O override
+microshift_deploy_cert_manager: true       # TEST OK
+microshift_deploy_nmstate: true            # TEST OK
+microshift_deploy_metallb: true            # TEST OK
+microshift_deploy_whereabouts: true
+microshift_deploy_frr_crds: false
+microshift_deploy_metal3_crds: false

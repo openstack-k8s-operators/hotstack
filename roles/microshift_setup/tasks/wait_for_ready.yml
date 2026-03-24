@@ -21,8 +21,8 @@
       --kubeconfig={{ microshift_kube_config_dir }}/config
   register: _api_check
   until: _api_check.rc == 0
-  retries: 30
-  delay: 10
+  retries: 10
+  delay: 5
   changed_when: false
 
 - name: Wait for MicroShift node to be Ready
@@ -31,10 +31,10 @@
       {{ bin_dir }}/oc wait nodes --all
       --kubeconfig={{ microshift_kube_config_dir }}/config
       --for=condition=Ready
-      --timeout=600s
+      --timeout=60s
   register: _node_ready
   until: _node_ready.rc == 0
-  retries: 30
+  retries: 10
   delay: 10
   changed_when: false
 

@@ -14,19 +14,24 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-- name: Write pull secret to MicroShift node
+- name: Deploy MicroShift manifests
   delegate_to: "{{ microshift_host }}"
   become: true
-  ansible.builtin.copy:
-    content: "{{ pull_secret | b64decode }}"
-    dest: /etc/crio/openshift-pull-secret
-    owner: root
-    group: root
-    mode: '0600'
+  block:
+    - name: Deploy FRR CRDs manifests
+      when: microshift_deploy_frr_crds | bool
+      ansible.builtin.copy:
+        src: etc/microshift/manifests.d/011-frr-crds/
+        dest: /etc/microshift/manifests.d/011-frr-crds/
+        owner: root
+        group: root
+        mode: '0644'
 
-- name: Restart crio to pick up pull secret
-  delegate_to: "{{ microshift_host }}"
-  become: true
-  ansible.builtin.systemd:
-    name: crio
-    state: restarted
+    - name: Deploy Metal3 CRDs manifests
+      when: microshift_deploy_metal3_crds | bool
+      ansible.builtin.copy:
+        src: etc/microshift/manifests.d/012-metal3-crds/
+        dest: /etc/microshift/manifests.d/012-metal3-crds/
+        owner: root
+        group: root
+        mode: '0644'
