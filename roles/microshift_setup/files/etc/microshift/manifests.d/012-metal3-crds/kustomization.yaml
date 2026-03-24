@@ -1,0 +1,9 @@
+---
+# TODO(hjensas): This installs only a minimal Metal3 BareMetalHost CRD stub to
+# prevent the openstack-baremetal-operator from crashlooping. For actual baremetal
+# provisioning, the full Metal3 baremetal-operator and Ironic deployment is required.
+# See install_yamls Makefile target 'crc_bmo_setup' for reference.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - baremetalhost-crd.yaml

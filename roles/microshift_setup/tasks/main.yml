@@ -22,8 +22,16 @@
 - name: MicroShift setup
   when: ocp_installer_type == 'microshift'
   block:
-    - name: Install pull secret on MicroShift node
-      ansible.builtin.include_tasks: pull_secret.yml
+    - name: Write pull secret to MicroShift node
+      when: pull_secret | length > 0
+      delegate_to: "{{ microshift_host }}"
+      become: true
+      ansible.builtin.copy:
+        content: "{{ pull_secret | b64decode }}"
+        dest: /etc/crio/openshift-pull-secret
+        owner: root
+        group: root
+        mode: '0600'
 
     - name: Ensure directories exist
       ansible.builtin.file:
@@ -37,6 +45,13 @@
     - name: Install OpenShift client
       ansible.builtin.include_tasks: install_client.yml
 
+    # Configuration files and manifests are now baked into the DIB image
+    # - name: Deploy MicroShift configurations and manifests
+    #   ansible.builtin.include_tasks: deploy_manifests.yml
+
+    - name: Start MicroShift service
+      ansible.builtin.include_tasks: start_microshift.yml
+
     - name: Wait for MicroShift and fetch kubeconfig
       ansible.builtin.include_tasks: fetch_kubeconfig.yml
 
@@ -46,6 +61,3 @@
     - name: Add MicroShift CA to trust
       when: microshift_add_ca_to_trust | bool
       ansible.builtin.include_tasks: ca_cert.yml
-
-    - name: Bootstrap MicroShift cluster with OLM catalog
-      ansible.builtin.include_tasks: bootstrap_cluster.yml

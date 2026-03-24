@@ -1,0 +1,11 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.82.0/nmstate.io_nmstates.yaml
+  - https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.82.0/namespace.yaml
+  - https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.82.0/service_account.yaml
+  - https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.82.0/role.yaml
+  - https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.82.0/role_binding.yaml
+  - https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.82.0/operator.yaml
+  - nmstate-cr.yaml

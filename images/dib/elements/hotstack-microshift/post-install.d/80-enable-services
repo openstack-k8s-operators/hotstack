@@ -23,4 +23,11 @@ fi
 echo "INFO: Enabling iSCSI and multipath services..."
 systemctl enable iscsid multipathd
 
+echo "INFO: Setting up /host bind mount for OpenShift compatibility..."
+# The host.mount unit is installed via static/etc/systemd/system/host.mount
+# It creates a bind mount of / to /host, making MicroShift compatible with
+# OpenShift-centric tools (like Multus CNI) that expect /host paths.
+mkdir -p /host
+systemctl enable host.mount
+
 echo "INFO: Services enabled successfully"

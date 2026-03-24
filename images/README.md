@@ -237,7 +237,7 @@ make clean
 
    ```shell
    openstack image create hotstack-microshift \
-     --disk-format raw \
+     --disk-format qcow2 \
      --file microshift.qcow2 \
      --property hw_firmware_type=uefi \
      --property hw_machine_type=q35

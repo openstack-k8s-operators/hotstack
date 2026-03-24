@@ -11,3 +11,5 @@ images/.*-build/
 images/*.d/
 *.gz.b64
 *.tar.gz
+scenarios/**/*-poap.tar.gz
+scenarios/**/*-poap.tar.gz.b64

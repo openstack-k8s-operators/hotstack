@@ -93,6 +93,7 @@ RETRYABLE_ERR_REGEX = {
     r".*tcp.*:\d+: connect: connection refused.*",
     r".*connection to the server.*was refused.*",
     r".*timed out waiting for the condition.*",
+    r".*failed to verify certificate.*x509.*",
 }
 INITIAL_RETRY_DELAY = 5
 RETRY_MAX_DELAY = INITIAL_RETRY_DELAY * 12

@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-- name: Install Openshift Container Platform
+- name: Setup MicroShift
   hosts: localhost
   gather_facts: true
   strategy: linear
@@ -27,31 +27,18 @@
     - name: Add controller-0 to the Ansible inventory
       ansible.builtin.add_host: "{{ stack_outputs.controller_ansible_host }}"
 
-    - name: Check if pull-secret file exists
-      ansible.builtin.stat:
-        path: "{{ pull_secret_file }}"
-      register: pull_secret_stat
-
-    - name: Fail if pull-secret is missing for non-MicroShift installers
-      when:
-        - not pull_secret_stat.stat.exists
-        - stack_outputs.ocp_installer_type | default('agent') != 'microshift'
-      ansible.builtin.fail:
-        msg: >-
-          Pull secret file {{ pull_secret_file }} not found and is required for
-          {{ stack_outputs.ocp_installer_type | default('agent') }} installer
+    - name: Add microshift-0 to the Ansible inventory
+      when: stack_outputs.microshift_ansible_host is defined
+      ansible.builtin.add_host: "{{ stack_outputs.microshift_ansible_host }}"
 
     - name: Slurp the pull-secret file
-      when: pull_secret_stat.stat.exists
       register: slurp_pull_secret
       ansible.builtin.slurp:
         src: "{{ pull_secret_file }}"
 
   roles:
-    - role: ocp_agent_installer
+    - role: microshift_setup
       delegate_to: controller-0
       vars:
         ocp_installer_type: "{{ stack_outputs.ocp_installer_type | default('agent') }}"
-        install_config: "{{ stack_outputs.ocp_install_config }}"
-        agent_config: "{{  stack_outputs.ocp_agent_config }}"
-        pull_secret: "{{ slurp_pull_secret.content | default('') }}"
+        pull_secret: "{{ slurp_pull_secret.content }}"
