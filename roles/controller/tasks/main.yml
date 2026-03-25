@@ -200,3 +200,8 @@
     - name: Install OpenStack client
       when: controller_install_openstack_client | bool
       ansible.builtin.include_tasks: install_openstack_client.yml
+
+    - name: Setup Hotstack git server
+      when: hotstack_git_server_enabled | bool
+      ansible.builtin.include_role:
+        name: hotstack_git_server
