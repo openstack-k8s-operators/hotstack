@@ -1,0 +1,10 @@
+---
+# Git server configuration for GitOps deployments
+hotstack_git_server_enabled: true
+base_dir: /home/zuul
+
+# Git daemon configuration
+hotstack_git_daemon_base_path: "{{ base_dir }}/git"
+
+# Git repository path
+hotstack_git_repo_path: "{{ hotstack_git_daemon_base_path }}/openstack-deployment"

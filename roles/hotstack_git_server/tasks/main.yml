@@ -1,0 +1,18 @@
+---
+- name: Install git-daemon package
+  ansible.builtin.package:
+    name: git-daemon
+    state: present
+  become: true
+
+- name: Initialize git server
+  hotstack_git_server_init:
+    path: "{{ hotstack_git_repo_path }}"
+    user_name: "Hotstack Automation"
+    user_email: "hotstack@openstack.lab"
+
+- name: Display git repository information
+  ansible.builtin.debug:
+    msg:
+      - "Git repository: {{ hotstack_git_repo_path }}"
+      - "Git daemon URL: git://controller-0.openstack.lab/openstack-deployment"

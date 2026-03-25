@@ -4,6 +4,7 @@ bind-utils:
 butane:
 dnsmasq:
 git:
+git-daemon:
 haproxy:
 httpd:
 httpd-tools:

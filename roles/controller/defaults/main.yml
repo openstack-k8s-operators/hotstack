@@ -18,6 +18,10 @@ nfs_exports:
     mode: '0777'  # World writable for container access
 
 controller_install_openstack_client: false
+
+# Hotstack git server for GitOps deployments
+hotstack_git_server_enabled: false
+
 hotstack_cloud_secrets:
   auth_url: http://cloud.example.com:5000
   application_credential_id: app_credential_id
