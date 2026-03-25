@@ -1,0 +1,25 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hostname": "sonic",
+            "type": "ToRRouter",
+            "bgp_asn": "65100",
+            "docker_routing_config_mode": "unified"
+        }
+    },
+    "MGMT_INTERFACE": {
+        "eth0|0.0.0.0/0": {
+            "gwaddr": "0.0.0.0"
+        }
+    },
+    "MGMT_PORT": {
+        "eth0": {
+            "alias": "eth0",
+            "admin_status": "up"
+        }
+    },
+    "PORT": {},
+    "VLAN": {},
+    "VLAN_INTERFACE": {},
+    "VLAN_MEMBER": {}
+}

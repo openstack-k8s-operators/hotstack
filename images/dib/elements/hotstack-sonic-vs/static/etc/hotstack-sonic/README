@@ -1,0 +1,39 @@
+SONiC Switch Configuration Directory
+=====================================
+
+This directory contains configuration files for the SONiC switch host.
+
+Configuration Files
+-------------------
+
+config
+  Shell-style configuration file with host-level settings:
+  - MGMT_INTERFACE: Host management interface (default: eth0)
+  - SWITCH_INTERFACE_START: First interface to move to container (default: eth1)
+  - SWITCH_INTERFACE_COUNT: Number of interfaces to move (default: 5)
+  - SWITCH_HOSTNAME: SONiC hostname (default: sonic)
+  - SONIC_IMAGE: Podman image tag (default: localhost/sonic:latest)
+
+config_db.json
+  SONiC native configuration file in JSON format. This file is mounted
+  into the SONiC container at /etc/sonic/config_db.json.
+
+Usage with cloud-init
+----------------------
+
+Use write_files to create these configuration files:
+
+  write_files:
+    - path: /etc/hotstack-sonic/config
+      content: |
+        SWITCH_HOSTNAME=leaf01
+        SWITCH_INTERFACE_COUNT=8
+    - path: /etc/hotstack-sonic/config_db.json
+      content: |
+        {
+          "DEVICE_METADATA": {
+            "localhost": {
+              "hostname": "leaf01"
+            }
+          }
+        }

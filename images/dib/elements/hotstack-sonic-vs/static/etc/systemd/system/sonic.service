@@ -1,0 +1,35 @@
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+[Unit]
+Description=SONiC Container Switch
+After=network-online.target sonic-import.service
+Wants=network-online.target
+Requires=sonic-import.service
+ConditionPathExists=/usr/local/bin/start-sonic
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=-/usr/bin/podman stop -t 30 sonic
+ExecStartPre=-/usr/bin/podman rm -f sonic
+ExecStart=/usr/local/bin/start-sonic
+ExecStop=/usr/bin/podman stop -t 30 sonic
+ExecStopPost=/usr/bin/podman rm -f sonic
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

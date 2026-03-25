@@ -25,6 +25,11 @@ CEOS_IMAGE_FORMAT            ?= qcow2
 CEOS_DIB_VENV                ?= $(HOME)/ceos-dib-venv
 CEOS_DIB_WORKDIR             ?= $(CURDIR)/.ceos-build
 CEOS_TAR_IMAGE               ?=
+SONIC_IMAGE_NAME             ?= sonic-vs-switch-host.qcow2
+SONIC_IMAGE_FORMAT           ?= qcow2
+SONIC_DIB_VENV               ?= $(HOME)/sonic-dib-venv
+SONIC_DIB_WORKDIR            ?= $(CURDIR)/.sonic-build
+SONIC_DOCKER_IMAGE           ?=
 
 # Switch vendor image locations (optional, leave empty if not available)
 # These will be copied into the image at /opt/<model>/ during build
@@ -309,4 +314,59 @@ ceos_clean:
 	fi
 	@if [ -d "$(CEOS_DIB_WORKDIR)" ]; then \
 		sudo rm -rf $(CEOS_DIB_WORKDIR); \
+	fi
+
+sonic: sonic_verify_image sonic_dib_setup sonic_dib_build sonic_convert
+
+sonic_verify_image:
+	@if [ -z "$(SONIC_DOCKER_IMAGE)" ]; then \
+		echo "ERROR: SONIC_DOCKER_IMAGE is not set."; \
+		echo "Please provide the path to the SONiC docker image file:"; \
+		echo "  make sonic SONIC_DOCKER_IMAGE=/path/to/docker-sonic-vs.gz"; \
+		exit 1; \
+	fi
+	@test -f $(SONIC_DOCKER_IMAGE) || (echo "ERROR: SONiC image not found: $(SONIC_DOCKER_IMAGE)" && exit 1)
+	@echo "Using SONiC image: $(SONIC_DOCKER_IMAGE)"
+
+sonic_dib_setup:
+	@if [ ! -d "$(SONIC_DIB_VENV)" ]; then \
+		echo "Creating Python virtual environment at $(SONIC_DIB_VENV)..."; \
+		python3 -m venv $(SONIC_DIB_VENV); \
+		. $(SONIC_DIB_VENV)/bin/activate && \
+		pip install --upgrade pip setuptools wheel && \
+		pip install diskimage-builder; \
+	else \
+		echo "Virtual environment already exists at $(SONIC_DIB_VENV)"; \
+	fi
+
+sonic_dib_build: sonic_dib_setup
+	@echo "Building SONiC image using diskimage-builder..."
+	@mkdir -p $(SONIC_DIB_WORKDIR)/cache
+	@. $(SONIC_DIB_VENV)/bin/activate && \
+		cd $(CURDIR) && \
+		ELEMENTS_PATH=$(CURDIR)/dib/elements \
+		DIB_IMAGE_CACHE=$(SONIC_DIB_WORKDIR)/cache \
+		DIB_DEBUG_TRACE=1 \
+		DIB_SONIC_IMAGE=$(SONIC_DOCKER_IMAGE) \
+		diskimage-builder dib/sonic-vs-image.yaml
+	@echo "SONiC image built successfully: $(SONIC_IMAGE_NAME)"
+
+sonic_convert:
+ifeq ($(SONIC_IMAGE_FORMAT),raw)
+	@echo "Converting SONiC image to raw format (in-place)..."
+	qemu-img convert -p -f qcow2 -O raw $(SONIC_IMAGE_NAME) $(SONIC_IMAGE_NAME).tmp
+	mv $(SONIC_IMAGE_NAME).tmp $(SONIC_IMAGE_NAME)
+	@echo "SONiC image converted to raw format: $(SONIC_IMAGE_NAME)"
+endif
+
+sonic_clean:
+	rm -f $(SONIC_IMAGE_NAME)
+	rm -f $(SONIC_IMAGE_NAME).tmp
+	rm -rf $(SONIC_DIB_VENV)
+	@if [ -z "$(SONIC_DIB_WORKDIR)" ] || [ "$(SONIC_DIB_WORKDIR)" = "/" ]; then \
+		echo "ERROR: SONIC_DIB_WORKDIR is not set or is dangerous: $(SONIC_DIB_WORKDIR)"; \
+		exit 1; \
+	fi
+	@if [ -d "$(SONIC_DIB_WORKDIR)" ]; then \
+		sudo rm -rf $(SONIC_DIB_WORKDIR); \
 	fi
