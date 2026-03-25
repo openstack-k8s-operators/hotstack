@@ -35,19 +35,312 @@ stages:
                "common/stages/olm-openstack-stages.yaml.j2")
       }}
 
-  - name: Control Plane (NNCP and OpenStackControlPlane)
+  - name: Clone Architecture Repository
+    documentation: |
+      Clone the openstack-k8s-operators/architecture repository to $HOME/manifests/architecture.
+      This allows us to reference it as a local resource and patch values files
+      before Kustomize component processing. The location matches where hotloop copies
+      kustomize directories, so relative paths work correctly.
+    shell: |
+      rm -rf $HOME/manifests/architecture
+      git clone --depth 1 --branch main \
+        https://github.com/openstack-k8s-operators/architecture.git \
+        $HOME/manifests/architecture
+
+  - name: Patch Architecture Values
+    documentation: |
+      Patch the architecture repository's values files with hotstack-specific settings.
+
+      The architecture repo uses a values-based replacement pattern where ConfigMap
+      values files are processed by Kustomize replacements to generate final resources.
+      Standard Kustomize overlays and strategic merge patches do not work because
+      replacements overwrite any patches applied to the final resources.
+
+      This stage applies yq patches to the source values files before Kustomize
+      processes them, including:
+      - Network interface names and MTU settings
+      - Storage class configuration
+      - Neutron service plugins (removing unavailable plugins)
+      - Bug fixes (IronicNeutronAgent secret, DNS replacement)
+      - SSH secret removal (we create them manually per Red Hat docs)
+      - Dataplane nodeset customizations (bootstrap command, SSH access)
+    stages:
+      - name: Patch Network Values
+        documentation: |
+          Patch the network-values ConfigMap with hotstack-specific interface names
+          and MTU settings. These values are used by multiple component replacements
+          throughout the architecture repo (NNCP, control plane, networking, etc.).
+
+          Changes:
+          - Interface names: enp7s0 -> eth1, enp8s0 -> eth2
+          - MTU: 1500 -> 1442
+          - Storage class: local-storage -> lvms-local-storage
+        shell: |
+          yq eval -i '
+            .data.ctlplane.iface = "eth1" |
+            .data.ctlplane.mtu = {{ stack_outputs.network_mtu.ctlplane }} |
+            .data.internalapi.base_iface = "eth1" |
+            .data.internalapi.mtu = {{ stack_outputs.network_mtu.internal_api }} |
+            .data.storage.base_iface = "eth1" |
+            .data.storage.mtu = {{ stack_outputs.network_mtu.storage }} |
+            .data.tenant.base_iface = "eth1" |
+            .data.tenant.mtu = {{ stack_outputs.network_mtu.tenant }} |
+            .data.octavia.base_iface = "eth1" |
+            .data.octavia.mtu = {{ stack_outputs.network_mtu.octavia }} |
+            .data.ironic.base_iface = "eth2" |
+            .data.ironic.mtu = {{ stack_outputs.network_mtu.ironic }} |
+            .data.storageClass = "lvms-local-storage" |
+            .data.dns-resolver.options[0].values[0] = "192.168.32.3"
+          ' $HOME/manifests/architecture/examples/dt/uni01alpha/control-plane/networking/nncp/values.yaml
+
+      - name: Disable NNCP DNS Replacement
+        documentation: |
+          Remove the DNS replacement from the NNCP component to prevent NMState
+          from trying to configure DNS, which causes reconciliation failures when
+          the same DNS server is already configured, or DNS server is reached
+          with machine network interface which is not configured by nmstate?
+
+          The DNS configuration remains in network-values for use by the control
+          plane DNS component, but won't be applied to NodeNetworkConfigurationPolicy
+          resources.
+        shell: |
+          yq eval -i 'del(.replacements[] | select(.source.fieldPath == "data.dns-resolver.config"))' \
+            $HOME/manifests/architecture/lib/nncp/kustomization.yaml
+
+      - name: Patch Service Values
+        documentation: |
+          Patch the service-values ConfigMap with hotstack-specific settings.
+
+          Changes:
+          - Storage class: local-storage -> lvms-local-storage
+          - Neutron service_plugins: Remove taas and tapmirror (not in image)
+          - Ironic kernel_append_params: Add ipa-debug=1 for IPA debugging
+        shell: |
+          yq eval -i '.data.storageClass = "lvms-local-storage"' \
+            $HOME/manifests/architecture/examples/dt/uni01alpha/control-plane/service-values.yaml
+
+          yq eval -i '
+            .data.neutron.customServiceConfig |=
+            sub("service_plugins = qos,ovn-router,trunk,segments,log,taas,tapmirror";
+                "service_plugins = qos,ovn-router,trunk,segments,log")
+          ' $HOME/manifests/architecture/examples/dt/uni01alpha/control-plane/service-values.yaml
+
+          yq eval -i '
+            .data.ironic.ironicConductors[0].customServiceConfig |=
+            sub("kernel_append_params = console=ttyS0";
+                "kernel_append_params = console=ttyS0 ipa-debug=1")
+          ' $HOME/manifests/architecture/examples/dt/uni01alpha/control-plane/service-values.yaml
+
+      - name: Remove SSH Secrets from Dataplane Nodeset Components
+        documentation: |
+          Remove SSH secret templates from the nodeset components since we create
+          them manually with oc create secret (as documented by Red Hat).
+
+          Red Hat's official RHOSO documentation specifies creating SSH secrets with
+          'oc create secret' commands BEFORE creating nodesets:
+          https://docs.redhat.com/en/documentation/red_hat_openstack_services_on_openshift/18.0/html/deploying_a_rhoso_environment_with_distributed_zones/assembly_creating-the-distributed-data-plane#proc_creating-the-data-plane-secrets_distributed-data-plane
+
+          The architecture repo's approach (including placeholder secrets in Kustomize)
+          is is different from what is documented by Red Hat.
+
+          Secrets removed:
+          - dataplane-ansible-ssh-private-key-secret (dataplane SSH)
+          - nova-migration-ssh-key (Nova migration)
+        shell: |
+          yq eval -i 'del(.resources[] | select(. == "dataplane-ssh-secret.yaml"))' \
+            $HOME/manifests/architecture/lib/dataplane/nodeset/kustomization.yaml
+
+          yq eval -i 'del(.resources[] | select(. == "dataplane-ssh-secret.yaml"))' \
+            $HOME/manifests/architecture/lib/dataplane/networker-nodeset/kustomization.yaml
+
+          yq eval -i 'del(.resources[] | select(. == "nova-migration-ssh-secret.yaml"))' \
+            $HOME/manifests/architecture/lib/dataplane/nodeset/kustomization.yaml
+
+      - name: Patch EDPM Nodeset Values
+        documentation: |
+          Patch the EDPM nodeset values ConfigMap with hotstack-specific settings.
+
+          Changes:
+          - edpm_bootstrap_command: Set to hotstack upstream bootstrap script
+          - edpm_sshd_allowed_ranges: Add 192.168.32.3/32 for hotstack controller access
+          - edpm_network_config_template: Change nic2->nic1 and eth1->eth0 for single-NIC
+          - Remove ovs_extra workaround: Added for OSPRH-17551, causes nmstate failures
+
+          NOTE: The edpm_bootstrap_command uses a Jinja2 template that will be rendered
+          by Ansible when hotloop processes this file. The template path is defined in
+          roles/hotloop/defaults/main.yml as hotstack_edpm_bootstrap_command.
+
+          Uses strenv() instead of env() to preserve multi-line string formatting in the
+          bootstrap command script.
+
+          The architecture repo assumes a two-NIC setup (nic1=management, nic2=ctlplane),
+          but hotstack uses a single-NIC setup where eth0 serves as the ctlplane network.
+
+          The ovs_extra configuration was added as a workaround for OSPRH-17551 to enable
+          bandwidth limits on physical ports. However, it causes nmstate verification
+          failures when os-net-config attempts to set ovs-db.external_ids on ethernet
+          interfaces. The underlying issue was reportedly fixed in FDP-1472 (closed
+          October 2025, RHBA-2025:17126), making the workaround no longer needed?
+        shell: |
+          export BOOTSTRAP_CMD='{{ lookup("ansible.builtin.template", hotstack_edpm_bootstrap_command) }}'
+          yq eval -i '.data.nodeset.ansible.ansibleVars.edpm_bootstrap_command = strenv(BOOTSTRAP_CMD)' \
+            $HOME/manifests/architecture/examples/dt/uni01alpha/edpm/values.yaml
+          yq eval -i '.data.nodeset.ansible.ansibleVars.edpm_sshd_allowed_ranges += ["192.168.32.3/32"]' \
+            $HOME/manifests/architecture/examples/dt/uni01alpha/edpm/values.yaml
+
+          # Patch network config template for single-NIC: nic2->nic1, eth1->eth0
+          # Architecture assumes 2 NICs (nic1=mgmt, nic2=ctlplane), hotstack has 1 NIC (eth0=ctlplane)
+          yq eval -i \
+            '.data.nodeset.ansible.ansibleVars.edpm_network_config_template |=
+              (. |
+                sub("name: nic2"; "name: nic1") |
+                sub("eth1"; "eth0")
+              )' \
+            $HOME/manifests/architecture/examples/dt/uni01alpha/edpm/values.yaml
+
+          # Remove ovs_extra workaround (causes nmstate verification failures, see documentation above)
+          yq eval -i \
+            '.data.nodeset.ansible.ansibleVars.edpm_network_config_template |=
+              (. |
+                sub("\\n\\s+# this ovs_extra configuration fixes OSPRH-17551.*"; "") |
+                sub("\\n\\s+# be not needed when FDP-1472 is resolved"; "") |
+                sub("\\n\\s+ovs_extra:"; "") |
+                sub("\\n\\s+- \"set interface eth0 external-ids:ovn-egress-iface=true\""; "")
+              )' \
+            $HOME/manifests/architecture/examples/dt/uni01alpha/edpm/values.yaml
+
+      - name: Patch Networker Nodeset Values
+        documentation: |
+          Patch the networker nodeset values ConfigMap with hotstack-specific settings.
+
+          Changes:
+          - edpm_bootstrap_command: Set to hotstack upstream bootstrap script
+          - edpm_sshd_allowed_ranges: Add 192.168.32.3/32 for hotstack controller access
+          - edpm_network_config_template: Change nic2->nic1 and eth1->eth0 for single-NIC
+          - Remove ovs_extra workaround: Added for OSPRH-17551, causes nmstate failures
+
+          NOTE: The edpm_bootstrap_command uses a Jinja2 template that will be rendered
+          by Ansible when hotloop processes this file. The template path is defined in
+          roles/hotloop/defaults/main.yml as hotstack_edpm_bootstrap_command.
+
+          Uses strenv() instead of env() to preserve multi-line string formatting in the
+          bootstrap command script.
+
+          The architecture repo assumes a two-NIC setup (nic1=management, nic2=ctlplane),
+          but hotstack uses a single-NIC setup where eth0 serves as the ctlplane network.
+
+          The ovs_extra configuration was added as a workaround for OSPRH-17551 to enable
+          bandwidth limits on physical ports. However, it causes nmstate verification
+          failures when os-net-config attempts to set ovs-db.external_ids on ethernet
+          interfaces. The underlying issue was reportedly fixed in FDP-1472 (closed
+          October 2025, RHBA-2025:17126), making the workaround no longer needed?
+        shell: |
+          export BOOTSTRAP_CMD='{{ lookup("ansible.builtin.template", hotstack_edpm_bootstrap_command) }}'
+          yq eval -i '.data.nodeset.ansible.ansibleVars.edpm_bootstrap_command = strenv(BOOTSTRAP_CMD)' \
+            $HOME/manifests/architecture/examples/dt/uni01alpha/networker/nodeset/values.yaml
+          yq eval -i '.data.nodeset.ansible.ansibleVars.edpm_sshd_allowed_ranges += ["192.168.32.3/32"]' \
+            $HOME/manifests/architecture/examples/dt/uni01alpha/networker/nodeset/values.yaml
+
+          # Patch network config template for single-NIC: nic2->nic1, eth1->eth0
+          # Architecture assumes 2 NICs (nic1=mgmt, nic2=ctlplane), hotstack has 1 NIC (eth0=ctlplane)
+          yq eval -i \
+            '.data.nodeset.ansible.ansibleVars.edpm_network_config_template |=
+              (. |
+                sub("name: nic2"; "name: nic1") |
+                sub("eth1"; "eth0")
+              )' \
+            $HOME/manifests/architecture/examples/dt/uni01alpha/networker/nodeset/values.yaml
+
+          # Remove ovs_extra workaround (causes nmstate verification failures, see documentation above)
+          yq eval -i \
+            '.data.nodeset.ansible.ansibleVars.edpm_network_config_template |=
+              (. |
+                sub("\\n\\s+# this ovs_extra configuration fixes OSPRH-17551.*"; "") |
+                sub("\\n\\s+# be not needed when FDP-1472 is resolved"; "") |
+                sub("\\n\\s+ovs_extra:"; "") |
+                sub("\\n\\s+- \"set interface eth0 external-ids:ovn-egress-iface=true\""; "")
+              )' \
+            $HOME/manifests/architecture/examples/dt/uni01alpha/networker/nodeset/values.yaml
+
+  - name: Label master-0 for cinder-lvm
+    documentation: |
+      Apply cinder-lvm label on master-0 node as required by the architecture
+      control plane configuration.
+    shell: |
+      oc label node master-0 openstack.org/cinder-lvm="" --overwrite
+
+  - name: NNCP (Node Network Configuration)
+    documentation: |
+      Apply Node Network Configuration Policies using the patched architecture repo.
+      The values.yaml file has been modified with hotstack-specific interface names
+      (eth1/eth2) and MTU (1442).
     kustomize:
-      directory: scenarios/uni01alpha/kustomize/control-plane
+      directory: ~/manifests/architecture/examples/dt/uni01alpha/control-plane/networking/nncp
+      remote_src: true
     wait_conditions:
       - >-
         oc wait -n openstack nncp -l osp/nncm-config-type=standard
         --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
         --timeout=180s
+
+  - name: Networking (MetalLB and NADs)
+    documentation: |
+      Apply MetalLB IPAddressPools, L2Advertisements, and NetworkAttachmentDefinitions
+      using the patched architecture repo.
+    kustomize:
+      directory: ~/manifests/architecture/examples/dt/uni01alpha/control-plane/networking
+      remote_src: true
+    wait_conditions:
+      - >-
+        oc wait -n metallb-system ipaddresspool ctlplane
+        --for jsonpath='{.metadata.name}' --timeout=60s
+      - >-
+        oc wait -n metallb-system ipaddresspool internalapi
+        --for jsonpath='{.metadata.name}' --timeout=60s
+      - >-
+        oc wait -n metallb-system ipaddresspool storage
+        --for jsonpath='{.metadata.name}' --timeout=60s
+      - >-
+        oc wait -n metallb-system ipaddresspool tenant
+        --for jsonpath='{.metadata.name}' --timeout=60s
+      - >-
+        oc wait -n openstack network-attachment-definitions.k8s.cni.cncf.io ctlplane
+        --for jsonpath='{.metadata.name}' --timeout=60s
+      - >-
+        oc wait -n openstack network-attachment-definitions.k8s.cni.cncf.io internalapi
+        --for jsonpath='{.metadata.name}' --timeout=60s
+      - >-
+        oc wait -n openstack network-attachment-definitions.k8s.cni.cncf.io storage
+        --for jsonpath='{.metadata.name}' --timeout=60s
+      - >-
+        oc wait -n openstack network-attachment-definitions.k8s.cni.cncf.io tenant
+        --for jsonpath='{.metadata.name}' --timeout=60s
+      - >-
+        oc wait -n openstack network-attachment-definitions.k8s.cni.cncf.io ironic
+        --for jsonpath='{.metadata.name}' --timeout=60s
+      - >-
+        oc wait -n openstack network-attachment-definitions.k8s.cni.cncf.io octavia
+        --for jsonpath='{.metadata.name}' --timeout=60s
+      - >-
+        oc wait -n openstack network-attachment-definitions.k8s.cni.cncf.io datacentre
+        --for jsonpath='{.metadata.name}' --timeout=60s
+
+  - name: OpenStack Control Plane
+    documentation: |
+      Deploy OpenStackControlPlane using the patched architecture repo with
+      hotstack-specific storage class and Neutron service plugins.
+    kustomize:
+      directory: ~/manifests/architecture/examples/dt/uni01alpha/control-plane
+      remote_src: true
+    wait_conditions:
       - >-
         oc wait -n openstack openstackcontrolplane controlplane
         --for condition=Ready --timeout=30m
 
   - name: Dataplane SSH key secret
+    documentation: |
+      Create the dataplane SSH secret as documented in Red Hat's official RHOSO docs.
+      This secret enables Ansible to manage RHEL nodes on the data plane.
     shell: >-
       oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret
       --save-config --dry-run=client
@@ -61,6 +354,9 @@ stages:
         --timeout=30s
 
   - name: Nova migration SSH key secret
+    documentation: |
+      Create the Nova migration SSH secret as documented in Red Hat's official RHOSO docs.
+      This secret enables migration of instances between Compute nodes.
     shell: >-
       oc create -n openstack secret generic nova-migration-ssh-key
       --save-config --dry-run=client
@@ -74,12 +370,24 @@ stages:
         --timeout=30s
 
   - name: Networker nodeset
+    documentation: |
+      Create the OpenStackDataPlaneNodeSet for networker nodes.
+
+      Uses the architecture repo nodeset configuration directly after applying
+      hotstack-specific patches inline (bootstrap commands, SSH access, network config).
     kustomize:
-      directory: scenarios/uni01alpha/kustomize/networker
+      directory: ~/manifests/architecture/examples/dt/uni01alpha/networker/nodeset
+      remote_src: true
 
   - name: EDPM nodeset
+    documentation: |
+      Create the OpenStackDataPlaneNodeSet for EDPM compute nodes.
+
+      Uses the architecture repo nodeset configuration directly after applying
+      hotstack-specific patches inline (bootstrap commands, SSH access, network config).
     kustomize:
-      directory: scenarios/uni01alpha/kustomize/edpm
+      directory: ~/manifests/architecture/examples/dt/uni01alpha/edpm
+      remote_src: true
 
   - name: Wait for nodesets (Networker and EDPM)
     wait_conditions:
@@ -91,12 +399,22 @@ stages:
         --for condition=SetupReady --timeout=10m
 
   - name: Networker deployment
+    documentation: |
+      Create the OpenStackDataPlaneDeployment for networker nodes.
+
+      Uses the architecture repo deployment configuration directly.
     kustomize:
-      directory: scenarios/uni01alpha/kustomize/networker-deployment
+      directory: ~/manifests/architecture/examples/dt/uni01alpha/networker
+      remote_src: true
 
   - name: EDPM deployment
+    documentation: |
+      Create the OpenStackDataPlaneDeployment for EDPM compute nodes.
+
+      Uses the architecture repo deployment configuration directly.
     kustomize:
-      directory: scenarios/uni01alpha/kustomize/dataplane-deployment
+      directory: ~/manifests/architecture/examples/dt/uni01alpha
+      remote_src: true
 
   - name: Wait for deployments (Networker and EDPM)
     wait_conditions:
@@ -127,29 +445,3 @@ stages:
       - oc wait -n openstack jobs.batch telemetry-edpm-deployment-openstack-edpm --for condition=Complete --timeout=10m
       - oc -n openstack wait openstackdataplanedeployment edpm-deployment --for condition=Ready --timeout=10m
       - timeout --foreground 15m hotstack-nova-discover-hosts --namespace openstack --num-computes 2
-
-  - name: "Minor update :: openstack-operators OLM"
-    stages: >-
-      {{
-        lookup('ansible.builtin.template',
-               'common/stages/openstack-olm-update.yaml.j2')
-      }}
-    run_conditions:
-      - >-
-        {{
-          openstack_operators_update is defined and
-          openstack_operators_update | bool
-        }}
-
-  - name: "Minor update :: controlplane and dataplane"
-    stages: >-
-      {{
-        lookup('ansible.builtin.template',
-               'common/stages/openstack-update.yaml.j2')
-      }}
-    run_conditions:
-      - >-
-        {{
-          openstack_update is defined and
-          openstack_update | bool
-        }}
