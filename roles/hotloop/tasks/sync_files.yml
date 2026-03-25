@@ -29,9 +29,9 @@
     remote_src: "{{ _synced_src_stat.stat.exists | default(false) }}"
     src: >-
       {{
-        [_work_dir, item.sync_files.src, ''] | ansible.builtin.path_join
+        [_work_dir, item.sync_files.src] | ansible.builtin.path_join
         if _synced_src_stat.stat.exists | default(false)
-        else [item.sync_files.src, ''] | ansible.builtin.path_join
+        else item.sync_files.src
       }}
-    dest: "{{ [item.sync_files.dest, ''] | ansible.builtin.path_join }}"
+    dest: "{{ item.sync_files.dest }}"
     mode: preserve
