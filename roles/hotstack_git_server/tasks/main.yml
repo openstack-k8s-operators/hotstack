@@ -1,10 +1,4 @@
 ---
-- name: Install git-daemon package
-  ansible.builtin.package:
-    name: git-daemon
-    state: present
-  become: true
-
 - name: Initialize git server
   hotstack_git_server_init:
     path: "{{ hotstack_git_repo_path }}"
