@@ -1,0 +1,509 @@
+#!/usr/bin/env python3
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+"""
+cEOS Container Startup Script
+
+Manages the lifecycle of an Arista cEOS containerized switch, including
+container creation, macvlan network interface setup, and configuration
+deployment. Designed to be invoked by systemd on boot.
+"""
+
+import logging
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from typing import Optional, Tuple
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stderr)
+LOG = logging.getLogger(__name__)
+
+# Configuration paths
+CONFIG_FILE = "/etc/hotstack-ceos/config"
+STARTUP_CONFIG_FILE = "/etc/hotstack-ceos/startup-config"
+FLASH_DIR = "/var/lib/ceos/flash"
+FLASH_STARTUP_CONFIG = "/var/lib/ceos/flash/startup-config"
+FLASH_SYSTEM_MAC = "/var/lib/ceos/flash/system_mac_address"
+FLASH_IF_WAIT = "/var/lib/ceos/flash/if-wait"
+DEFAULT_STARTUP_CONFIG = "/usr/share/hotstack-ceos/default-startup.cfg"
+IF_WAIT_SCRIPT = "/usr/share/hotstack-ceos/if-wait"
+
+
+class CeosConfig:
+    """Configuration for cEOS switch host."""
+
+    def __init__(self):
+        """Initialize configuration with default values."""
+        self.mgmt_interface = "eth0"
+        self.switch_mgmt_interface = "eth1"
+        self.data_interface_start = "eth2"
+        self.data_interface_count = 4
+        self.switch_hostname = "ceos"
+        self.ceos_image = "localhost/ceos:latest"
+
+    def load_from_file(self, config_file: str = CONFIG_FILE) -> None:
+        """Load configuration from shell-style config file.
+
+        :param config_file: Path to configuration file
+        :raises FileNotFoundError: If config file does not exist
+        """
+        if not os.path.exists(config_file):
+            raise FileNotFoundError(f"Configuration file not found: {config_file}")
+
+        with open(config_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    key = key.strip()
+                    value = value.strip().strip('"').strip("'")
+
+                    if key == "MGMT_INTERFACE":
+                        self.mgmt_interface = value
+                    elif key == "SWITCH_MGMT_INTERFACE":
+                        self.switch_mgmt_interface = value
+                    elif key == "DATA_INTERFACE_START":
+                        self.data_interface_start = value
+                    elif key == "DATA_INTERFACE_COUNT":
+                        self.data_interface_count = int(value)
+                    elif key == "SWITCH_HOSTNAME":
+                        self.switch_hostname = value
+                    elif key == "CEOS_IMAGE":
+                        self.ceos_image = value
+
+    def log_config(self) -> None:
+        """Log the current configuration to stderr."""
+        LOG.info("Configuration loaded:")
+        LOG.info(f"  Host Management Interface: {self.mgmt_interface}")
+        LOG.info(f"  Switch Management Interface: {self.switch_mgmt_interface}")
+        LOG.info(f"  Data Interface Start: {self.data_interface_start}")
+        LOG.info(f"  Data Interface Count: {self.data_interface_count}")
+        LOG.info(f"  Switch Hostname: {self.switch_hostname}")
+        LOG.info(f"  cEOS Image: {self.ceos_image}")
+
+
+def run_command(
+    cmd: list, check: bool = True, capture_output: bool = True
+) -> subprocess.CompletedProcess:
+    """Run a shell command and return the result.
+
+    :param cmd: Command and arguments as a list
+    :param check: Whether to raise exception on non-zero exit
+    :param capture_output: Whether to capture stdout/stderr
+    :returns: CompletedProcess instance with command results
+    :raises subprocess.CalledProcessError: If command fails and check=True
+    """
+    try:
+        result = subprocess.run(
+            cmd, check=check, capture_output=capture_output, text=True
+        )
+        return result
+    except subprocess.CalledProcessError as e:
+        if check:
+            LOG.error(f"Command failed: {' '.join(cmd)}")
+            LOG.error(f"Exit code: {e.returncode}")
+            if e.stderr:
+                LOG.error(f"Error output: {e.stderr}")
+        raise
+
+
+def get_interface_mac(interface: str) -> str:
+    """Get the MAC address of a network interface.
+
+    :param interface: Network interface name (e.g., 'eth0')
+    :returns: MAC address string
+    :raises RuntimeError: If MAC address cannot be determined
+    """
+    try:
+        result = run_command(["ip", "link", "show", interface])
+        for line in result.stdout.splitlines():
+            if "link/ether" in line:
+                parts = line.split()
+                mac_idx = parts.index("link/ether") + 1
+                if mac_idx < len(parts):
+                    return parts[mac_idx]
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to get MAC address for interface {interface}: {e}")
+
+    raise RuntimeError(f"No MAC address found for interface: {interface}")
+
+
+def increment_mac(mac: str) -> str:
+    """Increment the last byte of a MAC address.
+
+    :param mac: MAC address in colon-separated format (e.g., 'aa:bb:cc:dd:ee:ff')
+    :returns: MAC address with last byte incremented
+    """
+    parts = mac.split(":")
+    last_byte = int(parts[-1], 16)
+    last_byte = (last_byte + 1) % 256
+    parts[-1] = format(last_byte, "02x")
+    return ":".join(parts)
+
+
+def prepare_flash_directory(config: CeosConfig) -> None:
+    """Prepare the flash directory with startup config and required files.
+
+    Creates the flash directory structure, copies startup configuration,
+    generates system MAC address, and creates the interface wait script.
+
+    :param config: CeosConfig instance with switch configuration
+    :raises FileNotFoundError: If no startup config is found
+    :raises RuntimeError: If MAC address cannot be determined
+    """
+    LOG.info(f"Preparing flash directory: {FLASH_DIR}")
+
+    os.makedirs(FLASH_DIR, exist_ok=True)
+
+    if os.path.exists(STARTUP_CONFIG_FILE):
+        LOG.info(f"Using startup config from: {STARTUP_CONFIG_FILE}")
+        shutil.copy(STARTUP_CONFIG_FILE, FLASH_STARTUP_CONFIG)
+    elif os.path.exists(DEFAULT_STARTUP_CONFIG):
+        LOG.info("Using default startup config")
+        shutil.copy(DEFAULT_STARTUP_CONFIG, FLASH_STARTUP_CONFIG)
+    else:
+        raise FileNotFoundError("No startup config found")
+
+    mgmt_mac = get_interface_mac(config.switch_mgmt_interface)
+    system_mac = increment_mac(mgmt_mac)
+    with open(FLASH_SYSTEM_MAC, "w") as f:
+        f.write(system_mac)
+    LOG.info(f"System MAC address: {system_mac}")
+
+    shutil.copy(IF_WAIT_SCRIPT, FLASH_IF_WAIT)
+    os.chmod(FLASH_IF_WAIT, 0o755)
+
+    LOG.info("Flash directory prepared successfully")
+
+
+def get_container_pid() -> Optional[int]:
+    """Get the PID of the cEOS container.
+
+    :returns: Container PID or None if container not found
+    """
+    try:
+        result = run_command(
+            ["podman", "inspect", "ceos", "--format", "{{.State.Pid}}"], check=False
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return int(result.stdout.strip())
+    except (subprocess.CalledProcessError, ValueError):
+        pass
+    return None
+
+
+def wait_for_container(timeout: int = 60) -> bool:
+    """Wait for the cEOS container to start.
+
+    :param timeout: Maximum time to wait in seconds
+    :returns: True if container started successfully, False otherwise
+    """
+    LOG.info(f"Waiting for container to start (timeout: {timeout}s)...")
+
+    elapsed = 0
+    while elapsed < timeout:
+        try:
+            result = run_command(
+                [
+                    "podman",
+                    "ps",
+                    "--filter",
+                    "name=ceos",
+                    "--filter",
+                    "status=running",
+                    "--format",
+                    "{{.Names}}",
+                ],
+                check=False,
+            )
+            if result.returncode == 0 and "ceos" in result.stdout:
+                LOG.info("Container started successfully")
+                return True
+        except subprocess.CalledProcessError:
+            pass
+
+        time.sleep(2)
+        elapsed += 2
+
+    LOG.error(f"Container failed to start within {timeout} seconds")
+    return False
+
+
+def parse_interface_name(interface: str) -> Tuple[str, int]:
+    """Parse interface name into base and number.
+
+    :param interface: Interface name (e.g., 'eth2')
+    :returns: Tuple of (base, number) (e.g., ('eth', 2))
+    :raises ValueError: If interface name format is invalid
+    """
+    match = re.match(r"^([a-z]+)(\d+)$", interface)
+    if not match:
+        raise ValueError(f"Invalid interface name: {interface}")
+    return match.group(1), int(match.group(2))
+
+
+def create_macvlan_interface(parent_if: str, macvlan_name: str):
+    """Create a macvlan interface.
+
+    :param parent_if: Parent network interface name
+    :param macvlan_name: Name for the new macvlan interface
+    """
+    try:
+        result = run_command(["ip", "link", "show", macvlan_name], check=False)
+        if result.returncode == 0:
+            LOG.info(f"Removing existing macvlan interface: {macvlan_name}")
+            run_command(["ip", "link", "delete", macvlan_name], check=False)
+    except subprocess.CalledProcessError:
+        pass
+
+    LOG.info(f"Creating macvlan interface: {macvlan_name} (parent: {parent_if})")
+    run_command(
+        [
+            "ip",
+            "link",
+            "add",
+            "link",
+            parent_if,
+            "name",
+            macvlan_name,
+            "type",
+            "macvlan",
+            "mode",
+            "bridge",
+        ]
+    )
+    run_command(["ip", "link", "set", macvlan_name, "up"])
+
+
+def attach_interface_to_container(
+    interface: str, container_pid: int, container_if_name: str
+):
+    """Attach a network interface to the container namespace.
+
+    Moves the interface into the container's network namespace and renames it.
+
+    :param interface: Host interface name to move
+    :param container_pid: PID of the target container
+    :param container_if_name: New name for the interface inside the container
+    """
+    LOG.info(f"Attaching {interface} to container as {container_if_name}...")
+
+    run_command(
+        ["ip", "link", "set", interface, "netns", f"/proc/{container_pid}/ns/net"]
+    )
+
+    run_command(
+        [
+            "nsenter",
+            "-t",
+            str(container_pid),
+            "-n",
+            "ip",
+            "link",
+            "set",
+            interface,
+            "name",
+            container_if_name,
+        ]
+    )
+    run_command(
+        [
+            "nsenter",
+            "-t",
+            str(container_pid),
+            "-n",
+            "ip",
+            "link",
+            "set",
+            container_if_name,
+            "up",
+        ]
+    )
+
+
+def start_ceos_container(config: CeosConfig):
+    """Start the cEOS container.
+
+    Creates and starts a privileged podman container with the cEOS image,
+    mounting the flash directory and setting required environment variables.
+
+    :param config: CeosConfig instance with switch configuration
+    :returns: True if container started successfully, False otherwise
+    """
+    LOG.info("Starting cEOS container...")
+
+    env_vars = [
+        "CEOS=1",
+        "EOS_PLATFORM=ceoslab",
+        "INTFTYPE=eth",
+        "MAPETH0=1",
+        "MGMT_INTF=eth0",
+        "SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1",
+        "container=podman",
+    ]
+
+    systemd_env = f"systemd.setenv={' '.join(env_vars)}"
+
+    cmd = [
+        "podman",
+        "run",
+        "-d",
+        "--name",
+        "ceos",
+        "--hostname",
+        config.switch_hostname,
+        "--privileged",
+        "--network",
+        "none",
+        "-e",
+        "CEOS=1",
+        "-e",
+        "EOS_PLATFORM=ceoslab",
+        "-e",
+        "INTFTYPE=eth",
+        "-e",
+        "MAPETH0=1",
+        "-e",
+        "MGMT_INTF=eth0",
+        "-e",
+        "SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1",
+        "-v",
+        f"{FLASH_DIR}:/mnt/flash:rw",
+        config.ceos_image,
+        "/bin/bash",
+        "-c",
+        f"/mnt/flash/if-wait && exec /sbin/init {systemd_env}",
+    ]
+
+    run_command(cmd)
+
+    if not wait_for_container(60):
+        LOG.error("Container failed to start")
+        LOG.error("Container logs:")
+        try:
+            result = run_command(["podman", "logs", "ceos"], check=False)
+            if result.stdout:
+                for line in result.stdout.strip().split("\n"):
+                    LOG.error(line)
+            if result.stderr:
+                for line in result.stderr.strip().split("\n"):
+                    LOG.error(line)
+        except:
+            pass
+        return False
+
+    LOG.info("cEOS container started successfully")
+    return True
+
+
+def setup_networking(config: CeosConfig):
+    """Setup container networking with macvlan interfaces.
+
+    Creates macvlan interfaces for management and data ports, then attaches
+    them to the container's network namespace.
+
+    :param config: CeosConfig instance with network configuration
+    :returns: True if networking setup succeeded, False otherwise
+    """
+    LOG.info("Setting up container networking...")
+
+    container_pid = get_container_pid()
+    if not container_pid:
+        LOG.error("Failed to get container PID")
+        return False
+
+    LOG.info(f"Container PID: {container_pid}")
+
+    create_macvlan_interface(config.switch_mgmt_interface, "mv-mgmt0")
+    attach_interface_to_container("mv-mgmt0", container_pid, "eth0")
+
+    data_if_base, data_if_num = parse_interface_name(config.data_interface_start)
+
+    for i in range(config.data_interface_count):
+        host_if = f"{data_if_base}{data_if_num + i}"
+        macvlan_if = f"mv-eth{i + 1}"
+        container_if = f"eth{i + 1}"
+
+        try:
+            result = run_command(["ip", "link", "show", host_if], check=False)
+            if result.returncode != 0:
+                LOG.error(f"Host interface {host_if} not found, skipping")
+                continue
+        except subprocess.CalledProcessError:
+            LOG.error(f"Host interface {host_if} not found, skipping")
+            continue
+
+        create_macvlan_interface(host_if, macvlan_if)
+        attach_interface_to_container(macvlan_if, container_pid, container_if)
+
+    LOG.info("Networking setup complete")
+    return True
+
+
+def main():
+    """Main entry point for cEOS switch host setup.
+
+    Orchestrates the complete setup process: loads configuration, prepares
+    flash directory, starts container, and configures networking.
+
+    :returns: Exit code (0 for success, 1 for failure)
+    """
+    LOG.info("Starting cEOS switch host setup...")
+
+    try:
+        config = CeosConfig()
+        config.load_from_file()
+        config.log_config()
+    except Exception as e:
+        LOG.error(f"Failed to load configuration: {e}")
+        return 1
+
+    try:
+        prepare_flash_directory(config)
+    except Exception as e:
+        LOG.error(f"Failed to prepare flash directory: {e}")
+        return 1
+
+    if not start_ceos_container(config):
+        LOG.error("Failed to start cEOS container")
+        return 1
+
+    if not setup_networking(config):
+        LOG.error("Failed to setup networking")
+        return 1
+
+    LOG.info("cEOS switch host setup complete")
+    LOG.info("Container status:")
+    try:
+        result = run_command(["podman", "ps", "--filter", "name=ceos"], check=False)
+        for line in result.stdout.strip().split("\n"):
+            LOG.info(line)
+    except:
+        pass
+
+    LOG.info("To access the switch CLI, run: podman exec -it ceos Cli")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

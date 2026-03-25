@@ -1,0 +1,7 @@
+This directory contains cEOS runtime configuration files.
+
+Files in this directory:
+- config: Runtime configuration for the cEOS container
+- startup-config: EOS startup configuration
+
+These files are typically populated by cloud-init user-data during instance boot.

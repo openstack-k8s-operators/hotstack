@@ -1,0 +1,2 @@
+This directory is used by cEOS as persistent storage for the flash filesystem.
+Configuration files, logs, and other persistent data are stored here.

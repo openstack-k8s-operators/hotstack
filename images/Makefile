@@ -20,6 +20,11 @@ SWITCH_HOST_BASE_IMAGE       ?= switch-host-base.qcow2
 SWITCH_HOST_IMAGE_NAME       ?= switch-host.qcow2
 SWITCH_HOST_IMAGE_FORMAT     ?= raw
 SWITCH_HOST_INSTALL_PACKAGES ?= libvirt,qemu-kvm,qemu-img,expect,unzip,jq,iproute,nmap-ncat,telnet,git,vim-enhanced,tmux,bind-utils,bash-completion,nmstate,tcpdump,python3-jinja2
+CEOS_IMAGE_NAME              ?= ceos-switch-host.qcow2
+CEOS_IMAGE_FORMAT            ?= qcow2
+CEOS_DIB_VENV                ?= $(HOME)/ceos-dib-venv
+CEOS_DIB_WORKDIR             ?= $(CURDIR)/.ceos-build
+CEOS_TAR_IMAGE               ?=
 
 # Switch vendor image locations (optional, leave empty if not available)
 # These will be copied into the image at /opt/<model>/ during build
@@ -250,3 +255,58 @@ switch-host_clean:
 
 switch-host_clean_all: switch-host_clean
 	rm -f $(SWITCH_HOST_BASE_IMAGE)
+
+ceos: ceos_verify_image ceos_dib_setup ceos_dib_build ceos_convert
+
+ceos_verify_image:
+	@if [ -z "$(CEOS_TAR_IMAGE)" ]; then \
+		echo "ERROR: CEOS_TAR_IMAGE is not set."; \
+		echo "Please provide the path to the cEOS tar.xz file:"; \
+		echo "  make ceos CEOS_TAR_IMAGE=/path/to/cEOS64-lab-4.35.3F.tar.xz"; \
+		exit 1; \
+	fi
+	@test -f $(CEOS_TAR_IMAGE) || (echo "ERROR: cEOS image not found: $(CEOS_TAR_IMAGE)" && exit 1)
+	@echo "Using cEOS image: $(CEOS_TAR_IMAGE)"
+
+ceos_dib_setup:
+	@if [ ! -d "$(CEOS_DIB_VENV)" ]; then \
+		echo "Creating Python virtual environment at $(CEOS_DIB_VENV)..."; \
+		python3 -m venv $(CEOS_DIB_VENV); \
+		. $(CEOS_DIB_VENV)/bin/activate && \
+		pip install --upgrade pip setuptools wheel && \
+		pip install diskimage-builder; \
+	else \
+		echo "Virtual environment already exists at $(CEOS_DIB_VENV)"; \
+	fi
+
+ceos_dib_build: ceos_dib_setup
+	@echo "Building cEOS image using diskimage-builder..."
+	@mkdir -p $(CEOS_DIB_WORKDIR)/cache
+	@. $(CEOS_DIB_VENV)/bin/activate && \
+		cd $(CURDIR) && \
+		ELEMENTS_PATH=$(CURDIR)/dib/elements \
+		DIB_IMAGE_CACHE=$(CEOS_DIB_WORKDIR)/cache \
+		DIB_DEBUG_TRACE=1 \
+		DIB_CEOS_IMAGE=$(CEOS_TAR_IMAGE) \
+		diskimage-builder dib/ceos-image.yaml
+	@echo "cEOS image built successfully: $(CEOS_IMAGE_NAME)"
+
+ceos_convert:
+ifeq ($(CEOS_IMAGE_FORMAT),raw)
+	@echo "Converting cEOS image to raw format (in-place)..."
+	qemu-img convert -p -f qcow2 -O raw $(CEOS_IMAGE_NAME) $(CEOS_IMAGE_NAME).tmp
+	mv $(CEOS_IMAGE_NAME).tmp $(CEOS_IMAGE_NAME)
+	@echo "cEOS image converted to raw format: $(CEOS_IMAGE_NAME)"
+endif
+
+ceos_clean:
+	rm -f $(CEOS_IMAGE_NAME)
+	rm -f $(CEOS_IMAGE_NAME).tmp
+	rm -rf $(CEOS_DIB_VENV)
+	@if [ -z "$(CEOS_DIB_WORKDIR)" ] || [ "$(CEOS_DIB_WORKDIR)" = "/" ]; then \
+		echo "ERROR: CEOS_DIB_WORKDIR is not set or is dangerous: $(CEOS_DIB_WORKDIR)"; \
+		exit 1; \
+	fi
+	@if [ -d "$(CEOS_DIB_WORKDIR)" ]; then \
+		sudo rm -rf $(CEOS_DIB_WORKDIR); \
+	fi
