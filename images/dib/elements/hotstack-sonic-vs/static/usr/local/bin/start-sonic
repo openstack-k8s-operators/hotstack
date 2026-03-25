@@ -1,0 +1,424 @@
+#!/usr/bin/env python3
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+"""
+SONiC Container Startup Script
+
+Manages the lifecycle of a SONiC containerized switch, including
+container creation, network interface setup, and configuration deployment.
+Designed to be invoked by systemd on boot.
+"""
+
+import logging
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from typing import Optional, Tuple
+
+logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stderr)
+LOG = logging.getLogger(__name__)
+
+CONFIG_FILE = "/etc/hotstack-sonic/config"
+CONFIG_DB_FILE = "/etc/hotstack-sonic/config_db.json"
+FRR_CONF_FILE = "/etc/hotstack-sonic/frr.conf"
+SONIC_DIR = "/var/lib/sonic"
+SONIC_CONFIG_DB = "/var/lib/sonic/config_db.json"
+SONIC_FRR_CONF = "/var/lib/sonic/frr.conf"
+DEFAULT_CONFIG_DB = "/usr/share/hotstack-sonic/default-config_db.json"
+DEFAULT_FRR_CONF = "/usr/share/hotstack-sonic/default-frr.conf"
+
+
+class SonicConfig:
+    """Configuration for SONiC switch host."""
+
+    def __init__(self):
+        """Initialize configuration with default values."""
+        self.mgmt_interface = "eth0"
+        self.switch_interface_start = "eth1"
+        self.switch_interface_count = 5
+        self.switch_hostname = "sonic"
+        self.sonic_image = "localhost/sonic:latest"
+
+    def load_from_file(self, config_file: str = CONFIG_FILE) -> None:
+        """Load configuration from shell-style config file.
+
+        :param config_file: Path to configuration file
+        :raises FileNotFoundError: If config file does not exist
+        """
+        if not os.path.exists(config_file):
+            raise FileNotFoundError(f"Configuration file not found: {config_file}")
+
+        with open(config_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    key = key.strip()
+                    value = value.strip().strip('"').strip("'")
+
+                    if key == "MGMT_INTERFACE":
+                        self.mgmt_interface = value
+                    elif key == "SWITCH_INTERFACE_START":
+                        self.switch_interface_start = value
+                    elif key == "SWITCH_INTERFACE_COUNT":
+                        self.switch_interface_count = int(value)
+                    elif key == "SWITCH_HOSTNAME":
+                        self.switch_hostname = value
+                    elif key == "SONIC_IMAGE":
+                        self.sonic_image = value
+
+    def log_config(self) -> None:
+        """Log the current configuration to stderr."""
+        LOG.info("Configuration loaded:")
+        LOG.info(f"  Host Management Interface: {self.mgmt_interface}")
+        LOG.info(f"  Switch Interface Start: {self.switch_interface_start}")
+        LOG.info(f"  Switch Interface Count: {self.switch_interface_count}")
+        LOG.info(f"  Switch Hostname: {self.switch_hostname}")
+        LOG.info(f"  SONiC Image: {self.sonic_image}")
+
+
+def run_command(
+    cmd: list, check: bool = True, capture_output: bool = True
+) -> subprocess.CompletedProcess:
+    """Run a shell command and return the result.
+
+    :param cmd: Command and arguments as a list
+    :param check: Whether to raise exception on non-zero exit
+    :param capture_output: Whether to capture stdout/stderr
+    :returns: CompletedProcess instance with command results
+    :raises subprocess.CalledProcessError: If command fails and check=True
+    """
+    try:
+        result = subprocess.run(
+            cmd, check=check, capture_output=capture_output, text=True
+        )
+        return result
+    except subprocess.CalledProcessError as e:
+        if check:
+            LOG.error(f"Command failed: {' '.join(cmd)}")
+            LOG.error(f"Exit code: {e.returncode}")
+            if e.stderr:
+                LOG.error(f"Error output: {e.stderr}")
+        raise
+
+
+def prepare_sonic_directory(config: SonicConfig) -> None:
+    """Prepare the SONiC directory with configuration files.
+
+    Creates the SONiC directory structure and copies configuration.
+
+    :param config: SonicConfig instance with switch configuration
+    :raises FileNotFoundError: If no config is found
+    """
+    LOG.info(f"Preparing SONiC directory: {SONIC_DIR}")
+
+    os.makedirs(SONIC_DIR, exist_ok=True)
+
+    if os.path.exists(CONFIG_DB_FILE):
+        LOG.info(f"Using config_db.json from: {CONFIG_DB_FILE}")
+        shutil.copy(CONFIG_DB_FILE, SONIC_CONFIG_DB)
+    elif os.path.exists(DEFAULT_CONFIG_DB):
+        LOG.info("Using default config_db.json")
+        shutil.copy(DEFAULT_CONFIG_DB, SONIC_CONFIG_DB)
+    else:
+        LOG.warning("No config_db.json found, SONiC will use defaults")
+
+    if os.path.exists(FRR_CONF_FILE):
+        LOG.info(f"Using frr.conf from: {FRR_CONF_FILE}")
+        shutil.copy(FRR_CONF_FILE, SONIC_FRR_CONF)
+    elif os.path.exists(DEFAULT_FRR_CONF):
+        LOG.info("Using default frr.conf")
+        shutil.copy(DEFAULT_FRR_CONF, SONIC_FRR_CONF)
+    else:
+        LOG.info("No frr.conf found, FRR will use defaults")
+
+    LOG.info("SONiC directory prepared successfully")
+
+
+def get_container_pid() -> Optional[int]:
+    """Get the PID of the SONiC container.
+
+    :returns: Container PID or None if container not found
+    """
+    try:
+        result = run_command(
+            ["podman", "inspect", "sonic", "--format", "{{.State.Pid}}"], check=False
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return int(result.stdout.strip())
+    except (subprocess.CalledProcessError, ValueError):
+        pass
+    return None
+
+
+def wait_for_container(timeout: int = 60) -> bool:
+    """Wait for the SONiC container to start.
+
+    :param timeout: Maximum time to wait in seconds
+    :returns: True if container started successfully, False otherwise
+    """
+    LOG.info(f"Waiting for container to start (timeout: {timeout}s)...")
+
+    elapsed = 0
+    while elapsed < timeout:
+        try:
+            result = run_command(
+                [
+                    "podman",
+                    "ps",
+                    "--filter",
+                    "name=sonic",
+                    "--filter",
+                    "status=running",
+                    "--format",
+                    "{{.Names}}",
+                ],
+                check=False,
+            )
+            if result.returncode == 0 and "sonic" in result.stdout:
+                LOG.info("Container started successfully")
+                return True
+        except subprocess.CalledProcessError:
+            pass
+
+        time.sleep(2)
+        elapsed += 2
+
+    LOG.error(f"Container failed to start within {timeout} seconds")
+    return False
+
+
+def parse_interface_name(interface: str) -> Tuple[str, int]:
+    """Parse interface name into base and number.
+
+    :param interface: Interface name (e.g., 'eth2')
+    :returns: Tuple of (base, number) (e.g., ('eth', 2))
+    :raises ValueError: If interface name format is invalid
+    """
+    match = re.match(r"^([a-z]+)(\d+)$", interface)
+    if not match:
+        raise ValueError(f"Invalid interface name: {interface}")
+    return match.group(1), int(match.group(2))
+
+
+def attach_interface_to_container(
+    interface: str, container_pid: int, container_if_name: str
+):
+    """Attach a network interface to the container namespace.
+
+    Moves the interface into the container's network namespace and renames it.
+
+    :param interface: Host interface name to move
+    :param container_pid: PID of the target container
+    :param container_if_name: New name for the interface inside the container
+    """
+    LOG.info(f"Attaching {interface} to container as {container_if_name}...")
+
+    run_command(
+        ["ip", "link", "set", interface, "netns", f"/proc/{container_pid}/ns/net"]
+    )
+
+    run_command(
+        [
+            "nsenter",
+            "-t",
+            str(container_pid),
+            "-n",
+            "ip",
+            "link",
+            "set",
+            interface,
+            "name",
+            container_if_name,
+        ]
+    )
+    run_command(
+        [
+            "nsenter",
+            "-t",
+            str(container_pid),
+            "-n",
+            "ip",
+            "link",
+            "set",
+            container_if_name,
+            "up",
+        ]
+    )
+
+
+def start_sonic_container(config: SonicConfig):
+    """Start the SONiC container.
+
+    Creates and starts a privileged podman container with the SONiC image,
+    mounting the config directory.
+
+    :param config: SonicConfig instance with switch configuration
+    :returns: True if container started successfully, False otherwise
+    """
+    LOG.info("Starting SONiC container...")
+
+    cmd = [
+        "podman",
+        "run",
+        "-d",
+        "--name",
+        "sonic",
+        "--hostname",
+        config.switch_hostname,
+        "--privileged",
+        "--network",
+        "none",
+        "-v",
+        f"{SONIC_DIR}:/etc/sonic:rw",
+        "-v",
+        f"{SONIC_FRR_CONF}:/etc/frr/frr.conf:rw",
+        config.sonic_image,
+    ]
+
+    run_command(cmd)
+
+    if not wait_for_container(60):
+        LOG.error("Container failed to start")
+        LOG.error("Container logs:")
+        try:
+            result = run_command(["podman", "logs", "sonic"], check=False)
+            if result.stdout:
+                for line in result.stdout.strip().split("\n"):
+                    LOG.error(line)
+            if result.stderr:
+                for line in result.stderr.strip().split("\n"):
+                    LOG.error(line)
+        except:
+            pass
+        return False
+
+    LOG.info("SONiC container started successfully")
+    return True
+
+
+def setup_networking(config: SonicConfig):
+    """Setup container networking by moving host interfaces directly.
+
+    Moves host network interfaces directly into the container's network namespace
+    without using macvlan. This provides better performance and avoids macvlan
+    limitations.
+
+    :param config: SonicConfig instance with network configuration
+    :returns: True if networking setup succeeded, False otherwise
+    """
+    LOG.info("Setting up container networking (direct interface movement)...")
+
+    container_pid = get_container_pid()
+    if not container_pid:
+        LOG.error("Failed to get container PID")
+        return False
+
+    LOG.info(f"Container PID: {container_pid}")
+
+    # Move host interfaces directly into container namespace:
+    #   Host eth1 -> Container eth0 (Management0)
+    #   Host eth2 -> Container eth1 (Ethernet0)
+    #   Host eth3 -> Container eth2 (Ethernet1)
+    #   ... and so on
+    if_base, if_start_num = parse_interface_name(config.switch_interface_start)
+
+    for i in range(config.switch_interface_count):
+        host_if = f"{if_base}{if_start_num + i}"
+        container_if = f"eth{i}"
+
+        try:
+            result = run_command(["ip", "link", "show", host_if], check=False)
+            if result.returncode != 0:
+                LOG.warning(f"Host interface {host_if} not found, skipping")
+                continue
+        except subprocess.CalledProcessError:
+            LOG.warning(f"Host interface {host_if} not found, skipping")
+            continue
+
+        LOG.info(f"Moving {host_if} to container as {container_if}...")
+        attach_interface_to_container(host_if, container_pid, container_if)
+
+    LOG.info("Networking setup complete")
+    return True
+
+
+def main():
+    """Main entry point for SONiC switch host setup.
+
+    Orchestrates the complete setup process: loads configuration, prepares
+    SONiC directory, starts container, and configures networking.
+
+    :returns: Exit code (0 for success, 1 for failure)
+    """
+    LOG.info("Starting SONiC switch host setup...")
+
+    try:
+        config = SonicConfig()
+        config.load_from_file()
+        config.log_config()
+    except (FileNotFoundError, ValueError) as e:
+        LOG.error(f"Failed to load configuration: {e}")
+        return 1
+
+    try:
+        prepare_sonic_directory(config)
+    except (FileNotFoundError, RuntimeError, OSError) as e:
+        LOG.error(f"Failed to prepare SONiC directory: {e}")
+        return 1
+
+    if not start_sonic_container(config):
+        LOG.error("Failed to start SONiC container")
+        return 1
+
+    if not setup_networking(config):
+        LOG.error("Failed to setup networking")
+        return 1
+
+    LOG.info("Restarting FRR services to apply configuration...")
+    try:
+        run_command(
+            ["podman", "exec", "sonic", "supervisorctl", "restart", "bgpd"], check=False
+        )
+        run_command(
+            ["podman", "exec", "sonic", "supervisorctl", "restart", "zebra"],
+            check=False,
+        )
+        LOG.info("FRR services restarted")
+    except Exception as e:
+        LOG.warning(f"Failed to restart FRR services: {e}")
+
+    LOG.info("SONiC switch host setup complete")
+    LOG.info("Container status:")
+    try:
+        result = run_command(["podman", "ps", "--filter", "name=sonic"], check=False)
+        for line in result.stdout.strip().split("\n"):
+            LOG.info(line)
+    except:
+        pass
+
+    LOG.info("To access the switch CLI, run: podman exec -it sonic bash")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,8 @@
+---
+bash-completion:
+iproute:
+nmstate:
+podman:
+python3-jinja2:
+tcpdump:
+vim-enhanced:
