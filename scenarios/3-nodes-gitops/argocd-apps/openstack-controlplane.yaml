@@ -1,0 +1,20 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: openstack-controlplane
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
+spec:
+  destination:
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    repoURL: git://controller-0.openstack.lab/openstack-deployment
+    targetRevision: main
+    path: manifests/controlplane
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

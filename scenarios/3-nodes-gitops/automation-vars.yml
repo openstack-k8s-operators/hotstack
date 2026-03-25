@@ -23,6 +23,17 @@ stages:
                "common/stages/topolvm-stages.yaml.j2")
       }}
 
+  - name: OpenStack Dependencies
+    documentation: |
+      Install prerequisite operators required for OpenStack deployment including
+      MetalLB (load balancer), NMState (network configuration), and Cert-Manager
+      (certificate management).
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/deps-stages.yaml.j2")
+      }}
+
   - name: GitOps
     documentation: |
       Install and configure OpenShift GitOps via kustomize from the rhoso-gitops
@@ -33,3 +44,175 @@ stages:
         lookup("ansible.builtin.template",
                "common/stages/gitops-stages.yaml.j2")
       }}
+
+  - name: Sync gitops-manifests to controller
+    documentation: |
+      Copy the latest gitops-manifests from the scenario directory to the controller.
+      This ensures the controller has the most recent manifests for the GitOps workflow.
+    sync_files:
+      src: "gitops-manifests/"
+      dest: "~/gitops-manifests"
+
+  - name: Apply ArgoCD Applications
+    documentation: |
+      Apply all ArgoCD Application CRs. These will monitor the git repository
+      for manifests to deploy.
+    manifest: argocd-apps/openstack-operators.yaml
+
+  - name: Apply ArgoCD Application - Secrets
+    documentation: |
+      Apply ArgoCD Application for secrets.
+    manifest: argocd-apps/openstack-secrets.yaml
+
+  - name: Apply ArgoCD Application - Network
+    documentation: |
+      Apply ArgoCD Application for network.
+    manifest: argocd-apps/openstack-network.yaml
+
+  - name: Apply ArgoCD Application - ControlPlane
+    documentation: |
+      Apply ArgoCD Application for controlplane.
+    manifest: argocd-apps/openstack-controlplane.yaml
+
+  - name: Apply ArgoCD Application - DataPlane
+    documentation: |
+      Apply ArgoCD Application for dataplane.
+    manifest: argocd-apps/openstack-dataplane.yaml
+
+  - name: Wait for ArgoCD Applications to be initialized
+    documentation: |
+      Wait for all ArgoCD Application CRs to have a health status field.
+      This ensures they are initialized before we start committing manifests.
+    wait_conditions:
+      - >-
+        oc wait -n openshift-gitops application openstack-operators
+        --for jsonpath='{.status.health.status}' --timeout=60s
+      - >-
+        oc wait -n openshift-gitops application openstack-secrets
+        --for jsonpath='{.status.health.status}' --timeout=60s
+      - >-
+        oc wait -n openshift-gitops application openstack-network
+        --for jsonpath='{.status.health.status}' --timeout=60s
+      - >-
+        oc wait -n openshift-gitops application openstack-controlplane
+        --for jsonpath='{.status.health.status}' --timeout=60s
+      - >-
+        oc wait -n openshift-gitops application openstack-dataplane
+        --for jsonpath='{.status.health.status}' --timeout=60s
+
+  - name: Deploy OpenStack Operators
+    documentation: |
+      Commit operators manifests to git and wait for ArgoCD to deploy.
+    shell: |
+      set -ex
+      pushd ~/git/openstack-deployment
+      mkdir -p manifests
+      cp -rv ~/gitops-manifests/operators manifests/
+      git add manifests/operators/
+      git diff --cached --quiet || git commit -m "Add OpenStack operators"
+      popd
+    wait_conditions:
+      - >-
+        oc wait -n openshift-gitops application openstack-operators
+        --for jsonpath='{.status.sync.status}'=Synced --timeout=600s
+      - >-
+        oc wait -n openshift-gitops application openstack-operators
+        --for jsonpath='{.status.health.status}'=Healthy --timeout=600s
+      - >-
+        oc wait -n openstack-operators openstack openstack
+        --for condition=Ready --timeout=300s
+
+  - name: Deploy OpenStack Secrets
+    documentation: |
+      Create secrets dynamically using SSH keys from controller,
+      commit to git, and wait for ArgoCD to sync.
+    shell: |
+      set -ex
+      pushd ~/git/openstack-deployment
+      mkdir -p manifests/secrets
+
+      # Create dataplane SSH secret from controller keys
+      oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret \
+        --dry-run=client \
+        --from-file=ssh-privatekey=/home/zuul/.ssh/id_rsa \
+        --from-file=ssh-publickey=/home/zuul/.ssh/id_rsa.pub \
+        --type=Opaque -o yaml > manifests/secrets/dataplane-ssh-secret.yaml
+
+      # Copy other secret templates
+      cp -v ~/gitops-manifests/secrets/kustomization.yaml manifests/secrets/
+      cp -v ~/gitops-manifests/secrets/libvirt-secret.yaml manifests/secrets/
+      cp -v ~/gitops-manifests/secrets/osp-secret.yaml manifests/secrets/
+
+      git add manifests/secrets/
+      git diff --cached --quiet || git commit -m "Add OpenStack secrets"
+      popd
+    wait_conditions:
+      - >-
+        oc wait -n openshift-gitops application openstack-secrets
+        --for jsonpath='{.status.sync.status}'=Synced --timeout=300s
+
+  - name: Deploy OpenStack Network
+    documentation: |
+      Commit network manifests to git and wait for ArgoCD to deploy.
+    shell: |
+      set -ex
+      pushd ~/git/openstack-deployment
+      mkdir -p manifests
+      cp -rv ~/gitops-manifests/network manifests/
+      git add manifests/network/
+      git diff --cached --quiet || git commit -m "Add OpenStack network configuration"
+      popd
+    wait_conditions:
+      - >-
+        oc wait -n openshift-gitops application openstack-network
+        --for jsonpath='{.status.sync.status}'=Synced --timeout=600s
+      - >-
+        oc wait -n openshift-gitops application openstack-network
+        --for jsonpath='{.status.health.status}'=Healthy --timeout=600s
+      - >-
+        oc wait -n openstack nncp --all
+        --for condition=Available --timeout=300s
+
+  - name: Deploy OpenStack ControlPlane
+    documentation: |
+      Commit controlplane manifests to git and wait for ArgoCD to deploy.
+    shell: |
+      set -ex
+      pushd ~/git/openstack-deployment
+      mkdir -p manifests
+      cp -rv ~/gitops-manifests/controlplane manifests/
+      git add manifests/controlplane/
+      git diff --cached --quiet || git commit -m "Add OpenStack control plane"
+      popd
+    wait_conditions:
+      - >-
+        oc wait -n openshift-gitops application openstack-controlplane
+        --for jsonpath='{.status.sync.status}'=Synced --timeout=1200s
+      - >-
+        oc wait -n openshift-gitops application openstack-controlplane
+        --for jsonpath='{.status.health.status}'=Healthy --timeout=1200s
+      - >-
+        oc wait -n openstack openstackcontrolplane openstack-control-plane
+        --for condition=Ready --timeout=1800s
+
+  - name: Deploy OpenStack DataPlane
+    documentation: |
+      Commit dataplane manifests to git and wait for ArgoCD to deploy.
+    shell: |
+      set -ex
+      pushd ~/git/openstack-deployment
+      mkdir -p manifests
+      cp -rv ~/gitops-manifests/dataplane manifests/
+      git add manifests/dataplane/
+      git diff --cached --quiet || git commit -m "Add OpenStack data plane"
+      popd
+    wait_conditions:
+      - >-
+        oc wait -n openshift-gitops application openstack-dataplane
+        --for jsonpath='{.status.sync.status}'=Synced --timeout=600s
+      - >-
+        oc wait -n openshift-gitops application openstack-dataplane
+        --for jsonpath='{.status.health.status}'=Healthy --timeout=600s
+      - >-
+        oc wait -n openstack openstackdataplanedeployment dp-deploy-01
+        --for condition=Ready --timeout=2400s

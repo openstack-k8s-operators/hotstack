@@ -1,0 +1,22 @@
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openstack
+  namespace: openstack-operators
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openstack-operator
+  namespace: openstack-operators
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  name: openstack-operator
+  channel: stable-v1.0
+  installPlanApproval: Automatic
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace

@@ -1,0 +1,85 @@
+---
+apiVersion: core.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: openstack-control-plane
+  namespace: openstack
+spec:
+  storageClass: lvms-local-storage
+  galera:
+    templates:
+      openstack:
+        replicas: 1
+      openstack-cell1:
+        replicas: 1
+  rabbitmq:
+    templates:
+      rabbitmq:
+        replicas: 1
+      rabbitmq-cell1:
+        replicas: 1
+  memcached:
+    templates:
+      memcached:
+        replicas: 1
+  telemetry:
+    template:
+      metricStorage:
+        monitoringStack:
+          alertingEnabled: true
+          scrapeInterval: 30s
+          storage:
+            strategy: persistent
+            retention: 24h
+            persistent:
+              pvcStorageRequest: 20G
+        customMonitoringStack:
+          alertmanagerConfig:
+            replicas: 1
+          prometheusConfig:
+            replicas: 1
+  dns:
+    template:
+      replicas: 1
+      options:
+        - key: server
+          values:
+            - 192.168.32.254
+  cinder:
+    template:
+      cinderAPI:
+        replicas: 1
+  glance:
+    template:
+      glanceAPIs:
+        default:
+          replicas: 1
+  keystone:
+    template:
+      replicas: 1
+  neutron:
+    template:
+      replicas: 1
+  nova:
+    template:
+      apiServiceTemplate:
+        replicas: 1
+      metadataServiceTemplate:
+        replicas: 1
+      schedulerServiceTemplate:
+        replicas: 1
+  placement:
+    template:
+      replicas: 1
+  ovn:
+    template:
+      ovnController:
+        nicMappings:
+          datacentre: ospbr
+      ovnDBCluster:
+        ovndbcluster-nb:
+          replicas: 1
+        ovndbcluster-sb:
+          replicas: 1
+      ovnNorthd:
+        replicas: 1
