@@ -24,6 +24,9 @@ deployments. The tasks are executed using the `make` utility.
   environments
 - **switch-host** (experimental): A CentOS 9 Stream image with libvirt/qemu for
   running virtual network switches using nested virtualization
+- **ceos**: A CentOS 9 Stream image that runs Arista cEOS (containerized EOS) as
+  a podman container with macvlan networking. Built using diskimage-builder (DIB)
+  with the `hotstack-ceos` element
 
 ## Download Pre-built Images
 
@@ -92,6 +95,16 @@ The following sections describe how to build images locally using the included M
 - `FORCE10_10_IMAGE`: Path to Force10 OS10 image file (zip archive like
   `OS10_Virtualization_10.6.0.2.74V.zip`). Will be copied to `/opt/force10_10/`
   in the image. (Experimental support only)
+- `CEOS_IMAGE_NAME`: The name of the cEOS image file to be created (default:
+  `ceos-switch-host.qcow2`).
+- `CEOS_IMAGE_FORMAT`: The desired format for the cEOS image (default: `qcow2`).
+  Set to `raw` to convert to raw format after building.
+- `CEOS_DIB_VENV`: Path to the Python virtual environment for diskimage-builder
+  (default: `~/ceos-dib-venv`).
+- `CEOS_DIB_WORKDIR`: Working directory for DIB build artifacts and cache
+  (default: `.ceos-build`).
+- `CEOS_TAR_IMAGE`: Path to the Arista cEOS tar.xz image file (e.g.,
+  `cEOS64-lab-4.35.3F.tar.xz`). This is required when building the cEOS image.
 
 **Note**: Raw format is required for cloud backends using Ceph, as Ceph cannot
 directly use qcow2 images for VM disks.
@@ -332,3 +345,43 @@ make clean
 
    See `switch-host-scripts/README.md` for details on switch image requirements
    and configuration.
+
+#### Building and uploading the cEOS image to glance
+
+1. Build the cEOS image (using diskimage-builder):
+
+   ```shell
+   make ceos CEOS_TAR_IMAGE=/path/to/cEOS64-lab-4.35.3F.tar.xz
+   ```
+
+   This will create a Python virtual environment, install diskimage-builder,
+   build the image using the configuration from `dib/ceos-image.yaml`, and
+   keep it in qcow2 format (default).
+
+2. Upload the cEOS image to Glance:
+
+   ```shell
+   openstack image create hotstack-ceos \
+     --disk-format qcow2 \
+     --file ceos-switch-host.qcow2 \
+     --property hw_firmware_type=uefi \
+     --property hw_machine_type=q35
+   ```
+
+   **Note**: To convert to raw format (required for Ceph backends):
+
+   ```shell
+   make ceos \
+     CEOS_TAR_IMAGE=/path/to/cEOS64-lab-4.35.3F.tar.xz \
+     CEOS_IMAGE_FORMAT=raw
+
+   openstack image create hotstack-ceos \
+     --disk-format raw \
+     --file ceos-switch-host.qcow2 \
+     --property hw_firmware_type=uefi \
+     --property hw_machine_type=q35
+   ```
+
+3. See `dib/elements/hotstack-ceos/README.rst` for details on runtime
+   configuration via cloud-init, including network interface setup and startup
+   configuration.
