@@ -167,3 +167,16 @@
       scenario: multi-nodeset
     files:
       - ^scenarios/multi-nodeset/.*
+
+- job:
+    name: vexxhost-hotstack-uni01alpha
+    parent: base-hotstack-vexxhost
+    nodeset: hotstack-image-vexxhost
+    description: |
+      Hotstack scenario: uni01alpha
+    timeout: 18000
+    attempts: 1
+    vars:
+      scenario: uni01alpha
+    files:
+      - ^scenarios/uni01alpha/.*

@@ -1085,18 +1085,7 @@ resources:
     type: OS::Nova::Server
     properties:
       flavor: {get_param: [ironic_params, flavor]}
-      block_device_mapping_v2:
-        - device_type: disk
-          boot_index: 1
-          image_id: {get_param: [ironic_params, image]}
-          volume_size: 40
-          delete_on_termination: true
-        - device_type: cdrom
-          disk_bus: {get_param: cdrom_disk_bus}
-          boot_index: 0
-          image_id: {get_param: [ironic_params, cd_image]}
-          volume_size: 5
-          delete_on_termination: true
+      image: {get_param: [ironic_params, image]}
       networks:
         - port: {get_resource: ironic0-port}
 
@@ -1110,18 +1099,7 @@ resources:
     type: OS::Nova::Server
     properties:
       flavor: {get_param: [ironic_params, flavor]}
-      block_device_mapping_v2:
-        - device_type: disk
-          boot_index: 1
-          image_id: {get_param: [ironic_params, image]}
-          volume_size: 40
-          delete_on_termination: true
-        - device_type: cdrom
-          disk_bus: {get_param: cdrom_disk_bus}
-          boot_index: 0
-          image_id: {get_param: [ironic_params, cd_image]}
-          volume_size: 5
-          delete_on_termination: true
+      image: {get_param: [ironic_params, image]}
       networks:
         - port: {get_resource: ironic1-port}
 
@@ -1177,6 +1155,14 @@ outputs:
           ports:
             - address: {get_attr: [ironic1-port, mac_address]}
               physical_network: ironic
+
+  ironic_boot_interface:
+    description: Ironic boot interface configured for the redfish nodes
+    value: redfish-virtual-media
+
+  sushy_tools_vmedia_type:
+    description: Sushy-tools virtual media implementation type
+    value: rescue
 
   ocp_install_config:
     description: OCP install-config.yaml
