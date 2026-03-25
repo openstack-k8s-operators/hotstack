@@ -5,7 +5,7 @@
     repository. This sets up the necessary operator subscriptions for GitOps-based
     RHOSO deployment workflow.
   kustomize:
-    directory: https://github.com/openstack-gitops/rhoso-gitops/base/initialize/gitops/subscribe?ref=main
+    directory: https://github.com/openstack-k8s-operators/gitops/openshift-gitops.deploy/subscribe?ref=main
   wait_conditions:
     - >-
       oc wait namespace  openshift-gitops-operator
@@ -27,7 +27,7 @@
     repository. This stage configures the GitOps components and prepares the
     cluster for GitOps-based deployments.
   kustomize:
-    directory: https://github.com/openstack-gitops/rhoso-gitops/base/initialize/gitops/enable?ref=main
+    directory: https://github.com/openstack-k8s-operators/gitops/openshift-gitops.deploy/enable?ref=main
   wait_conditions:
     - >-
       oc wait -n openshift-gitops deployment openshift-gitops-server

@@ -16,6 +16,7 @@ representing a distinct phase in the deployment or configuration process.
   - [4. `manifest` Stage](#4-manifest-stage)
   - [5. `j2_manifest` Stage](#5-j2_manifest-stage)
   - [6. `kustomize` Stage](#6-kustomize-stage)
+  - [7. `sync_files` Stage](#7-sync_files-stage)
 
 ## Stages
 
@@ -399,3 +400,55 @@ configuration is pulled directly from the specified Git repository and branch.
 
 The `wait_conditions` ensure that deployed resources reach the desired state
 before proceeding to the next stage, providing reliable deployment workflows.
+
+### 7. `sync_files` Stage
+
+The `sync_files` stage type synchronizes files or directories from the Ansible
+controller to the target host. This is particularly useful for ensuring that
+configuration files, manifests, or other resources are up-to-date on the target
+system before they are used in subsequent stages.
+
+The stage automatically detects whether it's running with a local or remote
+connection and uses the appropriate Ansible module:
+
+- For local connections: Uses `ansible.builtin.copy`
+- For remote connections: Uses `ansible.posix.synchronize` with delegation to localhost
+
+The `sync_files` attribute is a dictionary with the following parameters:
+
+- **`src`**: (Required) Source path to the file or directory to sync. Can use
+  Jinja2 variables for dynamic paths.
+- **`dest`**: (Required) Destination path on the target host where files should
+  be copied. Supports tilde (`~`) expansion for home directory.
+
+**Example:**
+
+```yaml
+- name: Sync GitOps manifests to controller
+  documentation: |
+    Copy the latest gitops-manifests from the scenario directory to the controller.
+    This ensures the controller has the most recent manifests for the GitOps workflow.
+  sync_files:
+    src: "{{ scenario_dir }}/{{ scenario }}/gitops-manifests"
+    dest: "~/gitops-manifests"
+```
+
+In this example, the `sync_files` stage copies the `gitops-manifests` directory
+from the scenario to the controller's home directory.
+
+**Example with multiple sync stages:**
+
+```yaml
+- name: Sync configuration files
+  sync_files:
+    src: "config/"
+    dest: "~/app-config"
+
+- name: Sync application manifests
+  sync_files:
+    src: "manifests/"
+    dest: "~/manifests"
+```
+
+These stages sync different directories to the target host, ensuring that the
+necessary files are available for subsequent deployment stages.

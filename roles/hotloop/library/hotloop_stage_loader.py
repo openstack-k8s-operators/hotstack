@@ -103,6 +103,7 @@ ALLOWED_STAGE_KEYS = {
     "script",
     "shell",
     "stages",
+    "sync_files",
     "wait_conditions",
     "wait_pod_completion",
 }
