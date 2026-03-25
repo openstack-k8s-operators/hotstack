@@ -47,6 +47,11 @@
   ansible.builtin.include_tasks: kustomize.yml
 {% endif %}
 
+{% if _stage.sync_files is defined %}
+- name: "Stage: {{ _stage.name }} :: Sync files"
+  ansible.builtin.include_tasks: sync_files.yml
+{% endif %}
+
 {% if _stage.wait_conditions is defined %}
 - name: "Stage: {{ _stage.name }} :: Wait conditions"
   hotloop_wait_condition:

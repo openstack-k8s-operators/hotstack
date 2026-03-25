@@ -48,6 +48,13 @@ Schema for a stage item is:
       (`kustomization.yaml`, `kustomization.yml`, or `Kustomization`).
   * `timeout`: (int) Timeout in seconds for the operation. Defaults to 60
     seconds if not specified.
+* `sync_files`: (dict) Configuration for syncing files or directories to the
+  target host.
+  * `src`: (string) Source path to file or directory to sync.
+  * `dest`: (string) Destination path on the target host.
+  * Automatically handles both local and remote connections using appropriate
+    Ansible modules (`ansible.builtin.copy` for local, `ansible.posix.synchronize`
+    for remote).
 * `patches`: (list) List of YAML patches to apply to `manifests` and/or
   `j2_manifests`.
   * Each patch must define the `path` and the `value` to replace at the path.
@@ -132,7 +139,7 @@ Schema for a stage item is:
 
 > **NOTE**: Stage items are applied the actions in the following order:
 > `command` -> `shell` -> `script` -> `manifest` -> `j2_manifest` ->
-> `kustomize` -> `wait_conditions` -> `wait_pod_completion` -> `stages`.
+> `kustomize` -> `sync_files` -> `wait_conditions` -> `wait_pod_completion` -> `stages`.
 
 Example:
 
@@ -266,6 +273,14 @@ stages:
       Execute a complex setup script stored as a separate file.
       This provides better organization and reusability for complex operations.
     script: "scripts/setup-environment.sh"
+
+  - name: Sync configuration files to controller
+    documentation: |
+      Sync a directory of configuration files from the local scenario directory
+      to the controller node. This ensures the controller has the latest files.
+    sync_files:
+      src: "{{ scenario_dir }}/{{ scenario }}/config"
+      dest: "~/config"
 ```
 
 ## Work Directory Isolation

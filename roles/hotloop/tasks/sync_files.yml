@@ -1,0 +1,41 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Sync files to target
+  vars:
+    _source_path: "{{ [item.sync_files.src, ''] | ansible.builtin.path_join }}"
+    _dest_path: "{{ [item.sync_files.dest, ''] | ansible.builtin.path_join }}"
+    _is_local: >-
+      {{
+        hostvars[inventory_hostname]['ansible_connection'] |
+        default('') == 'local'
+      }}
+  block:
+    - name: Copy files (local connection)
+      when: _is_local
+      ansible.builtin.copy:
+        src: "{{ _source_path }}"
+        dest: "{{ _dest_path }}"
+        mode: preserve
+
+    - name: Sync files (remote connection)
+      when: not _is_local
+      ansible.posix.synchronize:
+        src: "{{ _source_path }}"
+        dest: "{{ _dest_path }}"
+        mode: push
+        archive: true
+      delegate_to: localhost
