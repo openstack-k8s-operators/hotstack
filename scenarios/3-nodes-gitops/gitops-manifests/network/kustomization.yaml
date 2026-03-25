@@ -1,0 +1,16 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+components:
+  - https://github.com/openstack-k8s-operators/gitops/components/argocd/annotations?ref=main
+  - https://github.com/openstack-k8s-operators/gitops/components/rhoso/controlplane/networking?ref=main
+
+resources:
+  - nncp-sno.yaml
+  - nad-datacentre.yaml
+
+patches:
+  - path: nncp-delete-workers.yaml
+  - path: netconfig-patch.yaml
+  - path: ipaddresspool-patch.yaml

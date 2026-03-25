@@ -1,47 +1,64 @@
 # 3-Nodes GitOps Scenario
 
-## Overview
+Deploys OpenStack on Single Node OpenShift (SNO) with one EDPM compute node using GitOps workflow. This scenario demonstrates true GitOps deployment where git commits drive cluster state changes.
 
-A minimal OpenStack deployment scenario with 3 nodes: 1 controller, 1
-OpenShift master, and 1 compute node. Sets up OpenShift cluster with GitOps
-operator for future RHOSO (Red Hat OpenStack Services on OpenShift) deployment.
+## GitOps Workflow
 
-## Architecture
+This scenario implements incremental GitOps deployment using a local git repository on the controller node:
 
-- **Controller**: DNS, load balancing, and orchestration
-- **OpenShift Master**: Single-node cluster running OpenStack control plane
-- **Compute Node**: EDPM compute node for workloads
-- **GitOps Operator**: Ready for OpenStack service deployment
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Controller Node: ~/git/openstack-deployment                    │
+│  • Git repository with manifests                                │
+│  • git-daemon serving on port 9418                              │
+│  • Source manifests in ~/gitops-manifests/                      │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ git:// protocol
+                         ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  ArgoCD (on OpenShift)                                          │
+│  • Polls git repo every 3 minutes                               │
+│  • Detects changes and syncs automatically                      │
+│  • Applies manifests to cluster                                 │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ kubectl apply
+                         ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  OpenShift Cluster                                              │
+│  • OpenStack operators, networking, control plane, data plane   │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-## Networks
+## Deployment Flow
 
-- **machine-net**: 192.168.32.0/24 (OpenShift cluster)
-- **ctlplane-net**: 192.168.122.0/24 (Control plane)
-- **internal-api-net**: 172.17.0.0/24 (OpenStack internal)
-- **storage-net**: 172.18.0.0/24 (Storage backend)
-- **tenant-net**: 172.19.0.0/24 (Tenant traffic)
-- **octavia-net**: 172.23.0.0/24 (Load balancing)
+The automation deploys OpenStack incrementally through git commits:
 
-**Configuration:** Fixed MAC addresses assigned to all interfaces for
-consistent networking.
+1. **Apply ArgoCD Applications** - Create all Application CRs (watch empty git repo)
+2. **Commit operators** → ArgoCD deploys OpenStack operator
+3. **Commit secrets** → ArgoCD deploys secrets
+4. **Commit network** → ArgoCD deploys networking
+5. **Commit controlplane** → ArgoCD deploys control plane services
+6. **Commit dataplane** → ArgoCD deploys compute node
 
-## Node Configuration
+Each git commit triggers ArgoCD to detect and deploy the next component automatically.
 
-**Controller:**
+## ArgoCD Applications
 
-- **Machine Net**: 192.168.32.3
-- **MAC**: fa:16:9e:81:f6:05
+Five applications deployed in sync-wave order:
 
-**Master0:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    ArgoCD Applications                      │
+├─────────────────────────────────────────────────────────────┤
+│  Wave 10: openstack-operators    → manifests/operators/     │
+│  Wave 15: openstack-secrets      → manifests/secrets/       │
+│  Wave 20: openstack-network      → manifests/network/       │
+│  Wave 30: openstack-controlplane → manifests/controlplane/  │
+│  Wave 40: openstack-dataplane    → manifests/dataplane/     │
+└─────────────────────────────────────────────────────────────┘
+```
 
-- **Machine Net**: 192.168.34.10
-- **Control Plane**: 192.168.122.10
-- **MACs**: fa:16:9e:81:f6:10 (machine), fa:16:9e:81:f6:11 (ctlplane)
-
-**Compute0:**
-
-- **Control Plane**: 192.168.122.100
-- **MAC**: fa:16:9e:81:f6:20 (ctlplane)
+Each application references kustomize manifests that combine upstream components from `openstack-k8s-operators/gitops` with SNO-specific patches.
 
 ## Usage
 
@@ -50,31 +67,31 @@ consistent networking.
 ansible-playbook -i inventory.yml bootstrap.yml \
   -e @scenarios/3-nodes-gitops/bootstrap_vars.yml \
   -e @~/cloud-secrets.yaml
-
-# Deploy using snapset images
-ansible-playbook -i inventory.yml bootstrap.yml \
-  -e @scenarios/3-nodes-gitops/bootstrap_vars.yml \
-  -e @~/cloud-secrets.yaml \
-  -e hotstack_revive_snapshot=true
 ```
 
-> **NOTE**: Snapset deployment requires snapset images to be available in your
-> OpenStack cloud. See [Hotstack SnapSet documentation](../../docs/hotstack_snapset.md)
-> for details.
+## Testing GitOps
 
-## Deployment Process
+To manually test GitOps reconciliation:
 
-1. **Infrastructure**: Heat template deploys infrastructure
-2. **OpenShift**: Single-node cluster installation
-3. **GitOps Operator**: Install and configure GitOps operator
+```bash
+# On controller node
+cd ~/git/openstack-deployment
+# Edit a manifest
+vi manifests/operators/openstack-cr.yaml
+git add manifests/
+git commit -m "Update OpenStack configuration"
+# ArgoCD detects and syncs automatically (within 3 minutes)
+```
 
-## Requirements
+## Architecture Details
 
-- **Instances**: 3 total (1 controller, 1 master, 1 compute)
-- **Flavors**: hotstack.small, hotstack.large, hotstack.xxlarge
-- **Images**: hotstack-controller, ipxe-boot-usb
-- **Features**: Multi-network setup, TopoLVM storage, fixed MAC addresses
+- **Controller**: DNS, load balancing, git-daemon
+- **OpenShift Master**: Single-node cluster (SNO)
+- **Compute Node**: EDPM compute node
+- **Storage**: TopoLVM for dynamic local storage
+- **Networking**: MetalLB, NMState, fixed MAC addresses
 
-This scenario provides the foundation for GitOps-based RHOSO deployments.
-OpenStack service deployment would be handled separately via GitOps
-configurations.
+## Upstream Components
+
+Kustomize manifests reference components from:
+- https://github.com/openstack-k8s-operators/gitops

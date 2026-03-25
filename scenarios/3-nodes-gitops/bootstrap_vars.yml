@@ -24,6 +24,9 @@ ovn_k8s_gateway_config_host_routing: true
 enable_iscsi: true
 enable_multipath: true
 
+# GitOps configuration
+hotstack_git_server_enabled: true
+
 cinder_volume_pvs:
   - /dev/vdc
   - /dev/vdd

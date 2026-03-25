@@ -185,3 +185,17 @@
             flavor: 16vcpu_48GB
     files:
       - ^scenarios/uni01alpha/.*
+
+- job:
+    name: vexxhost-hotstack-3-nodes-gitops
+    parent: base-hotstack-vexxhost
+    nodeset: hotstack-image-vexxhost
+    description: |
+      Hotstack scenario: 3-nodes-gitops (ArgoCD-based GitOps deployment)
+    timeout: 10800
+    attempts: 1
+    vars:
+      scenario: 3-nodes-gitops
+      hotstack_git_server_enabled: true
+    files:
+      - ^scenarios/3-nodes-gitops/.*

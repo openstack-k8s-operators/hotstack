@@ -1,0 +1,34 @@
+---
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneNodeSet
+metadata:
+  name: example-nodeset
+  namespace: openstack
+spec:
+  nodeTemplate:
+    ansible:
+      ansibleVars:
+        edpm_sshd_allowed_ranges:
+          - 192.168.32.254/32
+          - 192.168.122.0/24
+        ctlplane_dns_nameservers:
+          - 192.168.122.80
+  nodes:
+    edpm-compute-0:
+      ansible:
+        ansibleHost: 192.168.122.100
+      hostName: edpm-compute-0
+      networks:
+        - defaultRoute: true
+          fixedIP: 192.168.122.100
+          name: ctlplane
+          subnetName: subnet1
+        - fixedIP: 172.17.0.100
+          name: internalapi
+          subnetName: subnet1
+        - fixedIP: 172.18.0.100
+          name: storage
+          subnetName: subnet1
+        - fixedIP: 172.19.0.100
+          name: tenant
+          subnetName: subnet1

@@ -1,0 +1,91 @@
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: master-0
+  namespace: openstack
+  labels:
+    osp/nncm-config-type: standard
+spec:
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  desiredState:
+    dns-resolver:
+      config:
+        search: []
+        server:
+          - 192.168.32.254
+    interfaces:
+      - description: internalapi vlan interface
+        ipv4:
+          address:
+            - ip: 172.17.0.10
+              prefix-length: 24
+          dhcp: false
+          enabled: true
+        ipv6:
+          enabled: false
+        mtu: 1442
+        name: internalapi
+        state: up
+        type: vlan
+        vlan:
+          base-iface: eth1
+          id: 20
+      - description: storage vlan interface
+        ipv4:
+          address:
+            - ip: 172.18.0.10
+              prefix-length: 24
+          dhcp: false
+          enabled: true
+        ipv6:
+          enabled: false
+        mtu: 1442
+        name: storage
+        state: up
+        type: vlan
+        vlan:
+          base-iface: eth1
+          id: 21
+      - description: tenant vlan interface
+        ipv4:
+          address:
+            - ip: 172.19.0.10
+              prefix-length: 24
+          dhcp: false
+          enabled: true
+        ipv6:
+          enabled: false
+        mtu: 1442
+        name: tenant
+        state: up
+        type: vlan
+        vlan:
+          base-iface: eth1
+          id: 22
+      - description: ctlplane interface
+        mtu: 1442
+        name: eth1
+        state: up
+        type: ethernet
+      - bridge:
+          options:
+            stp:
+              enabled: false
+          port:
+            - name: eth1
+              vlan: {}
+        description: linux-bridge over ctlplane interface
+        ipv4:
+          address:
+            - ip: 192.168.122.10
+              prefix-length: 24
+          dhcp: false
+          enabled: true
+        ipv6:
+          enabled: false
+        mtu: 1442
+        name: ospbr
+        state: up
+        type: linux-bridge

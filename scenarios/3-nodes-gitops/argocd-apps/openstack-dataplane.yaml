@@ -1,0 +1,20 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: openstack-dataplane
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "40"
+spec:
+  destination:
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    repoURL: git://controller-0.openstack.lab/openstack-deployment
+    targetRevision: main
+    path: manifests/dataplane
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
