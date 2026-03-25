@@ -14,28 +14,24 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-- name: Sync files to target
-  vars:
-    _source_path: "{{ [item.sync_files.src, ''] | ansible.builtin.path_join }}"
-    _dest_path: "{{ [item.sync_files.dest, ''] | ansible.builtin.path_join }}"
-    _is_local: >-
+- name: Check if source exists in synced work directory
+  when: not item.sync_files.src.startswith('/')
+  ansible.builtin.stat:
+    path: >-
       {{
-        hostvars[inventory_hostname]['ansible_connection'] |
-        default('') == 'local'
+        [_work_dir, item.sync_files.src] |
+        ansible.builtin.path_join
       }}
-  block:
-    - name: Copy files (local connection)
-      when: _is_local
-      ansible.builtin.copy:
-        src: "{{ _source_path }}"
-        dest: "{{ _dest_path }}"
-        mode: preserve
+  register: _synced_src_stat
 
-    - name: Sync files (remote connection)
-      when: not _is_local
-      ansible.posix.synchronize:
-        src: "{{ _source_path }}"
-        dest: "{{ _dest_path }}"
-        mode: push
-        archive: true
-      delegate_to: localhost
+- name: Sync files to target
+  ansible.builtin.copy:
+    remote_src: "{{ _synced_src_stat.stat.exists | default(false) }}"
+    src: >-
+      {{
+        [_work_dir, item.sync_files.src, ''] | ansible.builtin.path_join
+        if _synced_src_stat.stat.exists | default(false)
+        else [item.sync_files.src, ''] | ansible.builtin.path_join
+      }}
+    dest: "{{ [item.sync_files.dest, ''] | ansible.builtin.path_join }}"
+    mode: preserve
