@@ -1,0 +1,19 @@
+---
+# L2VNI Network Nodes Configuration
+# This file provides fallback local_link_connection information for network nodes
+# when LLDP data is not available from OVN and Ironic.
+#
+# The system_id must match the OVN chassis system-id (from external-ids:system-id in OVS).
+# For this devstack deployment, the system-id is the hostname: devstack
+
+network_nodes:
+  - hostname: "devstack"
+    trunks:
+      - physical_network: public
+        local_link_information:
+          - switch_id: "22:57:f8:dd:03:10"
+            switch_info: "leaf01"
+            port_id: "Ethernet8"
+          - switch_id: "22:57:f8:dd:03:10"
+            switch_info: "leaf01"
+            port_id: "Ethernet12"
