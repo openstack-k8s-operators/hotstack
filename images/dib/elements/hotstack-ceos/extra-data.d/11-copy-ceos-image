@@ -29,16 +29,16 @@ if [ -z "${CEOS_VERSION}" ]; then
 fi
 
 echo "INFO: Importing cEOS image on build host (version: ${CEOS_VERSION})"
-podman import "${DIB_CEOS_IMAGE}" localhost/ceos:${CEOS_VERSION}
+podman import "${DIB_CEOS_IMAGE}" "localhost/ceos:${CEOS_VERSION}"
 
 echo "INFO: Saving cEOS image as podman archive"
 mkdir -p "${TMP_HOOKS_PATH}"
-podman save -o "${TMP_HOOKS_PATH}/ceos-image.tar" localhost/ceos:${CEOS_VERSION}
+podman save -o "${TMP_HOOKS_PATH}/ceos-image.tar" "localhost/ceos:${CEOS_VERSION}"
 
 echo "INFO: Compressing cEOS podman archive"
 gzip "${TMP_HOOKS_PATH}/ceos-image.tar"
 
 echo "INFO: Cleaning up imported image from build host"
-podman rmi localhost/ceos:${CEOS_VERSION}
+podman rmi "localhost/ceos:${CEOS_VERSION}"
 
 echo "INFO: cEOS image processed and ready for installation (version: ${CEOS_VERSION})"
