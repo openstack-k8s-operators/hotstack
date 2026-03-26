@@ -1,0 +1,117 @@
+---
+# Networking lab automation stages
+
+stages:
+  - name: Configure provisioning network route
+    documentation: >-
+      Configures a static route on the devstack node to enable communication
+      between the ironic-conductor and the provisioning network (where
+      ironic-python-agent runs during node deployment/cleaning). This retrieves
+      the router gateway IP from Neutron and adds a route via that gateway.
+      The provisioning network subnet is configured in local.conf.j2 via
+      IRONIC_PROVISION_SUBNET_PREFIX (default: 10.0.5.0/24).
+    shell: |
+      set -xe -o pipefail
+
+      IRONIC_PROVISION_SUBNET_PREFIX="10.0.5.0/24"
+
+      EXTERNAL_GW_INFO=$(openstack --os-cloud devstack-admin router show router1 -c external_gateway_info -f json)
+
+      ROUTER_GW_IP=$(echo "$EXTERNAL_GW_INFO" | python3 -c '
+      import sys, json, ipaddress
+      data = json.load(sys.stdin)
+      for ip_info in data["external_gateway_info"]["external_fixed_ips"]:
+          addr = ipaddress.ip_address(ip_info["ip_address"])
+          if addr.version == 4:
+              print(ip_info["ip_address"])
+              break
+      ')
+
+      if [ -z "$ROUTER_GW_IP" ]; then
+        echo "ERROR: Could not determine router gateway IP"
+        exit 1
+      fi
+
+      ssh -o StrictHostKeyChecking=no stack@devstack.stack.lab "
+        ROUTES=\$(ip -j r)
+        ROUTE_EXISTS=\$(echo \"\$ROUTES\" | python3 -c '
+      import sys, json
+      routes = json.load(sys.stdin)
+      target_dst = \"$IRONIC_PROVISION_SUBNET_PREFIX\"
+      target_gw = \"$ROUTER_GW_IP\"
+      for route in routes:
+          if route.get(\"dst\") == target_dst and route.get(\"gateway\") == target_gw:
+              print(\"exists\")
+              break
+      ')
+        if [ -z \"\$ROUTE_EXISTS\" ]; then
+          echo \"Adding route: $IRONIC_PROVISION_SUBNET_PREFIX via $ROUTER_GW_IP\"
+          sudo ip route add $IRONIC_PROVISION_SUBNET_PREFIX via $ROUTER_GW_IP
+        else
+          echo \"Route already exists: $IRONIC_PROVISION_SUBNET_PREFIX via $ROUTER_GW_IP\"
+        fi
+      "
+
+  - name: Enroll nodes in devstack ironic
+    documentation: >-
+      Registers physical baremetal nodes with the Ironic service in the DevStack
+      deployment using the node definitions from ironic_nodes.yaml. This creates
+      Ironic node records with BMC access credentials, hardware profiles, and port
+      configurations for networking-generic-switch integration.
+    shell: |
+      set -xe -o pipefail
+
+      NODES_FILE=/home/zuul/data/ironic_nodes.yaml
+
+      # Enroll the nodes
+      openstack --os-cloud devstack-admin baremetal create "$NODES_FILE"
+
+      echo "Nodes enrolled successfully"
+      openstack --os-cloud devstack-admin baremetal node list
+
+  - name: Wait for ironic nodes to reach enroll state
+    documentation: >-
+      Monitors node state transition to 'enroll' status, indicating that Ironic
+      has successfully registered the nodes and validated basic BMC connectivity.
+      This is the first state in the baremetal provisioning lifecycle.
+    shell: |
+      set -xe -o pipefail
+
+      counter=0
+      max_retries=60
+      sleep_interval=5
+
+      echo "Waiting for all nodes to reach 'enroll' state..."
+
+      until ! openstack --os-cloud devstack-admin baremetal node list -f value -c "Provisioning State" | grep -v "enroll"; do
+        ((counter++))
+        if (( counter > max_retries )); then
+          echo "ERROR: Timeout waiting for nodes to reach enroll state"
+          openstack --os-cloud devstack-admin baremetal node list
+          exit 1
+        fi
+        echo "Attempt $counter/$max_retries - waiting ${sleep_interval}s..."
+        sleep ${sleep_interval}
+      done
+
+      echo "All nodes successfully reached enroll state"
+      openstack --os-cloud devstack-admin baremetal node list
+
+  - name: Manage nodes
+    documentation: >-
+      Transitions nodes from 'enroll' to 'manageable' state. This validates
+      basic hardware connectivity and prepares nodes for further operations.
+    shell: |
+      set -x -o pipefail
+
+      # Get list of node UUIDs
+      node_uuids=$(openstack --os-cloud devstack-admin baremetal node list -f value -c UUID)
+
+      # Manage each node with --wait (300 second timeout)
+      for uuid in $node_uuids; do
+        echo "Managing node: $uuid"
+        openstack --os-cloud devstack-admin baremetal node manage --wait 300 $uuid
+      done
+
+      echo "All nodes successfully reached manageable state"
+      openstack --os-cloud devstack-admin baremetal node list
