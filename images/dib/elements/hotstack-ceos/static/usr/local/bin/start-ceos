@@ -18,8 +18,8 @@
 cEOS Container Startup Script
 
 Manages the lifecycle of an Arista cEOS containerized switch, including
-container creation, macvlan network interface setup, and configuration
-deployment. Designed to be invoked by systemd on boot.
+container creation, network interface setup, and configuration deployment.
+Designed to be invoked by systemd on boot.
 """
 
 import logging
@@ -52,9 +52,8 @@ class CeosConfig:
     def __init__(self):
         """Initialize configuration with default values."""
         self.mgmt_interface = "eth0"
-        self.switch_mgmt_interface = "eth1"
-        self.data_interface_start = "eth2"
-        self.data_interface_count = 4
+        self.switch_interface_start = "eth1"
+        self.switch_interface_count = 5
         self.switch_hostname = "ceos"
         self.ceos_image = "localhost/ceos:latest"
 
@@ -80,12 +79,10 @@ class CeosConfig:
 
                     if key == "MGMT_INTERFACE":
                         self.mgmt_interface = value
-                    elif key == "SWITCH_MGMT_INTERFACE":
-                        self.switch_mgmt_interface = value
-                    elif key == "DATA_INTERFACE_START":
-                        self.data_interface_start = value
-                    elif key == "DATA_INTERFACE_COUNT":
-                        self.data_interface_count = int(value)
+                    elif key == "SWITCH_INTERFACE_START":
+                        self.switch_interface_start = value
+                    elif key == "SWITCH_INTERFACE_COUNT":
+                        self.switch_interface_count = int(value)
                     elif key == "SWITCH_HOSTNAME":
                         self.switch_hostname = value
                     elif key == "CEOS_IMAGE":
@@ -95,9 +92,8 @@ class CeosConfig:
         """Log the current configuration to stderr."""
         LOG.info("Configuration loaded:")
         LOG.info(f"  Host Management Interface: {self.mgmt_interface}")
-        LOG.info(f"  Switch Management Interface: {self.switch_mgmt_interface}")
-        LOG.info(f"  Data Interface Start: {self.data_interface_start}")
-        LOG.info(f"  Data Interface Count: {self.data_interface_count}")
+        LOG.info(f"  Switch Interface Start: {self.switch_interface_start}")
+        LOG.info(f"  Switch Interface Count: {self.switch_interface_count}")
         LOG.info(f"  Switch Hostname: {self.switch_hostname}")
         LOG.info(f"  cEOS Image: {self.ceos_image}")
 
@@ -184,7 +180,7 @@ def prepare_flash_directory(config: CeosConfig) -> None:
     else:
         raise FileNotFoundError("No startup config found")
 
-    mgmt_mac = get_interface_mac(config.switch_mgmt_interface)
+    mgmt_mac = get_interface_mac(config.switch_interface_start)
     system_mac = increment_mac(mgmt_mac)
     with open(FLASH_SYSTEM_MAC, "w") as f:
         f.write(system_mac)
@@ -262,39 +258,6 @@ def parse_interface_name(interface: str) -> Tuple[str, int]:
     return match.group(1), int(match.group(2))
 
 
-def create_macvlan_interface(parent_if: str, macvlan_name: str):
-    """Create a macvlan interface.
-
-    :param parent_if: Parent network interface name
-    :param macvlan_name: Name for the new macvlan interface
-    """
-    try:
-        result = run_command(["ip", "link", "show", macvlan_name], check=False)
-        if result.returncode == 0:
-            LOG.info(f"Removing existing macvlan interface: {macvlan_name}")
-            run_command(["ip", "link", "delete", macvlan_name], check=False)
-    except subprocess.CalledProcessError:
-        pass
-
-    LOG.info(f"Creating macvlan interface: {macvlan_name} (parent: {parent_if})")
-    run_command(
-        [
-            "ip",
-            "link",
-            "add",
-            "link",
-            parent_if,
-            "name",
-            macvlan_name,
-            "type",
-            "macvlan",
-            "mode",
-            "bridge",
-        ]
-    )
-    run_command(["ip", "link", "set", macvlan_name, "up"])
-
-
 def attach_interface_to_container(
     interface: str, container_pid: int, container_if_name: str
 ):
@@ -362,7 +325,7 @@ def start_ceos_container(config: CeosConfig):
         "container=podman",
     ]
 
-    systemd_env = f"systemd.setenv={' '.join(env_vars)}"
+    systemd_env = " ".join([f'systemd.setenv="{var}"' for var in env_vars])
 
     cmd = [
         "podman",
@@ -417,15 +380,16 @@ def start_ceos_container(config: CeosConfig):
 
 
 def setup_networking(config: CeosConfig):
-    """Setup container networking with macvlan interfaces.
+    """Setup container networking by moving host interfaces directly.
 
-    Creates macvlan interfaces for management and data ports, then attaches
-    them to the container's network namespace.
+    Moves host network interfaces directly into the container's network namespace
+    without using macvlan. This provides better performance and avoids macvlan
+    limitations.
 
     :param config: CeosConfig instance with network configuration
     :returns: True if networking setup succeeded, False otherwise
     """
-    LOG.info("Setting up container networking...")
+    LOG.info("Setting up container networking (direct interface movement)...")
 
     container_pid = get_container_pid()
     if not container_pid:
@@ -434,27 +398,28 @@ def setup_networking(config: CeosConfig):
 
     LOG.info(f"Container PID: {container_pid}")
 
-    create_macvlan_interface(config.switch_mgmt_interface, "mv-mgmt0")
-    attach_interface_to_container("mv-mgmt0", container_pid, "eth0")
+    # Move host interfaces directly into container namespace:
+    #   Host eth1 -> Container eth0 (Management0)
+    #   Host eth2 -> Container eth1 (Ethernet1)
+    #   Host eth3 -> Container eth2 (Ethernet2)
+    #   ... and so on
+    if_base, if_start_num = parse_interface_name(config.switch_interface_start)
 
-    data_if_base, data_if_num = parse_interface_name(config.data_interface_start)
-
-    for i in range(config.data_interface_count):
-        host_if = f"{data_if_base}{data_if_num + i}"
-        macvlan_if = f"mv-eth{i + 1}"
-        container_if = f"eth{i + 1}"
+    for i in range(config.switch_interface_count):
+        host_if = f"{if_base}{if_start_num + i}"
+        container_if = f"eth{i}"
 
         try:
             result = run_command(["ip", "link", "show", host_if], check=False)
             if result.returncode != 0:
-                LOG.error(f"Host interface {host_if} not found, skipping")
+                LOG.warning(f"Host interface {host_if} not found, skipping")
                 continue
         except subprocess.CalledProcessError:
-            LOG.error(f"Host interface {host_if} not found, skipping")
+            LOG.warning(f"Host interface {host_if} not found, skipping")
             continue
 
-        create_macvlan_interface(host_if, macvlan_if)
-        attach_interface_to_container(macvlan_if, container_pid, container_if)
+        LOG.info(f"Moving {host_if} to container as {container_if}...")
+        attach_interface_to_container(host_if, container_pid, container_if)
 
     LOG.info("Networking setup complete")
     return True
@@ -474,13 +439,13 @@ def main():
         config = CeosConfig()
         config.load_from_file()
         config.log_config()
-    except Exception as e:
+    except (FileNotFoundError, ValueError) as e:
         LOG.error(f"Failed to load configuration: {e}")
         return 1
 
     try:
         prepare_flash_directory(config)
-    except Exception as e:
+    except (FileNotFoundError, RuntimeError, OSError) as e:
         LOG.error(f"Failed to prepare flash directory: {e}")
         return 1
 
