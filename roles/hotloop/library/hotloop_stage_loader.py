@@ -275,6 +275,48 @@ def _validate_kustomize(kustomize_config):
         )
 
 
+def _validate_sync_files(sync_files_config):
+    """Validates the 'sync_files' parameter.
+
+    This function checks if the 'sync_files' parameter is a dict with
+    required fields and proper formatting.
+
+    :param sync_files_config: The 'sync_files' parameter to validate.
+    """
+    if not isinstance(sync_files_config, dict):
+        raise TypeError(
+            "'sync_files' must be a dict, got {sync_files_type}".format(
+                sync_files_type=type(sync_files_config)
+            )
+        )
+
+    if "src" not in sync_files_config:
+        raise ValueError("sync_files must have a 'src' field")
+
+    if "dest" not in sync_files_config:
+        raise ValueError("sync_files must have a 'dest' field")
+
+    if not isinstance(sync_files_config["src"], str):
+        raise TypeError(
+            "sync_files 'src' must be a string, got {src_type}".format(
+                src_type=type(sync_files_config["src"])
+            )
+        )
+
+    if not isinstance(sync_files_config["dest"], str):
+        raise TypeError(
+            "sync_files 'dest' must be a string, got {dest_type}".format(
+                dest_type=type(sync_files_config["dest"])
+            )
+        )
+
+    if not sync_files_config["src"].endswith("/"):
+        raise ValueError(
+            "sync_files 'src' must end with '/' to indicate directory sync. "
+            "Got: {src}".format(src=sync_files_config["src"])
+        )
+
+
 def _validate_stage(stage, nested=False):
     """Validate a stage
 
@@ -310,6 +352,9 @@ def _validate_stage(stage, nested=False):
 
     if "kustomize" in stage:
         _validate_kustomize(stage["kustomize"])
+
+    if "sync_files" in stage:
+        _validate_sync_files(stage["sync_files"])
 
     if "wait_pod_completion" in stage:
         _validate_wait_pod_completion(stage["wait_pod_completion"])
