@@ -40,7 +40,7 @@ stack_parameters:
     flavor: hotstack.xxlarge
   switch_params:
     image: hotstack-ceos
-    flavor: hotstack.small
+    flavor: hotstack.medium
   ironic_params:
     image: CentOS-Stream-GenericCloud-9
     cd_image: sushy-tools-blank-image
