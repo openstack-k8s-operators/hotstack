@@ -48,7 +48,7 @@ parameters:
     type: json
     default:
       image: hotstack-ceos
-      flavor: hotstack.small
+      flavor: hotstack.medium
   cdrom_disk_bus:
     type: string
     description: >
