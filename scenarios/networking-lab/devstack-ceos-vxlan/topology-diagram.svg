@@ -83,30 +83,30 @@
   <text x="150" y="495" class="ip-text">192.168.32.20</text>
 
   <!-- Ironic0 -->
-  <rect x="220" y="450" width="100" height="60" rx="5" class="server-box"/>
-  <text x="270" y="475" class="switch-text">ironic0</text>
-  <text x="270" y="495" class="ip-text">BM Node</text>
+  <rect x="400" y="450" width="100" height="60" rx="5" class="server-box"/>
+  <text x="450" y="475" class="switch-text">ironic0</text>
+  <text x="450" y="495" class="ip-text">BM Node</text>
 
   <!-- Ironic1 -->
-  <rect x="460" y="450" width="100" height="60" rx="5" class="server-box"/>
-  <text x="510" y="475" class="switch-text">ironic1</text>
-  <text x="510" y="495" class="ip-text">BM Node</text>
+  <rect x="510" y="450" width="100" height="60" rx="5" class="server-box"/>
+  <text x="560" y="475" class="switch-text">ironic1</text>
+  <text x="560" y="495" class="ip-text">BM Node</text>
 
   <!-- Server to Switch connections -->
   <!-- Devstack to Leaf01 -->
   <line x1="150" y1="450" x2="180" y2="350" class="link-line"/>
   <text x="155" y="395" class="link-label">Eth4</text>
 
-  <!-- Ironic0 to Leaf01 -->
-  <line x1="270" y1="450" x2="240" y2="350" class="link-line"/>
-  <text x="265" y="395" class="link-label">Eth3</text>
+  <!-- Ironic0 to Leaf02 -->
+  <line x1="450" y1="450" x2="490" y2="350" class="link-line"/>
+  <text x="460" y="395" class="link-label">Eth3</text>
 
   <!-- Ironic1 to Leaf02 -->
-  <line x1="510" y1="450" x2="510" y2="350" class="link-line"/>
-  <text x="525" y="395" class="link-label">Eth3</text>
+  <line x1="560" y1="450" x2="530" y2="350" class="link-line"/>
+  <text x="555" y="395" class="link-label">Eth4</text>
 
   <!-- Legend -->
-  <g transform="translate(620, 380)">
+  <g transform="translate(650, 200)">
     <text x="0" y="0" style="font-family: Arial; font-size: 12px; font-weight: bold; fill: #6a737d;">Legend</text>
     <rect x="0" y="10" width="30" height="20" rx="3" class="switch-box"/>
     <text x="35" y="25" style="font-family: Arial; font-size: 11px; fill: #6a737d;">Switch</text>
