@@ -46,6 +46,6 @@
 
 - name: Wait for MetalLB and NMState
   wait_conditions:
-    - "oc wait -n metallb-system daemonset -l component=speaker --for jsonpath='{.status.numberReady}'=1 --timeout=180s"
-    - "oc wait -n openshift-nmstate daemonset -l component=kubernetes-nmstate-handler --for jsonpath='{.status.numberReady}'=1 --timeout=180s"
+    - "oc rollout status daemonset -n metallb-system -l component=speaker --timeout=180s"
+    - "oc rollout status daemonset -n openshift-nmstate -l component=kubernetes-nmstate-handler --timeout=180s"
     - "oc wait -n openshift-nmstate deployment -l component=kubernetes-nmstate-webhook --for condition=Available --timeout=180s"
