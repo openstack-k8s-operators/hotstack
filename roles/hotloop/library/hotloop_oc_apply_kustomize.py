@@ -274,7 +274,7 @@ def run_module():
         retry_time=0,
     )
 
-    directory = module.params["directory"]
+    directory = os.path.expanduser(module.params["directory"])
     timeout = module.params["timeout"]
     stage_name = module.params.get("stage_name")
     resource_identifier = module.params.get("resource_identifier", directory)
