@@ -261,8 +261,8 @@ def run_module():
     result = dict(success=False, changed=False, error="", outputs=dict())
     changed = False
 
-    file = module.params["file"]
-    path = module.params["path"]
+    file = os.path.expanduser(module.params["file"])
+    path = os.path.expanduser(module.params["path"])
     value = module.params["value"]
     where = module.params["where"]
 

@@ -111,6 +111,7 @@ ALLOWED_STAGE_KEYS = {
 ALLOWED_KUSTOMIZE_KEYS = {
     "directory",
     "timeout",
+    "remote_src",
 }
 
 FALSE_STRINGS = {"false", "False", "FALSE"}
@@ -271,6 +272,15 @@ def _validate_kustomize(kustomize_config):
         raise TypeError(
             "kustomize 'timeout' must be an integer, got {timeout_type}".format(
                 timeout_type=type(kustomize_config["timeout"])
+            )
+        )
+
+    if "remote_src" in kustomize_config and not isinstance(
+        kustomize_config["remote_src"], bool
+    ):
+        raise TypeError(
+            "kustomize 'remote_src' must be a boolean, got {remote_src_type}".format(
+                remote_src_type=type(kustomize_config["remote_src"])
             )
         )
 
