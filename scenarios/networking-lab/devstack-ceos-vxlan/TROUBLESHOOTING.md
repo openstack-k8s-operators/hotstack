@@ -22,7 +22,61 @@
 - Verify BGP is running: `show bgp summary`
 - Check BGP EVPN neighbors: `show bgp evpn summary`
 - Verify loopback reachability: `ping 10.255.255.1 source 10.255.255.3`
-- Check BGP configuration: `show running-config section bgp`
+- Check BGP configuration: `show running-config | section router bgp`
+- View all EVPN routes: `show bgp evpn`
+- Check EVPN Type 2 routes (MAC-IP): `show bgp evpn route-type mac-ip`
+- Check EVPN Type 3 routes (IMET): `show bgp evpn route-type imet`
+- View EVPN instance for VLAN: `show bgp evpn instance vlan <vlan-id>`
+- Check detailed EVPN routes: `show bgp evpn route-type mac-ip detail`
+
+## VXLAN/EVPN MAC Learning
+
+### Check Learned MACs via VXLAN
+```bash
+# View all MAC addresses learned via VXLAN (Arista equivalent of Cisco's "show l2route evpn mac all")
+show vxlan address-table
+
+# Check MACs for specific VLAN
+show vxlan address-table vlan <vlan-id>
+```
+
+### Check EVPN MAC-IP Routes
+```bash
+# View all EVPN Type 2 routes (MAC-IP advertisements)
+show bgp evpn route-type mac-ip
+
+# Check specific MAC or IP
+show bgp evpn route-type mac-ip <mac-address>
+show bgp evpn route-type mac-ip <ip-address>
+
+# View with details (includes route distinguishers, extended communities)
+show bgp evpn route-type mac-ip detail
+```
+
+### Check VXLAN VTEPs
+```bash
+# List remote VTEPs
+show vxlan vtep
+
+# Check VXLAN interface status
+show interface Vxlan1
+
+# View VXLAN flood lists for BUM traffic
+show vxlan flood vtep
+
+# Check VXLAN counters
+show vxlan counters
+```
+
+### Verify ARP Learning for EVPN
+```bash
+# Check if switch has learned IP-to-MAC bindings
+show ip arp
+
+# For MAC+IP to be advertised in EVPN Type 2 routes, the switch must have
+# ARP entries. If empty, only MAC-only routes will be advertised.
+# ARP suppression/proxy requires MAC+IP routes to function.
+```
 
 ## Devstack Deployment Issues
 - Check network connectivity on trunk0: `ip link show trunk0`
