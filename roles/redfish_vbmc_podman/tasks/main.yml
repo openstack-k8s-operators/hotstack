@@ -31,6 +31,15 @@
     owner: root
     group: root
 
+- name: Create sushy-emulator state directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ redfish_vbmc_podman_state_dir }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
 - name: Generate htpasswd
   register: _htpasswd
   ansible.builtin.command:

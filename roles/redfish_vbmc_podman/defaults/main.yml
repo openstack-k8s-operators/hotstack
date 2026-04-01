@@ -32,6 +32,7 @@ redfish_vbmc_podman_listen_port: 8000
 # Paths
 redfish_vbmc_podman_config_dir: /etc/sushy-emulator
 redfish_vbmc_podman_openstack_config_dir: /etc/openstack
+redfish_vbmc_podman_state_dir: /var/lib/sushy-emulator
 
 # Sushy-emulator configuration options
 redfish_vbmc_podman_debug: true

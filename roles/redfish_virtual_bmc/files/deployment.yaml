@@ -43,6 +43,9 @@ spec:
               path: clouds.yaml
             - key: certificate-pem
               path: cacert.pem
+      - name: sushy-emulator-state
+        persistentVolumeClaim:
+          claimName: sushy-emulator-state-pvc
       containers:
       - name: sushy-emulator
         image: quay.io/rhn_gps_hjensas/sushy-tools:dev-1773400388
@@ -54,6 +57,8 @@ spec:
           mountPath: /etc/sushy-emulator/
         - name: os-client-config
           mountPath: /etc/openstack/
+        - name: sushy-emulator-state
+          mountPath: /var/lib/sushy-emulator
         readinessProbe:
           httpGet:
             path: redfish/v1

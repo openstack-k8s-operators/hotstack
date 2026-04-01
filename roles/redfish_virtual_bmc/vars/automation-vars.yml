@@ -5,6 +5,22 @@ stages:
     wait_conditions:
       - "oc wait namespaces sushy-emulator --for jsonpath='{.status.phase}'=Active --timeout=300s"
 
+  - name: "Sushy Emulator : Clean Released PV"
+    shell: |
+      if oc get pv sushy-emulator-state-pv -o jsonpath='{.status.phase}' 2>/dev/null | grep -q Released; then
+        oc patch pv sushy-emulator-state-pv -p '{"spec":{"claimRef": null}}'
+      fi
+
+  - name: "Sushy Emulator : PersistentVolume"
+    manifest: sushy_state_pv.yaml
+    wait_conditions:
+      - "oc wait pv sushy-emulator-state-pv --for jsonpath='{.status.phase}'=Available --timeout=60s"
+
+  - name: "Sushy Emulator : PersistentVolumeClaim"
+    manifest: sushy_state_pvc.yaml
+    wait_conditions:
+      - "oc wait -n sushy-emulator pvc sushy-emulator-state-pvc --for jsonpath='{.status.phase}'=Bound --timeout=60s"
+
   - name: "Sushy Emulator : Openstack clouds secret"
     shell: >-
       oc create -n sushy-emulator secret generic os-client-config

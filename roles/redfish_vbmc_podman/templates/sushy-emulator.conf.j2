@@ -16,6 +16,9 @@ SUSHY_EMULATOR_SSL_KEY = None
 # If authentication is desired, set this to an htpasswd file.
 SUSHY_EMULATOR_AUTH_FILE = '/etc/sushy-emulator/.htpasswd'
 
+# Directory for persistent state storage (virtual media, boot modes, etc.)
+SUSHY_EMULATOR_STATE_DIR = '/var/lib/sushy-emulator'
+
 # The OpenStack cloud ID to use. This option enables OpenStack driver.
 SUSHY_EMULATOR_OS_CLOUD = '{{ redfish_vbmc_podman_os_cloud }}'
 

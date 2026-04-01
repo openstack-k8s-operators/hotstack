@@ -21,7 +21,8 @@ When `nfs_server_enabled` is set to `true`, this role will:
 5. Reload NFS exports
 
 The NFS server is used to provide shared storage for services like
-[`nova_console_recorder`](../nova_console_recorder) that need persistent
+[`nova_console_recorder`](../nova_console_recorder) and
+[`redfish_virtual_bmc`](../redfish_virtual_bmc) that need persistent
 storage accessible from any OpenShift node.
 
 ## Variables
@@ -30,7 +31,8 @@ storage accessible from any OpenShift node.
 |----------|---------|-------------|
 | `nfs_server_enabled` | `true` | Enable NFS server configuration |
 | `nova_console_recorder_nfs_server` | `controller-0.openstack.lab` | NFS server hostname |
-| `nova_console_recorder_nfs_path` | `/export/nova-console-recordings` | NFS export path |
+| `nova_console_recorder_nfs_path` | `/export/nova-console-recordings` | NFS export path for console recordings |
+| `sushy_emulator_state_nfs_path` | `/export/sushy-emulator-state` | NFS export path for sushy-emulator state |
 | `nfs_exports` | See below | List of NFS export configurations |
 
 ### NFS Export Configuration
@@ -50,6 +52,8 @@ Default configuration:
 ```yaml
 nfs_exports:
   - path: "{{ nova_console_recorder_nfs_path }}"
+    mode: '0777'  # World writable for container access
+  - path: "{{ sushy_emulator_state_nfs_path }}"
     mode: '0777'  # World writable for container access
 ```
 
