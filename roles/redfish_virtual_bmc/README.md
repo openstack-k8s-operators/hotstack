@@ -11,6 +11,17 @@ templated manifests in [templates](./templates/).
 The [automation-vars.yml](./vars/automation-vars.yml) is used with the
 [`hotloop`](../hotloop) role to apply the resources on the OpenShift cluster.
 
+## Persistent Storage
+
+This role configures NFS-backed persistent storage for sushy-emulator state. The storage is mounted at `/var/lib/sushy-emulator` in the pod and persists the following state across pod restarts:
+
+- Virtual media state (inserted/ejected CD-ROM images)
+- Boot mode settings (UEFI/BIOS)
+- Rescue mode state (for rescue-based PXE and vmedia features)
+- Volume state
+
+The persistent storage uses SQLite databases that are automatically created by sushy-tools. The NFS export must be configured on the controller node (see the [`controller`](../controller) role).
+
 ## Console Monitoring
 
 This role automatically includes two additional roles for Nova instance console monitoring:
@@ -56,6 +67,9 @@ curl -u admin:password http://sushy-emulator.apps.ocp.openstack.lab/redfish/v1/S
 | `instances_uuids` | `[]` | List of Nova instance UUIDs for BMC emulation |
 | `cloud_config_dir` | `/home/zuul/.hotcloud` | Directory containing clouds.yaml |
 | `sushy_emulator_manifests` | `/home/zuul/manifests/sushy_emulator_manifests` | Manifest storage |
+| `sushy_emulator_state_nfs_server` | `controller-0.openstack.lab` | NFS server hostname for persistent storage |
+| `sushy_emulator_state_nfs_path` | `/export/sushy-emulator-state` | NFS export path for persistent storage |
+| `sushy_emulator_state_storage_size` | `10Mi` | PVC storage size for persistent state |
 | `hotstack_enable_nova_console_poller` | `true` | Enable serial console poller deployment |
 | `hotstack_enable_nova_console_recorder` | `true` | Enable VNC console recorder deployment |
 

@@ -11,10 +11,15 @@ cloud_config_dir: "{{ base_dir }}/.hotcloud"
 nova_console_recorder_nfs_server: controller-0.openstack.lab
 nova_console_recorder_nfs_path: /export/nova-console-recordings
 
+# Sushy-emulator state NFS settings
+sushy_emulator_state_nfs_path: /export/sushy-emulator-state
+
 # NFS server settings
 nfs_server_enabled: true
 nfs_exports:
   - path: "{{ nova_console_recorder_nfs_path }}"
+    mode: '0777'  # World writable for container access
+  - path: "{{ sushy_emulator_state_nfs_path }}"
     mode: '0777'  # World writable for container access
 
 controller_install_openstack_client: false

@@ -22,6 +22,11 @@ instances_uuids: []
 cloud_config_dir: "/home/zuul/.hotcloud"
 sushy_emulator_manifests: /home/zuul/manifests/sushy_emulator_manifests
 
+# Persistent storage settings
+sushy_emulator_state_nfs_server: controller-0.openstack.lab
+sushy_emulator_state_nfs_path: /export/sushy-emulator-state
+sushy_emulator_state_storage_size: 10Mi
+
 # Console tools
 hotstack_enable_nova_console_poller: false
 hotstack_enable_nova_console_recorder: false

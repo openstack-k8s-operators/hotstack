@@ -35,6 +35,7 @@ and management.
 | `redfish_vbmc_podman_listen_port` | `8000` | Port to expose on the host |
 | `redfish_vbmc_podman_config_dir` | `/etc/sushy-emulator` | Configuration directory on host |
 | `redfish_vbmc_podman_openstack_config_dir` | `/etc/openstack` | OpenStack config mount point in container |
+| `redfish_vbmc_podman_state_dir` | `/var/lib/sushy-emulator` | Persistent state directory for virtual media, boot modes, etc. |
 | `redfish_vbmc_podman_debug` | `true` | Enable debug logging |
 | `redfish_vbmc_podman_vmedia_file_upload` | `true` | Enable file upload for virtual media |
 | `redfish_vbmc_podman_vmedia_delay_eject` | `true` | Delay rebuild on virtual media eject |
@@ -96,6 +97,17 @@ Expected response:
     "@Redfish.Copyright": "Copyright 2014-2016 Distributed Management Task Force, Inc. (DMTF). For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright."
 }
 ```
+
+## Persistent Storage
+
+The role configures persistent storage for sushy-emulator state in `/var/lib/sushy-emulator` on the host. This ensures that the following state persists across container restarts:
+
+- Virtual media state (inserted/ejected CD-ROM images)
+- Boot mode settings (UEFI/BIOS)
+- Rescue mode state (for rescue-based PXE and vmedia features)
+- Volume state
+
+The persistent storage uses SQLite databases that are created automatically when the emulator starts. This is particularly important for virtual media operations, as it prevents loss of virtual media state during service restarts.
 
 ## Management Commands
 

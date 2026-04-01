@@ -69,6 +69,28 @@
             ] | ansible.builtin.path_join
           }}
 
+    - name: Template the PersistentVolume
+      ansible.builtin.template:
+        src: sushy_state_pv.yaml.j2
+        dest: >-
+          {{
+            [
+              _tempdir.path,
+              'sushy_state_pv.yaml'
+            ] | ansible.builtin.path_join
+          }}
+
+    - name: Template the PersistentVolumeClaim
+      ansible.builtin.template:
+        src: sushy_state_pvc.yaml.j2
+        dest: >-
+          {{
+            [
+              _tempdir.path,
+              'sushy_state_pvc.yaml'
+            ] | ansible.builtin.path_join
+          }}
+
     - name: Load automation vars
       ansible.builtin.include_vars:
         file: automation-vars.yml

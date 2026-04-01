@@ -21,6 +21,7 @@ ExecStart=/usr/bin/podman run \
   --replace \
   -v {{ redfish_vbmc_podman_config_dir }}:/etc/sushy-emulator:ro,z \
   -v {{ redfish_vbmc_podman_cloud_config_dir }}:{{ redfish_vbmc_podman_openstack_config_dir }}:ro,z \
+  -v {{ redfish_vbmc_podman_state_dir }}:/var/lib/sushy-emulator:z \
   {{ redfish_vbmc_podman_image }} \
   {{ sushy_cmd }} {{ sushy_args | join(' ') }}
 ExecStop=/usr/bin/podman stop -t 10 sushy-emulator
