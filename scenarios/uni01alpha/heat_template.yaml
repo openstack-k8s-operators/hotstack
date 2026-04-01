@@ -1145,6 +1145,8 @@ outputs:
           driver: redfish
           bios_interface: no-bios
           boot_interface: ipxe
+          properties:
+            capabilities: 'boot_mode:uefi'
           driver_info:
             redfish_address: http://sushy-emulator.apps.ocp.openstack.lab
             redfish_system_id:
@@ -1161,6 +1163,8 @@ outputs:
           driver: redfish
           bios_interface: no-bios
           boot_interface: ipxe
+          properties:
+            capabilities: 'boot_mode:uefi'
           driver_info:
             redfish_address: http://sushy-emulator.apps.ocp.openstack.lab
             redfish_system_id:

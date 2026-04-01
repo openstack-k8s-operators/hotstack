@@ -374,8 +374,8 @@ stages:
     documentation: >-
       Executes comprehensive OpenStack validation tests using the Tempest framework.
       These tests validate API functionality, resource management, and integration
-      between OpenStack services in the baremetal environment. Includes both the
-      test execution phase (workflowStep=0) and log collection phase (workflowStep=1)
+      between OpenStack services in the baremetal environment. Includes ironic
+      scenario testing (workflowStep=0) and ironic API testing (workflowStep=1)
       to ensure complete validation results are captured for analysis.
     manifest: tempest-tests.yml
     wait_conditions:
