@@ -94,6 +94,7 @@ RETRYABLE_ERR_REGEX = {
     r".*connection to the server.*was refused.*",
     r".*timed out waiting for the condition.*",
     r".*failed to verify certificate.*x509.*",
+    r".*etcdserver: request timed out.*",
 }
 INITIAL_RETRY_DELAY = 5
 RETRY_MAX_DELAY = INITIAL_RETRY_DELAY * 12
