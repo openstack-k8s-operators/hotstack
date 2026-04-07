@@ -182,7 +182,6 @@ stages:
       - "oc wait -n metallb-system pod -l component=webhook-server --for condition=Ready --timeout=300s"
       - "oc wait -n openshift-nmstate deployments/nmstate-operator --for condition=Available --timeout=300s"
       - "oc wait -n openstack-operators -l openstack.org/operator-name deployment --for condition=Available --timeout=300s"
-      - "oc wait -n openstack-operators -l app.kubernetes.io/name=rabbitmq-cluster-operator deployment --for condition=Available --timeout=300s"
       - "oc wait -n openstack-operators -l app.kubernetes.io/instance=webhook-service service --for jsonpath='{.status.loadBalancer}' --timeout=300s"
 
   - name: Run tempest tests
