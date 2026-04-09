@@ -1,0 +1,9 @@
+---
+build_version: 'SONiC-VS.hotstack'
+debian_version: 'unknown'
+kernel_version: 'unknown'
+asic_type: vs
+commit_id: 'N/A'
+build_date: 'N/A'
+build_number: 0
+built_by: 'hotstack'

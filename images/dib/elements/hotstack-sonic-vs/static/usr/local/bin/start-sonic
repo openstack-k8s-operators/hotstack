@@ -37,11 +37,14 @@ LOG = logging.getLogger(__name__)
 CONFIG_FILE = "/etc/hotstack-sonic/config"
 CONFIG_DB_FILE = "/etc/hotstack-sonic/config_db.json"
 FRR_CONF_FILE = "/etc/hotstack-sonic/frr.conf"
+SONIC_VERSION_FILE = "/etc/hotstack-sonic/sonic_version.yml"
 SONIC_DIR = "/var/lib/sonic"
 SONIC_CONFIG_DB = "/var/lib/sonic/config_db.json"
 SONIC_FRR_CONF = "/var/lib/sonic/frr.conf"
+SONIC_VERSION_YML = "/var/lib/sonic/sonic_version.yml"
 DEFAULT_CONFIG_DB = "/usr/share/hotstack-sonic/default-config_db.json"
 DEFAULT_FRR_CONF = "/usr/share/hotstack-sonic/default-frr.conf"
+DEFAULT_SONIC_VERSION = "/usr/share/hotstack-sonic/default-sonic_version.yml"
 
 
 class SonicConfig:
@@ -150,6 +153,16 @@ def prepare_sonic_directory(config: SonicConfig) -> None:
         shutil.copy(DEFAULT_FRR_CONF, SONIC_FRR_CONF)
     else:
         LOG.info("No frr.conf found, FRR will use defaults")
+
+    if os.path.exists(SONIC_VERSION_FILE):
+        LOG.info(f"Using sonic_version.yml from: {SONIC_VERSION_FILE}")
+        shutil.copy(SONIC_VERSION_FILE, SONIC_VERSION_YML)
+    elif os.path.exists(DEFAULT_SONIC_VERSION):
+        LOG.info("Using default sonic_version.yml")
+        shutil.copy(DEFAULT_SONIC_VERSION, SONIC_VERSION_YML)
+    else:
+        LOG.error("No sonic_version.yml found - SONiC requires this file")
+        raise FileNotFoundError("sonic_version.yml is required but not found")
 
     LOG.info("SONiC directory prepared successfully")
 
