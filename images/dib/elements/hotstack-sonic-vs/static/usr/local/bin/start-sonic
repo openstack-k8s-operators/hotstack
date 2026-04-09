@@ -53,7 +53,7 @@ class SonicConfig:
         self.switch_interface_start = "eth1"
         self.switch_interface_count = 5
         self.switch_hostname = "sonic"
-        self.sonic_image = "localhost/sonic:latest"
+        self.sonic_image = "localhost/docker-sonic-vs:latest"
 
     def load_from_file(self, config_file: str = CONFIG_FILE) -> None:
         """Load configuration from shell-style config file.

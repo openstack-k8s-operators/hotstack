@@ -35,7 +35,7 @@ The config file contains shell-style variables for the host configuration:
 - SWITCH_INTERFACE_START: First interface to move to container (default: eth1)
 - SWITCH_INTERFACE_COUNT: Number of interfaces to move (default: 5)
 - SWITCH_HOSTNAME: SONiC hostname (default: sonic)
-- SONIC_IMAGE: Podman image tag (default: localhost/sonic:latest)
+- SONIC_IMAGE: Podman image tag (default: localhost/docker-sonic-vs:latest)
 
 Host interfaces are moved directly into the container namespace:
 - Host eth1 -> Container eth0 (SONiC Management0)
