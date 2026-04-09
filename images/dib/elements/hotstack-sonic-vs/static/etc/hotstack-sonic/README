@@ -12,7 +12,7 @@ config
   - SWITCH_INTERFACE_START: First interface to move to container (default: eth1)
   - SWITCH_INTERFACE_COUNT: Number of interfaces to move (default: 5)
   - SWITCH_HOSTNAME: SONiC hostname (default: sonic)
-  - SONIC_IMAGE: Podman image tag (default: localhost/sonic:latest)
+  - SONIC_IMAGE: Podman image tag (default: localhost/docker-sonic-vs:latest)
 
 config_db.json
   SONiC native configuration file in JSON format. This file is mounted
