@@ -176,6 +176,10 @@ DEFAULT_IPXE_EFI_URL = load_env_var(
     "HOTSTACK_IPXE_EFI_URL",
     "https://github.com/openstack-k8s-operators/hotstack/releases/download/latest-ipxe/ipxe-efi-latest.img",
 )
+DEFAULT_UBUNTU_NOBLE_URL = load_env_var(
+    "HOTSTACK_UBUNTU_NOBLE_URL",
+    "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
+)
 
 # Image specifications (name, disk format, and Glance properties)
 IMAGE_SPECS = [
@@ -244,6 +248,15 @@ IMAGE_SPECS = [
     {
         "name": "nat64-appliance",
         "url_param": "nat64_image_url",
+        "disk_format": "qcow2",
+        "properties": {
+            "hw_firmware_type": "uefi",
+            "hw_machine_type": "q35",
+        },
+    },
+    {
+        "name": "ubuntu-noble-server",
+        "url_param": "ubuntu_noble_url",
         "disk_format": "qcow2",
         "properties": {
             "hw_firmware_type": "uefi",
@@ -1172,6 +1185,11 @@ def parse_arguments():
         default=DEFAULT_IPXE_EFI_URL,
         help="URL to download iPXE UEFI boot image (default: GitHub latest-ipxe release)",
     )
+    parser.add_argument(
+        "--ubuntu-noble-url",
+        default=DEFAULT_UBUNTU_NOBLE_URL,
+        help="URL to download Ubuntu Noble cloud image (default: Ubuntu cloud images)",
+    )
 
     # SSH keypair configuration
     parser.add_argument(
@@ -1286,6 +1304,7 @@ def setup_admin_resources(admin_conn, args):
             image_urls["nat64_image_url"] = args.nat64_image_url
             image_urls["ipxe_bios_url"] = args.ipxe_bios_url
             image_urls["ipxe_efi_url"] = args.ipxe_efi_url
+            image_urls["ubuntu_noble_url"] = args.ubuntu_noble_url
 
         images_to_upload = download_images(admin_conn, image_urls)
         upload_images(admin_conn, images_to_upload)
