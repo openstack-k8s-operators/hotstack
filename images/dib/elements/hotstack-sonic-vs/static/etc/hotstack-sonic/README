@@ -18,6 +18,14 @@ config_db.json
   SONiC native configuration file in JSON format. This file is mounted
   into the SONiC container at /etc/sonic/config_db.json.
 
+frr.conf
+  FRRouting configuration file. This file is mounted into the SONiC
+  container at /etc/frr/frr.conf.
+
+sonic_version.yml
+  SONiC version information file. Required by SONiC services. If not
+  provided, a default version file will be used.
+
 Usage with cloud-init
 ----------------------
 
