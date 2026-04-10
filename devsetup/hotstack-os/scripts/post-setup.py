@@ -124,7 +124,7 @@ DEFAULT_ADMIN_CLOUD = load_env_var("HOTSTACK_ADMIN_CLOUD", "hotstack-os-admin")
 FLAVORS = [
     {"name": "hotstack.small", "vcpus": 1, "ram": 2048, "disk": 20},
     {"name": "hotstack.medium", "vcpus": 2, "ram": 4096, "disk": 40},
-    {"name": "hotstack.mlarge", "vcpus": 2, "ram": 6144, "disk": 40},
+    {"name": "hotstack.mlarge", "vcpus": 2, "ram": 6144, "disk": 60},
     {"name": "hotstack.large", "vcpus": 4, "ram": 8192, "disk": 80},
     {"name": "hotstack.xlarge", "vcpus": 8, "ram": 16384, "disk": 160},
     {"name": "hotstack.xxlarge", "vcpus": 12, "ram": 32768, "disk": 160},
