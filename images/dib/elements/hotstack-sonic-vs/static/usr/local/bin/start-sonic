@@ -22,6 +22,7 @@ container creation, network interface setup, and configuration deployment.
 Designed to be invoked by systemd on boot.
 """
 
+import json
 import logging
 import os
 import re
@@ -64,9 +65,6 @@ class SonicConfig:
         :param config_file: Path to configuration file
         :raises FileNotFoundError: If config file does not exist
         """
-        if not os.path.exists(config_file):
-            raise FileNotFoundError(f"Configuration file not found: {config_file}")
-
         with open(config_file, "r") as f:
             for line in f:
                 line = line.strip()
@@ -172,15 +170,21 @@ def get_container_pid() -> Optional[int]:
 
     :returns: Container PID or None if container not found
     """
+    result = run_command(
+        ["podman", "inspect", "sonic", "--format", "{{.State.Pid}}"], check=False
+    )
+
+    if result.returncode != 0:
+        return None
+
+    if not result.stdout.strip():
+        return None
+
     try:
-        result = run_command(
-            ["podman", "inspect", "sonic", "--format", "{{.State.Pid}}"], check=False
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return int(result.stdout.strip())
-    except (subprocess.CalledProcessError, ValueError):
-        pass
-    return None
+        return int(result.stdout.strip())
+    except ValueError:
+        LOG.warning(f"Could not parse container PID: {result.stdout.strip()}")
+        return None
 
 
 def wait_for_container(timeout: int = 60) -> bool:
@@ -193,25 +197,22 @@ def wait_for_container(timeout: int = 60) -> bool:
 
     elapsed = 0
     while elapsed < timeout:
-        try:
-            result = run_command(
-                [
-                    "podman",
-                    "ps",
-                    "--filter",
-                    "name=sonic",
-                    "--filter",
-                    "status=running",
-                    "--format",
-                    "{{.Names}}",
-                ],
-                check=False,
-            )
-            if result.returncode == 0 and "sonic" in result.stdout:
-                LOG.info("Container started successfully")
-                return True
-        except subprocess.CalledProcessError:
-            pass
+        result = run_command(
+            [
+                "podman",
+                "ps",
+                "--filter",
+                "name=sonic",
+                "--filter",
+                "status=running",
+                "--format",
+                "{{.Names}}",
+            ],
+            check=False,
+        )
+        if result.returncode == 0 and "sonic" in result.stdout:
+            LOG.info("Container started successfully")
+            return True
 
         time.sleep(2)
         elapsed += 2
@@ -313,16 +314,18 @@ def start_sonic_container(config: SonicConfig):
     if not wait_for_container(60):
         LOG.error("Container failed to start")
         LOG.error("Container logs:")
-        try:
-            result = run_command(["podman", "logs", "sonic"], check=False)
+        # Try to get container logs, but don't fail if we can't
+        # (check=False means run_command won't raise)
+        result = run_command(["podman", "logs", "sonic"], check=False)
+        if result.returncode == 0:
             if result.stdout:
                 for line in result.stdout.strip().split("\n"):
                     LOG.error(line)
             if result.stderr:
                 for line in result.stderr.strip().split("\n"):
                     LOG.error(line)
-        except:
-            pass
+        else:
+            LOG.error("Could not retrieve container logs")
         return False
 
     LOG.info("SONiC container started successfully")
@@ -359,12 +362,9 @@ def setup_networking(config: SonicConfig):
         host_if = f"{if_base}{if_start_num + i}"
         container_if = f"eth{i}"
 
-        try:
-            result = run_command(["ip", "link", "show", host_if], check=False)
-            if result.returncode != 0:
-                LOG.warning(f"Host interface {host_if} not found, skipping")
-                continue
-        except subprocess.CalledProcessError:
+        # Check if host interface exists (check=False so no exception raised)
+        result = run_command(["ip", "link", "show", host_if], check=False)
+        if result.returncode != 0:
             LOG.warning(f"Host interface {host_if} not found, skipping")
             continue
 
@@ -372,6 +372,194 @@ def setup_networking(config: SonicConfig):
         attach_interface_to_container(host_if, container_pid, container_if)
 
     LOG.info("Networking setup complete")
+    return True
+
+
+def read_config_db():
+    """Read and parse config_db.json.
+
+    :returns: Parsed config_db dictionary, or None if reading failed
+    """
+    try:
+        with open(SONIC_CONFIG_DB, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        LOG.error(f"config_db.json not found at {SONIC_CONFIG_DB}")
+        LOG.error("This file should have been created by prepare_sonic_directory()")
+        return None
+    except (IOError, json.JSONDecodeError) as e:
+        LOG.error(f"Failed to read or parse config_db.json: {e}")
+        return None
+
+
+def configure_management_interface(config_db):
+    """Configure management interface from config_db.json.
+
+    In hardware SONiC, the hostcfgd daemon reads MGMT_INTERFACE from
+    config_db.json and applies it to eth0. However, hostcfgd requires:
+    - Full systemd (not available in containers using supervisord)
+    - sudo command (not needed when running as root in containers)
+    - System services like hostname-config, rsyslog-config (not in SONiC-VS)
+
+    Since SONiC-VS containers use supervisord instead of systemd, hostcfgd cannot
+    run. All other config_db.json settings (INTERFACE, PORT, VLAN, VXLAN, etc.)
+    are properly applied by their respective daemons (intfmgrd, portmgrd, vlanmgrd).
+    Only MGMT_INTERFACE requires manual configuration in containerized environments.
+
+    This is the standard approach for SONiC-VS - containerlab uses Docker's IPAM
+    to configure eth0, but we use --network none and move host interfaces, so we
+    must configure the management IP manually from config_db.json.
+
+    :param config_db: Parsed config_db.json dictionary
+    :returns: True if configuration succeeded or was already applied, False otherwise
+    """
+    LOG.info("Configuring management interface from config_db.json...")
+
+    # Extract MGMT_INTERFACE configuration
+    # Format: "eth0|192.168.32.113/24": {"gwaddr": "192.168.32.1"}
+    mgmt_interfaces = config_db.get("MGMT_INTERFACE", {})
+    for key, value in mgmt_interfaces.items():
+        if "|" in key and key.startswith("eth0|"):
+            mgmt_ip = key.split("|")[1]
+            mgmt_gw = value.get("gwaddr")
+            break
+
+    if not mgmt_ip or mgmt_ip == "0.0.0.0/0":
+        LOG.warning(
+            "No valid management interface configuration found in config_db.json"
+        )
+        return False
+
+    LOG.info(f"Found management interface config: {mgmt_ip}, gateway: {mgmt_gw}")
+
+    # Apply the IP address
+    LOG.info(f"Applying management IP {mgmt_ip} to eth0...")
+    result = run_command(
+        ["podman", "exec", "sonic", "ip", "addr", "add", mgmt_ip, "dev", "eth0"],
+        check=False,
+    )
+    if result.returncode != 0:
+        LOG.error(f"Failed to add IP address to eth0 (exit code {result.returncode})")
+        if result.stderr:
+            LOG.error(f"Error: {result.stderr}")
+        return False
+
+    # Apply the default gateway if configured
+    # Note: gwaddr can be "0.0.0.0" in default config, which means no gateway
+    if mgmt_gw and mgmt_gw != "0.0.0.0":
+        LOG.info(f"Adding default route via {mgmt_gw}...")
+        result = run_command(
+            [
+                "podman",
+                "exec",
+                "sonic",
+                "ip",
+                "route",
+                "add",
+                "default",
+                "via",
+                mgmt_gw,
+            ],
+            check=False,
+        )
+        if result.returncode != 0:
+            LOG.error(f"Failed to add default route (exit code {result.returncode})")
+            if result.stderr:
+                LOG.error(f"Error: {result.stderr}")
+            return False
+    else:
+        LOG.info("No gateway configured, skipping default route")
+
+    LOG.info("Management interface configured successfully")
+    return True
+
+
+def wait_for_sonic_services(timeout: int = 60) -> bool:
+    """Wait for critical SONiC services to be running.
+
+    Polls supervisorctl status for specific services until redis-server and
+    orchagent are running, or until timeout is reached. These services are
+    required before we can configure the management interface.
+
+    Note: We check each service individually because 'supervisorctl status'
+    (without arguments) returns exit code 3 when ANY service is STOPPED,
+    but 'supervisorctl status <service>' returns 0 when that specific service
+    is RUNNING.
+
+    :param timeout: Maximum time to wait in seconds
+    :returns: True if services are running, False if timeout reached
+    """
+    LOG.info("Waiting for SONiC services to initialize...")
+
+    required_services = ["redis-server", "orchagent"]
+    elapsed = 0
+    poll_interval = 2
+
+    while elapsed < timeout:
+        all_running = True
+
+        for service in required_services:
+            try:
+                result = run_command(
+                    ["podman", "exec", "sonic", "supervisorctl", "status", service],
+                    check=False,
+                )
+
+                # Exit code 0 and "RUNNING" in output means service is running
+                if result.returncode == 0 and "RUNNING" in result.stdout:
+                    continue
+                else:
+                    all_running = False
+                    LOG.debug(f"Service {service} not ready yet")
+                    break
+
+            except (OSError, subprocess.SubprocessError) as e:
+                # OSError: podman command not found or permission denied
+                # SubprocessError: other subprocess-related errors
+                LOG.debug(f"Error checking {service} status: {e}")
+                all_running = False
+                break
+
+        if all_running:
+            LOG.info(
+                f"Required SONiC services are running: {', '.join(required_services)}"
+            )
+            return True
+
+        time.sleep(poll_interval)
+        elapsed += poll_interval
+
+    LOG.warning(f"Timeout waiting for SONiC services after {timeout} seconds")
+    return False
+
+
+def start_bgpd() -> bool:
+    """Start BGP daemon for routing protocols.
+
+    bgpd is not started by default in SONiC-VS and must be started explicitly.
+    This follows the same approach as containerlab's sonic-vs implementation.
+    The daemon reads its configuration from /etc/frr/frr.conf which is mounted
+    at container startup.
+
+    zebra (the FRR routing manager) starts automatically with supervisord and
+    does not need to be started manually.
+
+    :returns: True if bgpd started successfully, False otherwise
+    """
+    LOG.info("Starting BGP daemon...")
+
+    result = run_command(
+        ["podman", "exec", "sonic", "supervisorctl", "start", "bgpd"],
+        check=False,
+    )
+
+    if result.returncode != 0:
+        LOG.error(f"Failed to start bgpd (exit code {result.returncode})")
+        if result.stderr:
+            LOG.error(f"Error: {result.stderr}")
+        return False
+
+    LOG.info("BGP daemon started successfully")
     return True
 
 
@@ -407,27 +595,35 @@ def main():
         LOG.error("Failed to setup networking")
         return 1
 
-    LOG.info("Restarting FRR services to apply configuration...")
-    try:
-        run_command(
-            ["podman", "exec", "sonic", "supervisorctl", "restart", "bgpd"], check=False
-        )
-        run_command(
-            ["podman", "exec", "sonic", "supervisorctl", "restart", "zebra"],
-            check=False,
-        )
-        LOG.info("FRR services restarted")
-    except Exception as e:
-        LOG.warning(f"Failed to restart FRR services: {e}")
+    # Wait for critical SONiC services to be ready
+    if not wait_for_sonic_services(timeout=60):
+        LOG.error("Critical SONiC services (redis-server, orchagent) did not start")
+        LOG.error("Cannot configure management interface without these services")
+        return 1
+
+    # Read config_db.json
+    config_db = read_config_db()
+    if config_db is None:
+        LOG.error("Failed to read config_db.json")
+        return 1
+
+    # Configure management interface from config_db.json
+    if not configure_management_interface(config_db):
+        LOG.error("Failed to configure management interface")
+        return 1
+
+    # Start BGP daemon (not started by default in SONiC-VS)
+    if not start_bgpd():
+        LOG.error("Failed to start BGP daemon")
+        return 1
 
     LOG.info("SONiC switch host setup complete")
     LOG.info("Container status:")
-    try:
-        result = run_command(["podman", "ps", "--filter", "name=sonic"], check=False)
+    # Show container status (check=False so no exception raised)
+    result = run_command(["podman", "ps", "--filter", "name=sonic"], check=False)
+    if result.returncode == 0 and result.stdout:
         for line in result.stdout.strip().split("\n"):
             LOG.info(line)
-    except:
-        pass
 
     LOG.info("To access the switch CLI, run: podman exec -it sonic bash")
     return 0
