@@ -39,6 +39,7 @@ CONFIG_FILE = "/etc/hotstack-sonic/config"
 CONFIG_DB_FILE = "/etc/hotstack-sonic/config_db.json"
 FRR_CONF_FILE = "/etc/hotstack-sonic/frr.conf"
 SONIC_VERSION_FILE = "/etc/hotstack-sonic/sonic_version.yml"
+AUTHORIZED_KEYS_FILE = "/etc/hotstack-sonic/authorized_keys"
 SONIC_DIR = "/var/lib/sonic"
 SONIC_CONFIG_DB = "/var/lib/sonic/config_db.json"
 SONIC_FRR_CONF = "/var/lib/sonic/frr.conf"
@@ -57,7 +58,7 @@ class SonicConfig:
         self.switch_interface_start = "eth1"
         self.switch_interface_count = 5
         self.switch_hostname = "sonic"
-        self.sonic_image = "localhost/docker-sonic-vs:latest"
+        self.sonic_image = "localhost/docker-sonic-vs:hotstack"
 
     def load_from_file(self, config_file: str = CONFIG_FILE) -> None:
         """Load configuration from shell-style config file.
@@ -284,7 +285,7 @@ def start_sonic_container(config: SonicConfig):
     """Start the SONiC container.
 
     Creates and starts a privileged podman container with the SONiC image,
-    mounting the config directory.
+    mounting the config directory and SSH authorized_keys.
 
     :param config: SonicConfig instance with switch configuration
     :returns: True if container started successfully, False otherwise
@@ -306,8 +307,28 @@ def start_sonic_container(config: SonicConfig):
         f"{SONIC_DIR}:/etc/sonic:rw",
         "-v",
         f"{SONIC_FRR_CONF}:/etc/frr/frr.conf:rw",
-        config.sonic_image,
     ]
+
+    # Mount SSH authorized_keys - required for SSH access to admin user
+    # The authorized_keys file must be provided via cloud-init at /etc/hotstack-sonic/authorized_keys
+    if not os.path.exists(AUTHORIZED_KEYS_FILE):
+        LOG.error(f"SSH authorized_keys not found at {AUTHORIZED_KEYS_FILE}")
+        LOG.error(
+            "SSH access is required but cannot be configured without authorized_keys"
+        )
+        LOG.error("This file must be created via cloud-init write_files")
+        return False
+
+    LOG.info("Mounting SSH authorized_keys for admin user")
+    cmd.extend(
+        [
+            "-v",
+            f"{AUTHORIZED_KEYS_FILE}:/home/admin/.ssh/authorized_keys:ro",
+        ]
+    )
+
+    # Use the custom hotstack image with SSH and admin user configured
+    cmd.append("localhost/docker-sonic-vs:hotstack")
 
     run_command(cmd)
 
