@@ -12,7 +12,7 @@ config
   - SWITCH_INTERFACE_START: First interface to move to container (default: eth1)
   - SWITCH_INTERFACE_COUNT: Number of interfaces to move (default: 5)
   - SWITCH_HOSTNAME: SONiC hostname (default: sonic)
-  - SONIC_IMAGE: Podman image tag (default: localhost/docker-sonic-vs:latest)
+  - SONIC_IMAGE: Podman image tag (default: localhost/docker-sonic-vs:hotstack)
 
 config_db.json
   SONiC native configuration file in JSON format. This file is mounted
@@ -25,6 +25,12 @@ frr.conf
 sonic_version.yml
   SONiC version information file. Required by SONiC services. If not
   provided, a default version file will be used.
+
+authorized_keys (REQUIRED)
+  SSH authorized_keys file for the admin user. This file is mounted into
+  the SONiC container at /home/admin/.ssh/authorized_keys and enables
+  SSH access to the switch. This file is REQUIRED - the container will
+  not start without it.
 
 Usage with cloud-init
 ----------------------
@@ -45,3 +51,23 @@ Use write_files to create these configuration files:
             }
           }
         }
+    - path: /etc/hotstack-sonic/authorized_keys
+      content: |
+        ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... user@host
+      owner: root:root
+      permissions: '0644'
+
+Note: The authorized_keys file is REQUIRED. You can use Heat parameters
+to inject SSH keys, for example:
+
+  parameters:
+    controller_ssh_pub_key:
+      type: string
+
+  resources:
+    leaf01:
+      properties:
+        user_data:
+          write_files:
+            - path: /etc/hotstack-sonic/authorized_keys
+              content: {get_param: controller_ssh_pub_key}

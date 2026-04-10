@@ -28,8 +28,34 @@ if [ -z "${SONIC_VERSION}" ]; then
     SONIC_VERSION="latest"
 fi
 
-echo "INFO: Copying SONiC docker image archive (version: ${SONIC_VERSION})"
-mkdir -p "${TMP_HOOKS_PATH}"
-cp "${DIB_SONIC_IMAGE}" "${TMP_HOOKS_PATH}/sonic-image.tar.gz"
+echo "INFO: Loading base SONiC-VS image on build host (version: ${SONIC_VERSION})"
+podman load -i "${DIB_SONIC_IMAGE}"
 
-echo "INFO: SONiC image archive ready for installation (version: ${SONIC_VERSION})"
+echo "INFO: Building custom SONiC-VS image with SSH access"
+# Create temporary directory for build context
+BUILD_DIR=$(mktemp -d)
+trap 'rm -rf "${BUILD_DIR}"' EXIT
+
+# Get the directory where this script is located (extra-data.d)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Copy Containerfile, sshd.conf, and docker-wrapper.sh to build context
+cp "${SCRIPT_DIR}/Containerfile" "${BUILD_DIR}/"
+cp "${SCRIPT_DIR}/sshd.conf" "${BUILD_DIR}/"
+cp "${SCRIPT_DIR}/docker-wrapper.sh" "${BUILD_DIR}/"
+
+# Build custom image
+podman build -t "localhost/docker-sonic-vs:hotstack" -f "${BUILD_DIR}/Containerfile" "${BUILD_DIR}"
+
+echo "INFO: Saving custom SONiC-VS image as podman archive"
+mkdir -p "${TMP_HOOKS_PATH}"
+podman save -o "${TMP_HOOKS_PATH}/sonic-image.tar" "localhost/docker-sonic-vs:hotstack"
+
+echo "INFO: Compressing SONiC podman archive"
+gzip "${TMP_HOOKS_PATH}/sonic-image.tar"
+
+echo "INFO: Cleaning up images from build host"
+podman rmi "localhost/docker-sonic-vs:hotstack"
+podman rmi "localhost/docker-sonic-vs:latest"
+
+echo "INFO: Custom SONiC-VS image built and ready for installation (version: ${SONIC_VERSION})"
