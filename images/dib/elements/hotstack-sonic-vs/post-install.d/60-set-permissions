@@ -20,8 +20,7 @@ if [ "${DIB_DEBUG_TRACE:-0}" -gt 0 ]; then
     set -x
 fi
 
-echo "INFO: Enabling SONiC systemd service..."
+# Ensure setup-sonic script is executable
+chmod +x /usr/local/bin/setup-sonic
 
-systemctl enable sonic.service
-
-echo "INFO: SONiC service enabled successfully"
+echo "INFO: Set executable permission for setup-sonic script"

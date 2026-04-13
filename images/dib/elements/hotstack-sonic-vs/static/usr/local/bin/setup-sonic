@@ -1,0 +1,349 @@
+#!/usr/bin/env python3
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+"""
+SONiC systemd-nspawn Setup Script
+
+Prepares the environment for SONiC running in systemd-nspawn:
+  - Creates persistent network namespace with loopback
+  - Moves and renames host interfaces into the namespace
+  - Prepares SONiC configuration files
+"""
+
+import json
+import logging
+import os
+import re
+import subprocess
+import sys
+from typing import Tuple
+
+logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stderr)
+LOG = logging.getLogger(__name__)
+
+CONFIG_FILE = "/etc/hotstack-sonic/config"
+CONFIG_DB_FILE = "/etc/hotstack-sonic/config_db.json"
+BGPD_CONF_FILE = "/etc/hotstack-sonic/bgpd.conf"
+OSPFD_CONF_FILE = "/etc/hotstack-sonic/ospfd.conf"
+SONIC_VERSION_FILE = "/etc/hotstack-sonic/sonic_version.yml"
+AUTHORIZED_KEYS_FILE = "/etc/hotstack-sonic/authorized_keys"
+SONIC_DIR = "/var/lib/sonic"
+SONIC_CONFIG_DB = "/var/lib/sonic/config_db.json"
+SONIC_BGPD_CONF = "/var/lib/sonic/bgpd.conf"
+SONIC_OSPFD_CONF = "/var/lib/sonic/ospfd.conf"
+SONIC_VERSION_YML = "/var/lib/sonic/sonic_version.yml"
+DEFAULT_CONFIG_DB = "/usr/share/hotstack-sonic/default-config_db.json"
+DEFAULT_SONIC_VERSION = "/usr/share/hotstack-sonic/default-sonic_version.yml"
+NETNS_NAME = "sonic-ns"
+
+
+class SonicConfig:
+    """Configuration for SONiC switch host."""
+
+    def __init__(self):
+        """Initialize configuration with default values."""
+        self.mgmt_interface = "eth0"
+        self.switch_interface_start = "eth1"
+        self.switch_interface_count = 5
+
+    def load_from_file(self, config_file: str = CONFIG_FILE) -> None:
+        """Load configuration from shell-style config file.
+
+        :param config_file: Path to configuration file
+        """
+        if not os.path.exists(config_file):
+            LOG.warning(f"Config file {config_file} not found, using defaults")
+            return
+
+        with open(config_file, "r") as f:
+            content = f.read()
+
+        for line in content.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            if "=" not in line:
+                continue
+
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+
+            if key == "MGMT_INTERFACE":
+                self.mgmt_interface = value
+            elif key == "SWITCH_INTERFACE_START":
+                self.switch_interface_start = value
+            elif key == "SWITCH_INTERFACE_COUNT":
+                self.switch_interface_count = int(value)
+
+    def log_config(self) -> None:
+        """Log the current configuration."""
+        LOG.info("Configuration:")
+        LOG.info(f"  Management Interface: {self.mgmt_interface}")
+        LOG.info(f"  Switch Interface Start: {self.switch_interface_start}")
+        LOG.info(f"  Switch Interface Count: {self.switch_interface_count}")
+
+
+def run_command(cmd: list, check: bool = True) -> subprocess.CompletedProcess:
+    """Run a shell command and return the result.
+
+    :param cmd: Command and arguments as list
+    :param check: Raise exception on non-zero exit code
+    :return: CompletedProcess instance
+    """
+    try:
+        result = subprocess.run(
+            cmd,
+            check=check,
+            capture_output=True,
+            text=True,
+        )
+        return result
+    except subprocess.CalledProcessError as e:
+        if check:
+            LOG.error(f"Command failed: {' '.join(cmd)}")
+            LOG.error(f"Exit code: {e.returncode}")
+            if e.stdout:
+                LOG.error(f"stdout: {e.stdout}")
+            if e.stderr:
+                LOG.error(f"stderr: {e.stderr}")
+            raise
+        return e
+
+
+def run_in_netns(cmd: list, check: bool = True) -> subprocess.CompletedProcess:
+    """Run a command in the sonic network namespace.
+
+    :param cmd: Command and arguments as list
+    :param check: Raise exception on non-zero exit code
+    :return: CompletedProcess instance
+    """
+    return run_command(["ip", "netns", "exec", NETNS_NAME] + cmd, check=check)
+
+
+def parse_interface_name(ifname: str) -> Tuple[str, int]:
+    """Parse interface name into base and number.
+
+    :param ifname: Interface name (e.g., 'eth1')
+    :return: Tuple of (base, number) (e.g., ('eth', 1))
+    """
+    match = re.match(r"([a-zA-Z]+)(\d+)", ifname)
+    if not match:
+        raise ValueError(f"Invalid interface name: {ifname}")
+    return match.group(1), int(match.group(2))
+
+
+def create_network_namespace() -> None:
+    """Create persistent network namespace with loopback configured."""
+    netns_path = f"/var/run/netns/{NETNS_NAME}"
+
+    if not os.path.exists(netns_path):
+        LOG.info(f"Creating persistent network namespace: {NETNS_NAME}")
+        run_command(["ip", "netns", "add", NETNS_NAME])
+    else:
+        LOG.info(f"Network namespace {NETNS_NAME} already exists")
+
+    # Always ensure loopback is up (required for redis and inter-service communication)
+    result = run_in_netns(["ip", "link", "show", "lo"], check=False)
+    if "UP" not in result.stdout:
+        LOG.info(f"Bringing up loopback interface in {NETNS_NAME}")
+        run_in_netns(["ip", "link", "set", "lo", "up"])
+
+
+def move_interfaces_to_namespace(config: SonicConfig) -> None:
+    """Move and rename host interfaces into the persistent namespace.
+
+    Host eth1 -> Container eth0 (management)
+    Host eth2 -> Container eth1 (first data port)
+    Host eth3 -> Container eth2 (second data port)
+    etc.
+
+    :param config: SONiC configuration
+    :raises RuntimeError: If a configured interface doesn't exist
+    """
+    LOG.info("Moving and renaming interfaces into sonic-ns namespace...")
+
+    if_base, if_start_num = parse_interface_name(config.switch_interface_start)
+
+    for i in range(config.switch_interface_count):
+        host_if = f"{if_base}{if_start_num + i}"
+        container_if = f"eth{i}"  # Rename: host eth1->container eth0, eth2->eth1, etc.
+
+        # Check if interface is already in the namespace (with new name)
+        result = run_in_netns(["ip", "link", "show", container_if], check=False)
+        if result.returncode == 0:
+            LOG.info(f"Interface {container_if} already in {NETNS_NAME} namespace")
+            continue
+
+        # Check if host interface exists
+        result = run_command(["ip", "link", "show", host_if], check=False)
+        if result.returncode != 0:
+            raise RuntimeError(f"Host interface {host_if} not found - check SWITCH_INTERFACE_START and SWITCH_INTERFACE_COUNT configuration")
+
+        LOG.info(f"Moving {host_if} into {NETNS_NAME} namespace as {container_if}")
+        # Move to namespace
+        run_command(["ip", "link", "set", host_if, "netns", NETNS_NAME])
+
+        # Rename inside the namespace
+        run_in_netns(["ip", "link", "set", host_if, "name", container_if])
+
+        # Bring interface up in the namespace
+        run_in_netns(["ip", "link", "set", container_if, "up"])
+
+
+def configure_management_interface() -> bool:
+    """Configure management interface IP from config_db.json.
+
+    :return: True on success, False on failure
+    """
+    LOG.info("Configuring management interface...")
+
+    try:
+        # Read config_db.json to get MGMT_INTERFACE settings
+        with open(CONFIG_DB_FILE, "r") as f:
+            config_db = json.load(f)
+
+        mgmt_interfaces = config_db.get("MGMT_INTERFACE", {})
+        mgmt_ip = None
+        mgmt_gw = None
+
+        for key, value in mgmt_interfaces.items():
+            if "|" in key and key.startswith("eth0|"):
+                mgmt_ip = key.split("|")[1]
+                mgmt_gw = value.get("gwaddr")
+                break
+
+        if not mgmt_ip:
+            LOG.error("No MGMT_INTERFACE configuration found in config_db.json")
+            return False
+
+        LOG.info(f"Applying management IP {mgmt_ip} to eth0 in {NETNS_NAME}")
+
+        # Check if already configured
+        result = run_in_netns(["ip", "addr", "show", "eth0"], check=False)
+        if result.returncode == 0 and mgmt_ip.split("/")[0] in result.stdout:
+            LOG.info("Management interface already configured")
+            return True
+
+        # Apply IP address
+        result = run_in_netns(["ip", "addr", "add", mgmt_ip, "dev", "eth0"], check=False)
+        if result.returncode != 0 and result.returncode != 2:
+            LOG.error(f"Failed to add IP address: {result.stderr}")
+            return False
+
+        # Apply default gateway if specified
+        if mgmt_gw:
+            LOG.info(f"Adding default route via {mgmt_gw}")
+            result = run_in_netns(["ip", "route", "add", "default", "via", mgmt_gw], check=False)
+            if result.returncode != 0 and "File exists" not in result.stderr:
+                LOG.error(f"Failed to add default route: {result.stderr}")
+                return False
+
+        LOG.info("Management interface configured successfully")
+        return True
+
+    except (IOError, OSError, json.JSONDecodeError, KeyError) as e:
+        LOG.error(f"Failed to configure management interface: {e}")
+        return False
+
+
+def setup_network_namespace(config: SonicConfig) -> bool:
+    """Setup persistent network namespace and move interfaces into it.
+
+    :param config: SONiC configuration
+    :return: True on success, False on failure
+    """
+    LOG.info("Setting up SONiC network namespace")
+
+    # Create namespace with loopback
+    create_network_namespace()
+
+    # Move interfaces
+    move_interfaces_to_namespace(config)
+
+    # Configure management interface IP
+    if not configure_management_interface():
+        return False
+
+    LOG.info("Network namespace setup complete")
+    return True
+
+
+def prepare_config_files():
+    """Prepare SONiC configuration files.
+
+    :return: True on success, False on failure
+    """
+    os.makedirs(SONIC_DIR, exist_ok=True)
+
+    # Required files (with optional defaults)
+    required_files = [
+        (CONFIG_DB_FILE, SONIC_CONFIG_DB, "config_db.json", None),
+        (BGPD_CONF_FILE, SONIC_BGPD_CONF, "bgpd.conf", None),
+        (OSPFD_CONF_FILE, SONIC_OSPFD_CONF, "ospfd.conf", None),
+        (SONIC_VERSION_FILE, SONIC_VERSION_YML, "sonic_version.yml", DEFAULT_SONIC_VERSION),
+    ]
+
+    # Check all required files exist (or have defaults)
+    for src, _, name, default in required_files:
+        if not os.path.exists(src) and default is None:
+            LOG.error(f"Required config file not found: {src}")
+            return False
+
+    # Copy all required files
+    for src, dst, name, default in required_files:
+        actual_src = src if os.path.exists(src) else default
+        LOG.info(f"Using {name} from {actual_src}")
+        with open(actual_src, "r") as src_file:
+            with open(dst, "w") as dst_file:
+                dst_file.write(src_file.read())
+
+    # Copy authorized_keys with correct ownership for admin user (UID 1000)
+    if os.path.exists(AUTHORIZED_KEYS_FILE):
+        admin_ssh_dir = f"{SONIC_DIR}/admin_ssh"
+        os.makedirs(admin_ssh_dir, exist_ok=True)
+        os.chmod(admin_ssh_dir, 0o700)
+        os.chown(admin_ssh_dir, 1000, 1000)
+
+        authorized_keys_dst = f"{admin_ssh_dir}/authorized_keys"
+        LOG.info(f"Copying authorized_keys from {AUTHORIZED_KEYS_FILE}")
+        with open(AUTHORIZED_KEYS_FILE, "r") as src_file:
+            with open(authorized_keys_dst, "w") as dst_file:
+                dst_file.write(src_file.read())
+        os.chmod(authorized_keys_dst, 0o600)
+        os.chown(authorized_keys_dst, 1000, 1000)
+
+    return True
+
+
+def main():
+    """Main entry point - setup network namespace and prepare config files."""
+    config = SonicConfig()
+    config.load_from_file()
+    config.log_config()
+
+    if not prepare_config_files():
+        return 1
+
+    if not setup_network_namespace(config):
+        return 1
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

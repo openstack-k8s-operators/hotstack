@@ -11,26 +11,35 @@ config
   - MGMT_INTERFACE: Host management interface (default: eth0)
   - SWITCH_INTERFACE_START: First interface to move to container (default: eth1)
   - SWITCH_INTERFACE_COUNT: Number of interfaces to move (default: 5)
-  - SWITCH_HOSTNAME: SONiC hostname (default: sonic)
-  - SONIC_IMAGE: Podman image tag (default: localhost/docker-sonic-vs:hotstack)
 
-config_db.json
-  SONiC native configuration file in JSON format. This file is mounted
-  into the SONiC container at /etc/sonic/config_db.json.
+config_db.json (REQUIRED)
+  SONiC native configuration file in JSON format. This file is copied
+  to /var/lib/sonic/config_db.json and mounted into the container at
+  /etc/sonic/config_db.json. Must include MGMT_INTERFACE section for
+  management IP configuration.
 
-frr.conf
-  FRRouting configuration file. This file is mounted into the SONiC
-  container at /etc/frr/frr.conf.
+bgpd.conf
+  FRRouting BGP daemon configuration file. This file is copied to
+  /var/lib/sonic/bgpd.conf and mounted into the container at
+  /etc/frr/bgpd.conf. If the file contains "router bgp" configuration,
+  the bgpd daemon will be started automatically.
+
+ospfd.conf
+  FRRouting OSPF daemon configuration file. This file is copied to
+  /var/lib/sonic/ospfd.conf and mounted into the container at
+  /etc/frr/ospfd.conf. If the file contains "router ospf" configuration,
+  the ospfd daemon will be started automatically.
 
 sonic_version.yml
   SONiC version information file. Required by SONiC services. If not
   provided, a default version file will be used.
 
-authorized_keys (REQUIRED)
-  SSH authorized_keys file for the admin user. This file is mounted into
-  the SONiC container at /home/admin/.ssh/authorized_keys and enables
-  SSH access to the switch. This file is REQUIRED - the container will
-  not start without it.
+authorized_keys
+  SSH authorized_keys file for the admin user. This file is copied to
+  /var/lib/sonic/admin_ssh/authorized_keys and mounted into the container
+  at /home/admin/.ssh/authorized_keys. Enables SSH key authentication for
+  the admin user. If not provided, password authentication ("password") can
+  be used instead.
 
 Usage with cloud-init
 ----------------------
@@ -40,8 +49,9 @@ Use write_files to create these configuration files:
   write_files:
     - path: /etc/hotstack-sonic/config
       content: |
-        SWITCH_HOSTNAME=leaf01
         SWITCH_INTERFACE_COUNT=8
+      owner: root:root
+      permissions: '0644'
     - path: /etc/hotstack-sonic/config_db.json
       content: |
         {
@@ -49,16 +59,33 @@ Use write_files to create these configuration files:
             "localhost": {
               "hostname": "leaf01"
             }
+          },
+          "MGMT_INTERFACE": {
+            "eth0|192.168.32.113/24": {
+              "gwaddr": "192.168.32.1"
+            }
           }
         }
+      owner: root:root
+      permissions: '0644'
+    - path: /etc/hotstack-sonic/bgpd.conf
+      content: |
+        # Empty or BGP configuration
+      owner: root:root
+      permissions: '0644'
+    - path: /etc/hotstack-sonic/ospfd.conf
+      content: |
+        # Empty or OSPF configuration
+      owner: root:root
+      permissions: '0644'
     - path: /etc/hotstack-sonic/authorized_keys
       content: |
         ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... user@host
       owner: root:root
       permissions: '0644'
 
-Note: The authorized_keys file is REQUIRED. You can use Heat parameters
-to inject SSH keys, for example:
+Note: The config_db.json file is REQUIRED and must include a MGMT_INTERFACE
+section. You can use Heat parameters to inject SSH keys, for example:
 
   parameters:
     controller_ssh_pub_key:
@@ -69,5 +96,14 @@ to inject SSH keys, for example:
       properties:
         user_data:
           write_files:
+            - path: /etc/hotstack-sonic/config_db.json
+              content: |
+                {
+                  "MGMT_INTERFACE": {
+                    "eth0|192.168.32.113/24": {
+                      "gwaddr": "192.168.32.1"
+                    }
+                  }
+                }
             - path: /etc/hotstack-sonic/authorized_keys
               content: {get_param: controller_ssh_pub_key}

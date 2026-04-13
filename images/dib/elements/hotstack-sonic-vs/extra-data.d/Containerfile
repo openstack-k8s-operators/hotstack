@@ -19,15 +19,19 @@
 ARG BASE_IMAGE=localhost/docker-sonic-vs:latest
 FROM ${BASE_IMAGE}
 
-# Install sudo, create admin user, and configure SSH
+# Install sudo, create admin user with explicit UID/GID, and configure SSH
+# Using UID/GID 1000 for admin user to ensure consistency
+# Set password to "password" for ML2 driver compatibility (both SSH and sudo)
+# Note: Ownership will be fixed in install.d after tar extraction
 RUN apt-get update && \
     apt-get install -y sudo && \
     rm -rf /var/lib/apt/lists/* && \
-    useradd -m -s /bin/bash -G sudo,redis,frrvty admin && \
-    echo "admin ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/admin && \
+    groupadd -g 1000 admin && \
+    useradd -m -u 1000 -g 1000 -s /bin/bash -G sudo,redis,frrvty admin && \
+    echo "admin:password" | chpasswd && \
+    echo "admin ALL=(ALL) ALL" > /etc/sudoers.d/admin && \
     chmod 0440 /etc/sudoers.d/admin && \
     mkdir -p /home/admin/.ssh && \
-    chown admin:admin /home/admin/.ssh && \
     chmod 700 /home/admin/.ssh && \
     ssh-keygen -A && \
     mkdir -p /run/sshd
@@ -36,8 +40,23 @@ RUN apt-get update && \
 COPY docker-wrapper.sh /usr/local/bin/docker
 RUN chmod +x /usr/local/bin/docker
 
-# Add supervisord configuration for sshd
+# Patch start.sh to start FRR daemons when configured
+RUN echo '' >> /usr/bin/start.sh && \
+    echo '# Start ospfd when OSPF is configured in ospfd.conf' >> /usr/bin/start.sh && \
+    echo 'if [ -f /etc/frr/ospfd.conf ] && grep -q "^router ospf" /etc/frr/ospfd.conf; then' >> /usr/bin/start.sh && \
+    echo '    supervisorctl start ospfd' >> /usr/bin/start.sh && \
+    echo 'fi' >> /usr/bin/start.sh && \
+    echo '' >> /usr/bin/start.sh && \
+    echo '# Start bgpd when BGP is configured in bgpd.conf' >> /usr/bin/start.sh && \
+    echo 'if [ -f /etc/frr/bgpd.conf ] && grep -q "^router bgp" /etc/frr/bgpd.conf; then' >> /usr/bin/start.sh && \
+    echo '    supervisorctl start bgpd' >> /usr/bin/start.sh && \
+    echo 'fi' >> /usr/bin/start.sh
+
+# Add supervisord configuration for sshd, ospfd, bgpd, and rebootbackend
 COPY sshd.conf /etc/supervisor/conf.d/sshd.conf
+COPY ospfd.conf /etc/supervisor/conf.d/ospfd.conf
+COPY bgpd.conf /etc/supervisor/conf.d/bgpd.conf
+COPY rebootbackend.conf /etc/supervisor/conf.d/rebootbackend.conf
 
 # Metadata
 LABEL maintainer="hotstack"
