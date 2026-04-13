@@ -1,0 +1,71 @@
+#!/bin/bash
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+set -eu -o pipefail
+
+if [ "${DIB_DEBUG_TRACE:-0}" -gt 0 ]; then
+    set -x
+fi
+
+SONIC_VERSION=$(echo "${DIB_SONIC_IMAGE:-}" \
+    | xargs basename 2>/dev/null \
+    | sed -n 's/docker-sonic-vs-\?\(.*\)\.gz/\1/p')
+
+if [ -z "${SONIC_VERSION}" ]; then
+    SONIC_VERSION="latest"
+fi
+
+echo "INFO: Loading base SONiC-VS image on build host (version: ${SONIC_VERSION})"
+podman load -i "${DIB_SONIC_IMAGE}"
+
+echo "INFO: Building custom SONiC-VS image with SSH access"
+# Create temporary directory for build context
+BUILD_DIR=$(mktemp -d)
+trap 'rm -rf "${BUILD_DIR}"' EXIT
+
+# Get the directory where this script is located (extra-data.d)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Copy build files to build context
+cp "${SCRIPT_DIR}/Containerfile" "${BUILD_DIR}/"
+cp "${SCRIPT_DIR}/container-files/sshd.conf" "${BUILD_DIR}/"
+cp "${SCRIPT_DIR}/container-files/ospfd.conf" "${BUILD_DIR}/"
+cp "${SCRIPT_DIR}/container-files/bgpd.conf" "${BUILD_DIR}/"
+cp "${SCRIPT_DIR}/container-files/rebootbackend.conf" "${BUILD_DIR}/"
+cp "${SCRIPT_DIR}/container-files/docker-wrapper.sh" "${BUILD_DIR}/"
+
+# Build custom image
+podman build -t "localhost/docker-sonic-vs:hotstack" -f "${BUILD_DIR}/Containerfile" "${BUILD_DIR}"
+
+echo "INFO: Extracting SONiC rootfs for systemd-nspawn using podman unshare"
+
+# Use podman unshare to extract with proper UID mapping and permission preservation
+# This runs in a user namespace where we appear as root, preserving all permissions
+podman unshare bash -c "
+    CONTAINER_ID=\$(podman create localhost/docker-sonic-vs:hotstack)
+    MOUNT_POINT=\$(podman mount \$CONTAINER_ID)
+    tar -C \$MOUNT_POINT -cf ${TMP_HOOKS_PATH}/sonic-rootfs.tar .
+    podman unmount \$CONTAINER_ID
+    podman rm \$CONTAINER_ID
+"
+
+echo "INFO: Cleaning up"
+# Force remove any leftover containers first
+podman ps -a --filter ancestor=localhost/docker-sonic-vs:hotstack -q | xargs -r podman rm -f
+podman rmi -f "localhost/docker-sonic-vs:hotstack"
+podman rmi -f "localhost/docker-sonic-vs:latest"
+
+echo "INFO: Custom SONiC-VS rootfs built and ready for installation (version: ${SONIC_VERSION})"

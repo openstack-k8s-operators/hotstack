@@ -1,8 +1,7 @@
 ---
 bash-completion:
 iproute:
-nmstate:
-podman:
 python3-jinja2:
+systemd-container:
 tcpdump:
 vim-enhanced:

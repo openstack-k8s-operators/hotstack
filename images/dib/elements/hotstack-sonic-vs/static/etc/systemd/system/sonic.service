@@ -14,20 +14,33 @@
 # under the License.
 
 [Unit]
-Description=SONiC Container Switch
-After=network-online.target sonic-import.service
+Description=SONiC systemd-nspawn Container
+After=network-online.target
 Wants=network-online.target
-Requires=sonic-import.service
-ConditionPathExists=/usr/local/bin/start-sonic
+ConditionPathExists=/usr/local/bin/setup-sonic
+ConditionPathExists=/var/lib/machines/sonic
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStartPre=-/usr/bin/podman stop -t 30 sonic
-ExecStartPre=-/usr/bin/podman rm -f sonic
-ExecStart=/usr/local/bin/start-sonic
-ExecStop=/usr/bin/podman stop -t 30 sonic
-ExecStopPost=/usr/bin/podman rm -f sonic
+Type=exec
+ExecStartPre=/usr/local/bin/setup-sonic
+ExecStart=/usr/bin/systemd-nspawn \
+    --quiet \
+    --keep-unit \
+    --link-journal=try-guest \
+    --network-namespace-path=/var/run/netns/sonic-ns \
+    --directory=/var/lib/machines/sonic \
+    --machine=sonic \
+    --setenv=PLATFORM=x86_64-kvm_x86_64-r0 \
+    --setenv=HWSKU=Force10-S6000 \
+    --capability=CAP_NET_BIND_SERVICE,CAP_NET_ADMIN,CAP_NET_RAW,CAP_SYS_ADMIN \
+    --bind=/var/lib/sonic:/etc/sonic \
+    --bind=/var/lib/sonic/bgpd.conf:/etc/frr/bgpd.conf \
+    --bind=/var/lib/sonic/ospfd.conf:/etc/frr/ospfd.conf \
+    --bind-ro=/var/lib/sonic/admin_ssh:/home/admin/.ssh \
+    /usr/local/bin/supervisord -c /etc/supervisor/supervisord.conf
+ExecStop=/usr/bin/machinectl poweroff sonic
+KillMode=mixed
+KillSignal=SIGRTMIN+3
 Restart=on-failure
 RestartSec=10
 
