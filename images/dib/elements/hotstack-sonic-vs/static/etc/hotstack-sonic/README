@@ -9,7 +9,7 @@ Configuration Files
 config
   Shell-style configuration file with host-level settings:
   - MGMT_INTERFACE: Host management interface (default: eth0)
-  - SWITCH_INTERFACE_START: First interface to move to container (default: eth1)
+  - SWITCH_INTERFACE_START: First interface to move to namespace (default: eth1)
   - SWITCH_INTERFACE_COUNT: Number of interfaces to move (default: 5)
 
 config_db.json (REQUIRED)

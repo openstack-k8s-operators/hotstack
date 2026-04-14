@@ -446,7 +446,6 @@ resources:
               SWITCH_INTERFACE_START=eth1
               SWITCH_INTERFACE_COUNT=4
               SWITCH_HOSTNAME=spine01
-              SONIC_IMAGE=localhost/docker-sonic-vs:latest
             owner: root:root
             permissions: '0644'
           - path: /etc/hotstack-sonic/config_db.json
@@ -552,7 +551,6 @@ resources:
               SWITCH_INTERFACE_START=eth1
               SWITCH_INTERFACE_COUNT=4
               SWITCH_HOSTNAME=spine02
-              SONIC_IMAGE=localhost/docker-sonic-vs:latest
             owner: root:root
             permissions: '0644'
           - path: /etc/hotstack-sonic/config_db.json
@@ -662,7 +660,6 @@ resources:
               SWITCH_INTERFACE_START=eth1
               SWITCH_INTERFACE_COUNT=5
               SWITCH_HOSTNAME=leaf01
-              SONIC_IMAGE=localhost/docker-sonic-vs:latest
             owner: root:root
             permissions: '0644'
           - path: /etc/hotstack-sonic/config_db.json
@@ -830,7 +827,6 @@ resources:
               SWITCH_INTERFACE_START=eth1
               SWITCH_INTERFACE_COUNT=5
               SWITCH_HOSTNAME=leaf02
-              SONIC_IMAGE=localhost/docker-sonic-vs:latest
             owner: root:root
             permissions: '0644'
           - path: /etc/hotstack-sonic/config_db.json
