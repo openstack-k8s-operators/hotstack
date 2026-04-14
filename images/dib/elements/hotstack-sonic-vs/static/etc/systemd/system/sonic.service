@@ -22,6 +22,8 @@ ConditionPathExists=/var/lib/machines/sonic
 
 [Service]
 Type=exec
+EnvironmentFile=-/etc/hotstack-sonic/config
+Environment=SWITCH_HOSTNAME=sonic
 ExecStartPre=/usr/local/bin/setup-sonic
 ExecStart=/usr/bin/systemd-nspawn \
     --quiet \
@@ -30,6 +32,7 @@ ExecStart=/usr/bin/systemd-nspawn \
     --network-namespace-path=/var/run/netns/sonic-ns \
     --directory=/var/lib/machines/sonic \
     --machine=sonic \
+    --hostname=${SWITCH_HOSTNAME} \
     --setenv=PLATFORM=x86_64-kvm_x86_64-r0 \
     --setenv=HWSKU=Force10-S6000 \
     --capability=CAP_NET_BIND_SERVICE,CAP_NET_ADMIN,CAP_NET_RAW,CAP_SYS_ADMIN \

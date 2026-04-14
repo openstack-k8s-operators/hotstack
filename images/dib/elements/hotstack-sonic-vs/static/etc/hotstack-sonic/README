@@ -11,6 +11,7 @@ config
   - MGMT_INTERFACE: Host management interface (default: eth0)
   - SWITCH_INTERFACE_START: First interface to move to namespace (default: eth1)
   - SWITCH_INTERFACE_COUNT: Number of interfaces to move (default: 5)
+  - SWITCH_HOSTNAME: Hostname for the SONiC container (default: sonic)
 
 config_db.json (REQUIRED)
   SONiC native configuration file in JSON format. This file is copied
