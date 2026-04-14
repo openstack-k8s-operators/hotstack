@@ -6,17 +6,21 @@ This directory contains SONiC runtime data and configuration.
 Files
 -----
 
-sonic-image.tar.gz
-  Compressed podman archive containing the SONiC container image.
-  Loaded by sonic-import.service on first boot.
-
 sonic-version.txt
-  Version identifier for the SONiC image.
-
-.image-imported
-  Marker file created after successful image import.
-  Prevents re-importing on subsequent boots.
+  Version identifier for the SONiC image, created during image build.
 
 config_db.json
-  SONiC configuration file, mounted into the container at /etc/sonic/config_db.json.
-  Created by start-sonic script from /etc/hotstack-sonic/config_db.json or defaults.
+  SONiC configuration database, bind-mounted into systemd-nspawn container at /etc/sonic/config_db.json.
+  Created by setup-sonic script from /etc/hotstack-sonic/config_db.json or defaults.
+
+bgpd.conf
+  FRR BGP daemon configuration, bind-mounted into systemd-nspawn container at /etc/frr/bgpd.conf.
+  Created by setup-sonic script from /etc/hotstack-sonic/bgpd.conf.
+
+ospfd.conf
+  FRR OSPF daemon configuration, bind-mounted into systemd-nspawn container at /etc/frr/ospfd.conf.
+  Created by setup-sonic script from /etc/hotstack-sonic/ospfd.conf.
+
+admin_ssh/
+  Directory containing SSH authorized_keys for the admin user.
+  Bind-mounted read-only into systemd-nspawn container at /home/admin/.ssh.
