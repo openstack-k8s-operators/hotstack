@@ -40,6 +40,12 @@ RUN apt-get update && \
 COPY docker-wrapper.sh /usr/local/bin/docker
 RUN chmod +x /usr/local/bin/docker
 
+# Suppress Python SyntaxWarnings from SONiC code
+# SyntaxWarnings are generated at compile time, so we need to set PYTHONWARNINGS
+# environment variable rather than using sitecustomize.py
+RUN echo 'export PYTHONWARNINGS=ignore::SyntaxWarning' >> /etc/profile.d/python-warnings.sh && \
+    chmod 644 /etc/profile.d/python-warnings.sh
+
 # Patch start.sh to start FRR daemons when configured
 RUN echo '' >> /usr/bin/start.sh && \
     echo '# Start ospfd when OSPF is configured in ospfd.conf' >> /usr/bin/start.sh && \
