@@ -149,7 +149,8 @@ password = admin
 ngs_mac_address = 22:57:f8:dd:03:01
 ngs_disable_inactive_ports = true
 ngs_physical_networks = public
-ngs_nve_interface = Vxlan1
+ngs_vxlan_interface = Vxlan1
+ngs_bgp_asn = 65001
 
 [genericswitch:leaf02]
 device_type = netmiko_arista_eos
@@ -159,4 +160,5 @@ password = admin
 ngs_mac_address = 22:57:f8:dd:04:01
 ngs_disable_inactive_ports = true
 ngs_physical_networks = public
-ngs_nve_interface = Vxlan1
+ngs_vxlan_interface = Vxlan1
+ngs_bgp_asn = 65001
