@@ -163,6 +163,11 @@ def create_network_namespace() -> None:
         LOG.info(f"Bringing up loopback interface in {NETNS_NAME}")
         run_in_netns(["ip", "link", "set", "lo", "up"])
 
+    # Enable IP forwarding (required for routing VXLAN traffic)
+    LOG.info(f"Enabling IP forwarding in {NETNS_NAME}")
+    run_in_netns(["sysctl", "-w", "net.ipv4.ip_forward=1"])
+    run_in_netns(["sysctl", "-w", "net.ipv6.conf.all.forwarding=1"])
+
 
 def move_interfaces_to_namespace(config: SonicConfig) -> None:
     """Move and rename host interfaces into the persistent namespace.
