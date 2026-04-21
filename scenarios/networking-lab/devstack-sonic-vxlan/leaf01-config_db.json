@@ -28,13 +28,9 @@
         "Loopback0|10.255.255.3/32": {}
     },
     "INTERFACE": {
-        "Ethernet0": {
-            "mtu": "1442"
-        },
+        "Ethernet0": {},
         "Ethernet0|10.1.1.6/30": {},
-        "Ethernet4": {
-            "mtu": "1442"
-        },
+        "Ethernet4": {},
         "Ethernet4|10.1.1.10/30": {}
     },
     "PORT": {
@@ -54,15 +50,13 @@
             "alias": "fortyGigE0/8",
             "lanes": "33,34,35,36",
             "speed": "40000",
-            "admin_status": "up",
-            "mtu": "1442"
+            "admin_status": "up"
         },
         "Ethernet12": {
             "alias": "fortyGigE0/12",
             "lanes": "37,38,39,40",
             "speed": "40000",
-            "admin_status": "up",
-            "mtu": "1442"
+            "admin_status": "up"
         }
     },
     "VLAN": {},

@@ -28,17 +28,11 @@
         "Loopback0|10.255.255.1/32": {}
     },
     "INTERFACE": {
-        "Ethernet0": {
-            "mtu": "1442"
-        },
+        "Ethernet0": {},
         "Ethernet0|10.1.1.1/30": {},
-        "Ethernet4": {
-            "mtu": "1442"
-        },
+        "Ethernet4": {},
         "Ethernet4|10.1.1.5/30": {},
-        "Ethernet8": {
-            "mtu": "1442"
-        },
+        "Ethernet8": {},
         "Ethernet8|10.1.1.13/30": {}
     },
     "PORT": {
