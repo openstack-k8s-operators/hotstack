@@ -8,9 +8,8 @@ SERVICE_PASSWORD=$ADMIN_PASSWORD
 # Service timeouts
 SERVICE_TIMEOUT=120
 
-# MTU - running inside an encapsulated environment, restrict to 1442 on the
-# physical network so VXLAN tenant networks get 1442 - 50 = 1392 effective MTU.
-PUBLIC_BRIDGE_MTU=1442
+# MTU - using default 1500 since undercloud network has MTU 9158
+PUBLIC_BRIDGE_MTU=1500
 
 # Networking
 HOST_IP=192.168.32.20
@@ -118,7 +117,7 @@ disable_service horizon
 
 [[post-config|$NEUTRON_CONF]]
 [DEFAULT]
-global_physnet_mtu = 1442
+global_physnet_mtu = 1500
 
 [baremetal_agent]
 enable_ha_chassis_group_alignment = False
