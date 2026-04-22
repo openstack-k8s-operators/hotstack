@@ -346,6 +346,50 @@ make clean
    See `switch-host-scripts/README.md` for details on switch image requirements
    and configuration.
 
+#### Building and uploading the SONiC Virtual Switch image to glance
+
+1. Build the SONiC image (using diskimage-builder):
+
+   ```shell
+   make sonic
+   ```
+
+   This will create a Python virtual environment, install diskimage-builder,
+   build the image using the configuration from `dib/sonic-image.yaml`, and
+   keep it in qcow2 format (default).
+
+2. Upload the SONiC image to Glance:
+
+   ```shell
+   openstack image create hotstack-sonic \
+     --disk-format qcow2 \
+     --file sonic-vs-switch-host.qcow2 \
+     --property hw_firmware_type=uefi \
+     --property hw_machine_type=q35 \
+     --property hw_vif_model=e1000
+   ```
+
+   **Note**: The `hw_vif_model=e1000` property is recommended for SONiC switches
+   to avoid virtio checksum offloading issues when connected via OVS/OVN bridge
+   networks.
+
+   **Note**: To convert to raw format (required for Ceph backends):
+
+   ```shell
+   make sonic SONIC_IMAGE_FORMAT=raw
+
+   openstack image create hotstack-sonic \
+     --disk-format raw \
+     --file sonic-vs-switch-host.qcow2 \
+     --property hw_firmware_type=uefi \
+     --property hw_machine_type=q35 \
+     --property hw_vif_model=e1000
+   ```
+
+3. See `dib/elements/hotstack-sonic-vs/README.rst` for details on runtime
+   configuration via cloud-init, including network interface setup and SONiC
+   configuration.
+
 #### Building and uploading the cEOS image to glance
 
 1. Build the cEOS image (using diskimage-builder):
@@ -365,8 +409,13 @@ make clean
      --disk-format qcow2 \
      --file ceos-switch-host.qcow2 \
      --property hw_firmware_type=uefi \
-     --property hw_machine_type=q35
+     --property hw_machine_type=q35 \
+     --property hw_vif_model=e1000
    ```
+
+   **Note**: The `hw_vif_model=e1000` property is recommended for switch images
+   to avoid virtio checksum offloading issues when connected via OVS/OVN bridge
+   networks.
 
    **Note**: To convert to raw format (required for Ceph backends):
 
@@ -379,7 +428,8 @@ make clean
      --disk-format raw \
      --file ceos-switch-host.qcow2 \
      --property hw_firmware_type=uefi \
-     --property hw_machine_type=q35
+     --property hw_machine_type=q35 \
+     --property hw_vif_model=e1000
    ```
 
 3. See `dib/elements/hotstack-ceos/README.rst` for details on runtime
