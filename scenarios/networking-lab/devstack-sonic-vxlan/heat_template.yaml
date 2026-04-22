@@ -519,7 +519,6 @@ resources:
       image: {get_param: [switch_params, image]}
       flavor: {get_param: [switch_params, flavor]}
       config_drive: false
-      diskConfig: MANUAL
       networks:
         - port: {get_resource: spine01-machine-port}
         - port: {get_resource: spine01-switch-mgmt-port}
@@ -624,7 +623,6 @@ resources:
       image: {get_param: [switch_params, image]}
       flavor: {get_param: [switch_params, flavor]}
       config_drive: false
-      diskConfig: MANUAL
       networks:
         - port: {get_resource: spine02-machine-port}
         - port: {get_resource: spine02-switch-mgmt-port}
@@ -794,7 +792,6 @@ resources:
       image: {get_param: [switch_params, image]}
       flavor: {get_param: [switch_params, flavor]}
       config_drive: false
-      diskConfig: MANUAL
       networks:
         - port: {get_resource: leaf01-machine-port}
         - port: {get_resource: leaf01-switch-mgmt-port}
@@ -900,7 +897,6 @@ resources:
       image: {get_param: [switch_params, image]}
       flavor: {get_param: [switch_params, flavor]}
       config_drive: false
-      diskConfig: MANUAL
       networks:
         - port: {get_resource: leaf02-machine-port}
         - port: {get_resource: leaf02-switch-mgmt-port}

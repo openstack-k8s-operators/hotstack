@@ -2,8 +2,8 @@
 heat_template_version: rocky
 
 description: >
-  Heat template for networking lab with spine-and-leaf Arista cEOS setup.
-  Includes 4 switches (spine01, spine02, leaf01, leaf02), 1 devstack node, and 2 ironic nodes.
+  Heat template for networking lab with single SONiC switch using simple VLAN trunking (no VXLAN).
+  Includes 1 switch, 1 devstack node, and 2 ironic nodes.
 
 parameters:
   dns_servers:
@@ -42,12 +42,11 @@ parameters:
     type: json
     default:
       image: CentOS-Stream-GenericCloud-9
-      cd_image: sushy-tools-blank-image
       flavor: hotstack.medium
   switch_params:
     type: json
     default:
-      image: hotstack-ceos
+      image: hotstack-sonic
       flavor: hotstack.medium
   cdrom_disk_bus:
     type: string
@@ -71,40 +70,7 @@ resources:
       port_security_enabled: false
       value_specs: {get_param: net_value_specs}
 
-  # Spine switch interconnect
-  spine-link-net:
-    type: OS::Neutron::Net
-    properties:
-      port_security_enabled: false
-      value_specs: {get_param: net_value_specs}
-
-  # Leaf to spine links
-  leaf01-spine01-net:
-    type: OS::Neutron::Net
-    properties:
-      port_security_enabled: false
-      value_specs: {get_param: net_value_specs}
-
-  leaf01-spine02-net:
-    type: OS::Neutron::Net
-    properties:
-      port_security_enabled: false
-      value_specs: {get_param: net_value_specs}
-
-  leaf02-spine01-net:
-    type: OS::Neutron::Net
-    properties:
-      port_security_enabled: false
-      value_specs: {get_param: net_value_specs}
-
-  leaf02-spine02-net:
-    type: OS::Neutron::Net
-    properties:
-      port_security_enabled: false
-      value_specs: {get_param: net_value_specs}
-
   # Simple bridge networks for server attachments
-  # These are just L2 connectivity - VLANs and configuration managed by ML2
   devstack-br-net:
     type: OS::Neutron::Net
     properties:
@@ -123,15 +89,7 @@ resources:
       port_security_enabled: false
       value_specs: {get_param: net_value_specs}
 
-  # Trunk network for leaf01 switch
-  leaf01-trunk-net:
-    type: OS::Neutron::Net
-    properties:
-      port_security_enabled: false
-      value_specs: {get_param: net_value_specs}
-
-  # Shared VLAN networks for physical network connectivity
-  public-vlan100:
+  trunk-net:
     type: OS::Neutron::Net
     properties:
       port_security_enabled: false
@@ -168,51 +126,6 @@ resources:
       dns_nameservers:
         - 192.168.32.254
 
-  spine-link-subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      network: {get_resource: spine-link-net}
-      ip_version: 4
-      cidr: 10.1.1.0/30
-      enable_dhcp: false
-      gateway_ip: null
-
-  leaf01-spine01-subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      network: {get_resource: leaf01-spine01-net}
-      ip_version: 4
-      cidr: 10.1.1.4/30
-      enable_dhcp: false
-      gateway_ip: null
-
-  leaf01-spine02-subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      network: {get_resource: leaf01-spine02-net}
-      ip_version: 4
-      cidr: 10.1.1.8/30
-      enable_dhcp: false
-      gateway_ip: null
-
-  leaf02-spine01-subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      network: {get_resource: leaf02-spine01-net}
-      ip_version: 4
-      cidr: 10.1.1.12/30
-      enable_dhcp: false
-      gateway_ip: null
-
-  leaf02-spine02-subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      network: {get_resource: leaf02-spine02-net}
-      ip_version: 4
-      cidr: 10.1.1.16/30
-      enable_dhcp: false
-      gateway_ip: null
-
   devstack-br-subnet:
     type: OS::Neutron::Subnet
     properties:
@@ -240,25 +153,14 @@ resources:
       enable_dhcp: false
       gateway_ip: null
 
-  # Leaf01 trunk subnet
-  leaf01-trunk-subnet:
+  trunk-subnet:
     type: OS::Neutron::Subnet
     properties:
-      network: {get_resource: leaf01-trunk-net}
+      network: {get_resource: trunk-net}
       ip_version: 4
-      cidr: 172.20.20.0/24
+      cidr: 172.20.2.0/24
       enable_dhcp: false
       gateway_ip: null
-
-  # Shared VLAN subnets
-  public-vlan100-subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      network: {get_resource: public-vlan100}
-      ip_version: 4
-      cidr: 172.20.0.0/24
-      gateway_ip: 172.20.0.1
-      enable_dhcp: false
 
   tenant-vlan103-subnet:
     type: OS::Neutron::Subnet
@@ -266,8 +168,8 @@ resources:
       network: {get_resource: tenant-vlan103}
       ip_version: 4
       cidr: 172.20.3.0/24
-      gateway_ip: null
       enable_dhcp: false
+      gateway_ip: null
 
   tenant-vlan104-subnet:
     type: OS::Neutron::Subnet
@@ -275,8 +177,8 @@ resources:
       network: {get_resource: tenant-vlan104}
       ip_version: 4
       cidr: 172.20.4.0/24
-      gateway_ip: null
       enable_dhcp: false
+      gateway_ip: null
 
   tenant-vlan105-subnet:
     type: OS::Neutron::Subnet
@@ -284,8 +186,8 @@ resources:
       network: {get_resource: tenant-vlan105}
       ip_version: 4
       cidr: 172.20.5.0/24
-      gateway_ip: null
       enable_dhcp: false
+      gateway_ip: null
 
   #
   # Routers
@@ -347,25 +249,13 @@ resources:
                 template: |
                   # Host records
                   host-record=controller-0.stack.lab,$controller0
-                  host-record=spine01-host.stack.lab,$spine01_host
-                  host-record=spine01.stack.lab,$spine01
-                  host-record=spine02-host.stack.lab,$spine02_host
-                  host-record=spine02.stack.lab,$spine02
-                  host-record=leaf01-host.stack.lab,$leaf01_host
-                  host-record=leaf01.stack.lab,$leaf01
-                  host-record=leaf02-host.stack.lab,$leaf02_host
-                  host-record=leaf02.stack.lab,$leaf02
+                  host-record=switch-host.stack.lab,$switch_host
+                  host-record=switch.stack.lab,$switch
                   host-record=devstack.stack.lab,$devstack
                 params:
                   $controller0: {get_attr: [controller-machine-port, fixed_ips, 0, ip_address]}
-                  $spine01_host: {get_attr: [spine01-machine-port, fixed_ips, 0, ip_address]}
-                  $spine01: {get_attr: [spine01-switch-mgmt-port, fixed_ips, 0, ip_address]}
-                  $spine02_host: {get_attr: [spine02-machine-port, fixed_ips, 0, ip_address]}
-                  $spine02: {get_attr: [spine02-switch-mgmt-port, fixed_ips, 0, ip_address]}
-                  $leaf01_host: {get_attr: [leaf01-machine-port, fixed_ips, 0, ip_address]}
-                  $leaf01: {get_attr: [leaf01-switch-mgmt-port, fixed_ips, 0, ip_address]}
-                  $leaf02_host: {get_attr: [leaf02-machine-port, fixed_ips, 0, ip_address]}
-                  $leaf02: {get_attr: [leaf02-switch-mgmt-port, fixed_ips, 0, ip_address]}
+                  $switch_host: {get_attr: [switch-machine-port, fixed_ips, 0, ip_address]}
+                  $switch: {get_attr: [switch-switch-mgmt-port, fixed_ips, 0, ip_address]}
                   $devstack: {get_attr: [devstack-machine-port, fixed_ips, 0, ip_address]}
             owner: root:dnsmasq
           - path: /etc/resolv.conf
@@ -384,6 +274,9 @@ resources:
       cloud_config:
         runcmd:
           - ['setenforce', 'permissive']
+          - ['sed', '-i', 's/Listen 80/Listen 8081/g', '/etc/httpd/conf/httpd.conf']
+          - ['systemctl', 'enable', 'httpd.service']
+          - ['systemctl', 'start', 'httpd.service']
           - ['systemctl', 'enable', 'dnsmasq.service']
           - ['systemctl', 'start', 'dnsmasq.service']
 
@@ -421,16 +314,14 @@ resources:
       user_data: {get_resource: controller-init}
 
   #
-  # Spine Switches
+  # SONiC Switch
   #
-
-  # Spine01 Switch
-  spine01-init:
+  switch-init:
     type: OS::Heat::CloudConfig
     properties:
       cloud_config:
-        hostname: spine01
-        fqdn: spine01.stack.lab
+        hostname: switch
+        fqdn: switch.stack.lab
         users:
           - default
           - name: zuul
@@ -440,23 +331,41 @@ resources:
               - {get_param: controller_ssh_pub_key}
               - {get_param: dataplane_ssh_pub_key}
         write_files:
-          - path: /etc/hotstack-ceos/config
+          - path: /etc/hotstack-sonic/config
             content: |
               MGMT_INTERFACE=eth0
               SWITCH_INTERFACE_START=eth1
               SWITCH_INTERFACE_COUNT=4
-              SWITCH_HOSTNAME=spine01
-              CEOS_IMAGE=localhost/ceos:latest
+              SWITCH_HOSTNAME=switch
             owner: root:root
             permissions: '0644'
-          - path: /etc/hotstack-ceos/startup-config
-            content: {get_file: spine01-startup.cfg}
+          - path: /etc/hotstack-sonic/config_db.json
+            content: {get_file: switch-config_db.json}
+            owner: root:root
+            permissions: '0644'
+          - path: /etc/hotstack-sonic/bgpd.conf
+            content: {get_file: switch-bgpd.conf}
+            owner: root:root
+            permissions: '0644'
+          - path: /etc/hotstack-sonic/ospfd.conf
+            content: {get_file: switch-ospfd.conf}
+            owner: root:root
+            permissions: '0644'
+          - path: /etc/hotstack-sonic/authorized_keys
+            content:
+              str_replace:
+                template: |
+                  $CONTROLLER_KEY
+                  $DATAPLANE_KEY
+                params:
+                  $CONTROLLER_KEY: {get_param: controller_ssh_pub_key}
+                  $DATAPLANE_KEY: {get_param: dataplane_ssh_pub_key}
             owner: root:root
             permissions: '0644'
         runcmd:
-          - systemctl start ceos.service
+          - systemctl start sonic.service
 
-  spine01-machine-port:
+  switch-machine-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: machine-net}
@@ -465,7 +374,7 @@ resources:
       fixed_ips:
         - ip_address: 192.168.32.11
 
-  spine01-switch-mgmt-port:
+  switch-switch-mgmt-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: machine-net}
@@ -474,366 +383,78 @@ resources:
       fixed_ips:
         - ip_address: 192.168.32.111
 
-  spine01-spine-link-port:
+  switch-trunk-parent-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: spine-link-net}
+      network: {get_resource: trunk-net}
       port_security_enabled: false
       mac_address: "22:57:f8:dd:01:02"
 
-  spine01-leaf01-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf01-spine01-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:01:04"
-
-  spine01-leaf02-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf02-spine01-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:01:05"
-
-  spine01:
-    type: OS::Nova::Server
-    properties:
-      image: {get_param: [switch_params, image]}
-      flavor: {get_param: [switch_params, flavor]}
-      config_drive: false
-      networks:
-        - port: {get_resource: spine01-machine-port}
-        - port: {get_resource: spine01-switch-mgmt-port}
-        - port: {get_resource: spine01-spine-link-port}
-        - port: {get_resource: spine01-leaf01-port}
-        - port: {get_resource: spine01-leaf02-port}
-      user_data_format: RAW
-      user_data: {get_resource: spine01-init}
-
-  # Spine02 Switch
-  spine02-init:
-    type: OS::Heat::CloudConfig
-    properties:
-      cloud_config:
-        hostname: spine02
-        fqdn: spine02.stack.lab
-        users:
-          - default
-          - name: zuul
-            gecos: "Zuul user"
-            sudo: ALL=(ALL) NOPASSWD:ALL
-            ssh_authorized_keys:
-              - {get_param: controller_ssh_pub_key}
-              - {get_param: dataplane_ssh_pub_key}
-        write_files:
-          - path: /etc/hotstack-ceos/config
-            content: |
-              MGMT_INTERFACE=eth0
-              SWITCH_INTERFACE_START=eth1
-              SWITCH_INTERFACE_COUNT=4
-              SWITCH_HOSTNAME=spine02
-              CEOS_IMAGE=localhost/ceos:latest
-            owner: root:root
-            permissions: '0644'
-          - path: /etc/hotstack-ceos/startup-config
-            content: {get_file: spine02-startup.cfg}
-            owner: root:root
-            permissions: '0644'
-        runcmd:
-          - systemctl start ceos.service
-
-  spine02-machine-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: machine-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:02:01"
-      fixed_ips:
-        - ip_address: 192.168.32.12
-
-  spine02-switch-mgmt-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: machine-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:02:10"
-      fixed_ips:
-        - ip_address: 192.168.32.112
-
-  spine02-spine-link-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: spine-link-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:02:02"
-
-  spine02-leaf01-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf01-spine02-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:02:04"
-
-  spine02-leaf02-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf02-spine02-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:02:05"
-
-  spine02:
-    type: OS::Nova::Server
-    properties:
-      image: {get_param: [switch_params, image]}
-      flavor: {get_param: [switch_params, flavor]}
-      config_drive: false
-      networks:
-        - port: {get_resource: spine02-machine-port}
-        - port: {get_resource: spine02-switch-mgmt-port}
-        - port: {get_resource: spine02-spine-link-port}
-        - port: {get_resource: spine02-leaf01-port}
-        - port: {get_resource: spine02-leaf02-port}
-      user_data_format: RAW
-      user_data: {get_resource: spine02-init}
-
-  #
-  # Leaf Switches
-  #
-
-  # Leaf01 Switch
-  leaf01-init:
-    type: OS::Heat::CloudConfig
-    properties:
-      cloud_config:
-        hostname: leaf01
-        fqdn: leaf01.stack.lab
-        users:
-          - default
-          - name: zuul
-            gecos: "Zuul user"
-            sudo: ALL=(ALL) NOPASSWD:ALL
-            ssh_authorized_keys:
-              - {get_param: controller_ssh_pub_key}
-              - {get_param: dataplane_ssh_pub_key}
-        write_files:
-          - path: /etc/hotstack-ceos/config
-            content: |
-              MGMT_INTERFACE=eth0
-              SWITCH_INTERFACE_START=eth1
-              SWITCH_INTERFACE_COUNT=5
-              SWITCH_HOSTNAME=leaf01
-              CEOS_IMAGE=localhost/ceos:latest
-            owner: root:root
-            permissions: '0644'
-          - path: /etc/hotstack-ceos/startup-config
-            content: {get_file: leaf01-startup.cfg}
-            owner: root:root
-            permissions: '0644'
-        runcmd:
-          - systemctl start ceos.service
-
-  leaf01-machine-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: machine-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:03:01"
-      fixed_ips:
-        - ip_address: 192.168.32.13
-
-  leaf01-switch-mgmt-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: machine-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:03:10"
-      fixed_ips:
-        - ip_address: 192.168.32.113
-
-  leaf01-spine01-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf01-spine01-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:03:02"
-
-  leaf01-spine02-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf01-spine02-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:03:04"
-
-  leaf01-devstack-br-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: devstack-br-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:03:06"
-
-  leaf01-trunk-parent-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf01-trunk-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:03:05"
-
-  leaf01-trunk-public-vlan100-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: public-vlan100}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:03:07"
-
-  leaf01-trunk-tenant-vlan103-port:
+  switch-trunk-tenant-vlan103-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: tenant-vlan103}
       port_security_enabled: false
-      mac_address: "22:57:f8:dd:03:08"
+      mac_address: "22:57:f8:dd:01:03"
 
-  leaf01-trunk-tenant-vlan104-port:
+  switch-trunk-tenant-vlan104-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: tenant-vlan104}
       port_security_enabled: false
-      mac_address: "22:57:f8:dd:03:09"
+      mac_address: "22:57:f8:dd:01:04"
 
-  leaf01-trunk-tenant-vlan105-port:
+  switch-trunk-tenant-vlan105-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: tenant-vlan105}
       port_security_enabled: false
-      mac_address: "22:57:f8:dd:03:0a"
+      mac_address: "22:57:f8:dd:01:05"
 
-  leaf01-trunk:
+  switch-trunk:
     type: OS::Neutron::Trunk
     properties:
-      port: {get_resource: leaf01-trunk-parent-port}
+      port: {get_resource: switch-trunk-parent-port}
       sub_ports:
-        - port: {get_resource: leaf01-trunk-public-vlan100-port}
-          segmentation_id: 100
-          segmentation_type: vlan
-        - port: {get_resource: leaf01-trunk-tenant-vlan103-port}
+        - port: {get_resource: switch-trunk-tenant-vlan103-port}
           segmentation_id: 103
           segmentation_type: vlan
-        - port: {get_resource: leaf01-trunk-tenant-vlan104-port}
+        - port: {get_resource: switch-trunk-tenant-vlan104-port}
           segmentation_id: 104
           segmentation_type: vlan
-        - port: {get_resource: leaf01-trunk-tenant-vlan105-port}
+        - port: {get_resource: switch-trunk-tenant-vlan105-port}
           segmentation_id: 105
           segmentation_type: vlan
 
-  leaf02-ironic0-br-port:
+  switch-ironic0-br-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: ironic0-br-net}
       port_security_enabled: false
-      mac_address: "22:57:f8:dd:04:05"
+      mac_address: "22:57:f8:dd:01:06"
 
-  leaf01:
-    type: OS::Nova::Server
-    depends_on: leaf01-trunk
-    properties:
-      image: {get_param: [switch_params, image]}
-      flavor: {get_param: [switch_params, flavor]}
-      config_drive: false
-      networks:
-        - port: {get_resource: leaf01-machine-port}
-        - port: {get_resource: leaf01-switch-mgmt-port}
-        - port: {get_resource: leaf01-spine01-port}
-        - port: {get_resource: leaf01-spine02-port}
-        - port: {get_attr: [leaf01-trunk, port_id]}
-        - port: {get_resource: leaf01-devstack-br-port}
-      user_data_format: RAW
-      user_data: {get_resource: leaf01-init}
-
-  # Leaf02 Switch
-  leaf02-init:
-    type: OS::Heat::CloudConfig
-    properties:
-      cloud_config:
-        hostname: leaf02
-        fqdn: leaf02.stack.lab
-        users:
-          - default
-          - name: zuul
-            gecos: "Zuul user"
-            sudo: ALL=(ALL) NOPASSWD:ALL
-            ssh_authorized_keys:
-              - {get_param: controller_ssh_pub_key}
-              - {get_param: dataplane_ssh_pub_key}
-        write_files:
-          - path: /etc/hotstack-ceos/config
-            content: |
-              MGMT_INTERFACE=eth0
-              SWITCH_INTERFACE_START=eth1
-              SWITCH_INTERFACE_COUNT=5
-              SWITCH_HOSTNAME=leaf02
-              CEOS_IMAGE=localhost/ceos:latest
-            owner: root:root
-            permissions: '0644'
-          - path: /etc/hotstack-ceos/startup-config
-            content: {get_file: leaf02-startup.cfg}
-            owner: root:root
-            permissions: '0644'
-        runcmd:
-          - systemctl start ceos.service
-
-  leaf02-machine-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: machine-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:04:01"
-      fixed_ips:
-        - ip_address: 192.168.32.14
-
-  leaf02-switch-mgmt-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: machine-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:04:10"
-      fixed_ips:
-        - ip_address: 192.168.32.114
-
-  leaf02-spine01-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf02-spine01-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:04:02"
-
-  leaf02-spine02-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: leaf02-spine02-net}
-      port_security_enabled: false
-      mac_address: "22:57:f8:dd:04:04"
-
-  leaf02-ironic1-br-port:
+  switch-ironic1-br-port:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: ironic1-br-net}
       port_security_enabled: false
-      mac_address: "22:57:f8:dd:04:06"
+      mac_address: "22:57:f8:dd:01:07"
 
-  leaf02:
+  switch:
     type: OS::Nova::Server
+    depends_on: switch-trunk
     properties:
       image: {get_param: [switch_params, image]}
       flavor: {get_param: [switch_params, flavor]}
       config_drive: false
       networks:
-        - port: {get_resource: leaf02-machine-port}
-        - port: {get_resource: leaf02-switch-mgmt-port}
-        - port: {get_resource: leaf02-spine01-port}
-        - port: {get_resource: leaf02-spine02-port}
-        - port: {get_resource: leaf02-ironic0-br-port}
-        - port: {get_resource: leaf02-ironic1-br-port}
+        - port: {get_resource: switch-machine-port}
+        - port: {get_resource: switch-switch-mgmt-port}
+        - port: {get_attr: [switch-trunk, port_id]}
+        - port: {get_resource: switch-ironic0-br-port}
+        - port: {get_resource: switch-ironic1-br-port}
       user_data_format: RAW
-      user_data: {get_resource: leaf02-init}
+      user_data: {get_resource: switch-init}
 
   #
   # Devstack Instance
@@ -860,7 +481,6 @@ resources:
         hostname: devstack
         fqdn: devstack.stack.lab
 
-
   devstack-write-files:
     type: OS::Heat::CloudConfig
     properties:
@@ -869,11 +489,6 @@ resources:
           - path: /etc/hotstack/local.conf.j2
             content:
               get_file: local.conf.j2
-            owner: root:root
-            permissions: '0644'
-          - path: /etc/neutron/l2vni_network_nodes.yaml
-            content:
-              get_file: l2vni_network_nodes.yaml
             owner: root:root
             permissions: '0644'
 
@@ -897,29 +512,23 @@ resources:
   devstack-trunk-parent-port:
     type: OS::Neutron::Port
     properties:
-      network: {get_resource: devstack-br-net}
+      network: {get_resource: trunk-net}
       port_security_enabled: false
       mac_address: "fa:16:9e:81:f6:21"
 
-  devstack-public-vlan100-port:
-    type: OS::Neutron::Port
-    properties:
-      network: {get_resource: public-vlan100}
-      port_security_enabled: false
-
-  devstack-tenant-vlan103-port:
+  devstack-tenant-vlan103-subport:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: tenant-vlan103}
       port_security_enabled: false
 
-  devstack-tenant-vlan104-port:
+  devstack-tenant-vlan104-subport:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: tenant-vlan104}
       port_security_enabled: false
 
-  devstack-tenant-vlan105-port:
+  devstack-tenant-vlan105-subport:
     type: OS::Neutron::Port
     properties:
       network: {get_resource: tenant-vlan105}
@@ -930,16 +539,13 @@ resources:
     properties:
       port: {get_resource: devstack-trunk-parent-port}
       sub_ports:
-        - port: {get_resource: devstack-public-vlan100-port}
-          segmentation_id: 100
-          segmentation_type: vlan
-        - port: {get_resource: devstack-tenant-vlan103-port}
+        - port: {get_resource: devstack-tenant-vlan103-subport}
           segmentation_id: 103
           segmentation_type: vlan
-        - port: {get_resource: devstack-tenant-vlan104-port}
+        - port: {get_resource: devstack-tenant-vlan104-subport}
           segmentation_id: 104
           segmentation_type: vlan
-        - port: {get_resource: devstack-tenant-vlan105-port}
+        - port: {get_resource: devstack-tenant-vlan105-subport}
           segmentation_id: 105
           segmentation_type: vlan
 
@@ -968,18 +574,7 @@ resources:
     type: OS::Nova::Server
     properties:
       flavor: {get_param: [ironic_params, flavor]}
-      block_device_mapping_v2:
-        - device_type: disk
-          boot_index: 1
-          image_id: {get_param: [ironic_params, image]}
-          volume_size: 40
-          delete_on_termination: true
-        - device_type: cdrom
-          disk_bus: {get_param: cdrom_disk_bus}
-          boot_index: 0
-          image_id: {get_param: [ironic_params, cd_image]}
-          volume_size: 5
-          delete_on_termination: true
+      image: {get_param: [ironic_params, image]}
       networks:
         - port: {get_resource: ironic0-port}
 
@@ -993,18 +588,7 @@ resources:
     type: OS::Nova::Server
     properties:
       flavor: {get_param: [ironic_params, flavor]}
-      block_device_mapping_v2:
-        - device_type: disk
-          boot_index: 1
-          image_id: {get_param: [ironic_params, image]}
-          volume_size: 40
-          delete_on_termination: true
-        - device_type: cdrom
-          disk_bus: {get_param: cdrom_disk_bus}
-          boot_index: 0
-          image_id: {get_param: [ironic_params, cd_image]}
-          volume_size: 5
-          delete_on_termination: true
+      image: {get_param: [ironic_params, image]}
       networks:
         - port: {get_resource: ironic1-port}
 
@@ -1053,14 +637,14 @@ outputs:
               macaddress: "fa:16:9e:81:f6:20"
             dhcp4: true
             set-name: "enp3s0"
-            mtu: 1442
-          trunk0:
+            mtu: 1500
+          enp4s0:
             match:
               macaddress: "fa:16:9e:81:f6:21"
             dhcp4: false
             dhcp6: false
             set-name: trunk0
-            mtu: 1442
+            mtu: 1500
 
   sushy_emulator_uuids:
     description: UUIDs of instances to manage with sushy-tools - RedFish virtual BMC
@@ -1100,9 +684,9 @@ outputs:
             - address: {get_attr: [ironic0-port, mac_address]}
               physical_network: public
               local_link_connection:
-                switch_info: leaf02.stack.lab
-                switch_id: "22:57:f8:dd:04:01"
-                port_id: "Ethernet3"
+                switch_info: switch.stack.lab
+                switch_id: "22:57:f8:dd:01:01"
+                port_id: "Ethernet4"
         - name: ironic1
           driver: redfish
           bios_interface: no-bios
@@ -1127,9 +711,9 @@ outputs:
             - address: {get_attr: [ironic1-port, mac_address]}
               physical_network: public
               local_link_connection:
-                switch_info: leaf02.stack.lab
-                switch_id: "22:57:f8:dd:04:01"
-                port_id: "Ethernet4"
+                switch_info: switch.stack.lab
+                switch_id: "22:57:f8:dd:01:01"
+                port_id: "Ethernet8"
 
   ansible_inventory:
     description: Ansible inventory
@@ -1155,23 +739,8 @@ outputs:
             ansible_ssh_private_key_file: '~/.ssh/id_rsa'
       switches:
         hosts:
-          spine01:
-            ansible_host: {get_attr: [spine01-machine-port, fixed_ips, 0, ip_address]}
-            ansible_user: admin
-            ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
-            ansible_ssh_private_key_file: '~/.ssh/id_rsa'
-          spine02:
-            ansible_host: {get_attr: [spine02-machine-port, fixed_ips, 0, ip_address]}
-            ansible_user: admin
-            ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
-            ansible_ssh_private_key_file: '~/.ssh/id_rsa'
-          leaf01:
-            ansible_host: {get_attr: [leaf01-machine-port, fixed_ips, 0, ip_address]}
-            ansible_user: admin
-            ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
-            ansible_ssh_private_key_file: '~/.ssh/id_rsa'
-          leaf02:
-            ansible_host: {get_attr: [leaf02-machine-port, fixed_ips, 0, ip_address]}
+          switch:
+            ansible_host: {get_attr: [switch-machine-port, fixed_ips, 0, ip_address]}
             ansible_user: admin
             ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
             ansible_ssh_private_key_file: '~/.ssh/id_rsa'
