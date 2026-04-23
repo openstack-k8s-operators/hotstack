@@ -51,9 +51,9 @@
           networker_params:
             image: cs9stream-genericcloud
           bmh_params:
-            image: cs9stream-genericcloud
+            image: sushy-tools-blank-image
           ironic_params:
-            image: cs9stream-genericcloud
+            image: sushy-tools-blank-image
             # vpu: 2 ram 4GB disk: 40GB
             flavor: ci.m1.medium
       hotstack_enable_nova_console_poller: true
