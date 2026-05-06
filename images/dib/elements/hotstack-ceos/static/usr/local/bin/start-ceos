@@ -56,6 +56,7 @@ class CeosConfig:
         self.switch_interface_count = 5
         self.switch_hostname = "ceos"
         self.ceos_image = "localhost/ceos:latest"
+        self.enable_switch_port_promisc = True
 
     def load_from_file(self, config_file: str = CONFIG_FILE) -> None:
         """Load configuration from shell-style config file.
@@ -87,6 +88,8 @@ class CeosConfig:
                         self.switch_hostname = value
                     elif key == "CEOS_IMAGE":
                         self.ceos_image = value
+                    elif key == "ENABLE_SWITCH_PORT_PROMISC":
+                        self.enable_switch_port_promisc = value.lower() != "false"
 
     def log_config(self) -> None:
         """Log the current configuration to stderr."""
@@ -96,6 +99,9 @@ class CeosConfig:
         LOG.info(f"  Switch Interface Count: {self.switch_interface_count}")
         LOG.info(f"  Switch Hostname: {self.switch_hostname}")
         LOG.info(f"  cEOS Image: {self.ceos_image}")
+        LOG.info(
+            f"  Enable switch port promisc (eth1+): {self.enable_switch_port_promisc}"
+        )
 
 
 def run_command(
@@ -259,7 +265,10 @@ def parse_interface_name(interface: str) -> Tuple[str, int]:
 
 
 def attach_interface_to_container(
-    interface: str, container_pid: int, container_if_name: str
+    interface: str,
+    container_pid: int,
+    container_if_name: str,
+    config: CeosConfig,
 ):
     """Attach a network interface to the container namespace.
 
@@ -268,6 +277,7 @@ def attach_interface_to_container(
     :param interface: Host interface name to move
     :param container_pid: PID of the target container
     :param container_if_name: New name for the interface inside the container
+    :param config: Host configuration (promisc on dataplane eth1+ if enabled)
     """
     LOG.info(f"Attaching {interface} to container as {container_if_name}...")
 
@@ -302,6 +312,23 @@ def attach_interface_to_container(
             "up",
         ]
     )
+
+    if config.enable_switch_port_promisc and container_if_name != "eth0":
+        LOG.info(f"Enabling promiscuous mode on {container_if_name} in container...")
+        run_command(
+            [
+                "nsenter",
+                "-t",
+                str(container_pid),
+                "-n",
+                "ip",
+                "link",
+                "set",
+                container_if_name,
+                "promisc",
+                "on",
+            ]
+        )
 
 
 def start_ceos_container(config: CeosConfig):
@@ -419,7 +446,7 @@ def setup_networking(config: CeosConfig):
             continue
 
         LOG.info(f"Moving {host_if} to container as {container_if}...")
-        attach_interface_to_container(host_if, container_pid, container_if)
+        attach_interface_to_container(host_if, container_pid, container_if, config)
 
     LOG.info("Networking setup complete")
     return True
