@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-config-v1
+  namespace: kube-system
+  annotations:
+    description: "Minimal cluster config for MicroShift compatibility with OpenStack operators"
+data:
+  install-config: |
+    # MicroShift compatibility shim
+    # OpenStack operators check this ConfigMap to detect FIPS mode
+    # We fake this as false for MicroShift compatibility
+    fips: false
