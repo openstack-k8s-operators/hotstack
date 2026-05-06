@@ -447,6 +447,7 @@ resources:
               SWITCH_INTERFACE_COUNT=4
               SWITCH_HOSTNAME=spine01
               CEOS_IMAGE=localhost/ceos:latest
+              ENABLE_SWITCH_PORT_PROMISC=true
             owner: root:root
             permissions: '0644'
           - path: /etc/hotstack-ceos/startup-config
@@ -533,6 +534,7 @@ resources:
               SWITCH_INTERFACE_COUNT=4
               SWITCH_HOSTNAME=spine02
               CEOS_IMAGE=localhost/ceos:latest
+              ENABLE_SWITCH_PORT_PROMISC=true
             owner: root:root
             permissions: '0644'
           - path: /etc/hotstack-ceos/startup-config
@@ -623,6 +625,7 @@ resources:
               SWITCH_INTERFACE_COUNT=5
               SWITCH_HOSTNAME=leaf01
               CEOS_IMAGE=localhost/ceos:latest
+              ENABLE_SWITCH_PORT_PROMISC=true
             owner: root:root
             permissions: '0644'
           - path: /etc/hotstack-ceos/startup-config
@@ -771,6 +774,7 @@ resources:
               SWITCH_INTERFACE_COUNT=5
               SWITCH_HOSTNAME=leaf02
               CEOS_IMAGE=localhost/ceos:latest
+              ENABLE_SWITCH_PORT_PROMISC=true
             owner: root:root
             permissions: '0644'
           - path: /etc/hotstack-ceos/startup-config

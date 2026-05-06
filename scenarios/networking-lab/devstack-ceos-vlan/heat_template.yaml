@@ -338,6 +338,7 @@ resources:
               SWITCH_INTERFACE_COUNT=4
               SWITCH_HOSTNAME=switch
               CEOS_IMAGE=localhost/ceos:latest
+              ENABLE_SWITCH_PORT_PROMISC=true
             owner: root:root
             permissions: '0644'
           - path: /etc/hotstack-ceos/startup-config
