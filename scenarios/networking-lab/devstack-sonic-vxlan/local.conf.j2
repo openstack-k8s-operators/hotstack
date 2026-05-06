@@ -115,6 +115,10 @@ disable_service s-proxy s-object s-container s-account
 # Disable Horizon dashboard
 disable_service horizon
 
+[[post-config|/etc/ironic/ironic.conf]]
+[conductor]
+power_state_change_timeout = 90
+
 [[post-config|$NEUTRON_CONF]]
 [DEFAULT]
 global_physnet_mtu = 1500
