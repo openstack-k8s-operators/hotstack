@@ -15,7 +15,7 @@
 ## OSPF Not Working
 - Verify OSPF is running: `show ip ospf`
 - Check OSPF neighbors: `show ip ospf neighbor`
-- Verify interface MTU matches (1442): `show interface Ethernet1`
+- Verify interface MTU matches on both ends: `show interface Ethernet1`
 - Check OSPF interface configuration: `show ip ospf interface`
 
 ## BGP EVPN Not Working
@@ -23,6 +23,15 @@
 - Check BGP EVPN neighbors: `show bgp evpn summary`
 - Verify loopback reachability: `ping 10.255.255.1 source 10.255.255.3`
 - Check BGP configuration: `show running-config section bgp`
+
+## VLAN-to-VNI mapping / learned MACs and IPs
+- Confirm VLAN ↔ VNI binding: `show vxlan vni`
+- Learned MACs on overlay: `show vxlan address-table`
+- Learned MACs on local VLAN ports: `show mac address-table dynamic` (narrow with `vlan <vlan-id>`)
+- EVPN Type-2 MAC/IP routes: `show bgp evpn route-type mac-ip`
+
+## Packet capture on cEOS (tcpdump in bash)
+- `bash` → `sudo tcpdump -i eth3` (Linux `ethN` from `ip link`, not `EthernetN`)
 
 ## Devstack Deployment Issues
 - Check network connectivity on trunk0: `ip link show trunk0`

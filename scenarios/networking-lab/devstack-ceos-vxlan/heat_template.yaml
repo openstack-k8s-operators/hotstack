@@ -1057,14 +1057,12 @@ outputs:
               macaddress: "fa:16:9e:81:f6:20"
             dhcp4: true
             set-name: "enp3s0"
-            mtu: 1442
           trunk0:
             match:
               macaddress: "fa:16:9e:81:f6:21"
             dhcp4: false
             dhcp6: false
             set-name: trunk0
-            mtu: 1442
 
   sushy_emulator_uuids:
     description: UUIDs of instances to manage with sushy-tools - RedFish virtual BMC
