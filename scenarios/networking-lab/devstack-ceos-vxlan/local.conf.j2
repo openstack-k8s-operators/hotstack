@@ -8,9 +8,8 @@ SERVICE_PASSWORD=$ADMIN_PASSWORD
 # Service timeouts
 SERVICE_TIMEOUT=120
 
-# MTU - running inside an encapsulated environment, restrict to 1442 on the
-# physical network so VXLAN tenant networks get 1442 - 50 = 1392 effective MTU.
-PUBLIC_BRIDGE_MTU=1442
+# MTU - use standard 1500 on the physical network
+PUBLIC_BRIDGE_MTU=1500
 
 # Networking
 HOST_IP=192.168.32.20
@@ -34,9 +33,10 @@ disable_service n-net
 enable_service q-svc
 # Disable traditional neutron agents
 disable_service q-agt
-disable_service q-dhcp
 disable_service q-l3
 disable_service q-meta
+# Temporary troubleshooting override: run Neutron DHCP agent alongside OVN DHCP.
+enable_service q-dhcp
 # Enable OVN services
 enable_service ovn-northd
 enable_service ovn-controller
@@ -122,7 +122,10 @@ power_state_change_timeout = 90
 
 [[post-config|$NEUTRON_CONF]]
 [DEFAULT]
-global_physnet_mtu = 1442
+global_physnet_mtu = 1500
+
+[ovn]
+disable_ovn_dhcp_for_baremetal_ports = true
 
 [baremetal_agent]
 enable_ha_chassis_group_alignment = False
