@@ -138,6 +138,24 @@
       - ^roles/ocp_agent_installer/.*
 
 - job:
+    name: vexxhost-hotstack-3-nodes-ocp-latest
+    parent: vexxhost-hotstack-3-nodes
+    description: |
+      Hotstack scenario: 3-nodes with OpenShift latest
+    vars:
+      hotstack_overrides:
+        openshift_version: latest
+
+- job:
+    name: vexxhost-hotstack-3-nodes-ocp-stable
+    parent: vexxhost-hotstack-3-nodes
+    description: |
+      Hotstack scenario: 3-nodes with OpenShift stable
+    vars:
+      hotstack_overrides:
+        openshift_version: stable
+
+- job:
     name: vexxhost-hotstack-3-nodes-update
     parent: base-hotstack-vexxhost
     nodeset: hotstack-image-vexxhost
