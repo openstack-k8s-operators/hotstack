@@ -23,6 +23,9 @@
 - name: Install Openshift Container Platform
   ansible.builtin.import_playbook: 03-install_ocp.yml
 
+- name: Setup MicroShift
+  ansible.builtin.import_playbook: 03-setup_microshift.yml
+
 - name: Deploy RedFish Virtual BMC
   ansible.builtin.import_playbook: 04-redfish_virtual_bmc.yml
 

@@ -1,0 +1,241 @@
+{% raw %}
+---
+apiVersion: v1
+data:
+  server-ca-passphrase: MTIzNDU2Nzg=
+kind: Secret
+metadata:
+  name: octavia-ca-passphrase
+  namespace: openstack
+type: Opaque
+---
+apiVersion: v1
+data:
+  AdminPassword: MTIzNDU2Nzg=
+  AodhDatabasePassword: MTIzNDU2Nzg=
+  AodhPassword: MTIzNDU2Nzg=
+  BarbicanDatabasePassword: MTIzNDU2Nzg=
+  BarbicanPassword: MTIzNDU2Nzg=
+  BarbicanSimpleCryptoKEK: r0wDZ1zrD5upafX9RDfYqvDkW2LENBWH7Gz9+Tr3NdM=
+  CeilometerPassword: MTIzNDU2Nzg=
+  CinderDatabasePassword: MTIzNDU2Nzg=
+  CinderPassword: MTIzNDU2Nzg=
+  DatabasePassword: MTIzNDU2Nzg=
+  DbRootPassword: MTIzNDU2Nzg=
+  DesignateDatabasePassword: MTIzNDU2Nzg=
+  DesignatePassword: MTIzNDU2Nzg=
+  GlanceDatabasePassword: MTIzNDU2Nzg=
+  GlancePassword: MTIzNDU2Nzg=
+  HeatAuthEncryptionKey: NzY3YzNlZDA1NmNiYWEzYjlkZmVkYjhjNmY4MjViZjA=
+  HeatDatabasePassword: MTIzNDU2Nzg=
+  HeatPassword: MTIzNDU2Nzg=
+  IronicDatabasePassword: MTIzNDU2Nzg=
+  IronicInspectorDatabasePassword: MTIzNDU2Nzg=
+  IronicInspectorPassword: MTIzNDU2Nzg=
+  IronicPassword: MTIzNDU2Nzg=
+  KeystoneDatabasePassword: MTIzNDU2Nzg=
+  ManilaDatabasePassword: MTIzNDU2Nzg=
+  ManilaPassword: MTIzNDU2Nzg=
+  MetadataSecret: MTIzNDU2Nzg0Mg==
+  NeutronDatabasePassword: MTIzNDU2Nzg=
+  NeutronPassword: MTIzNDU2Nzg=
+  NovaAPIDatabasePassword: MTIzNDU2Nzg=
+  NovaCell0DatabasePassword: MTIzNDU2Nzg=
+  NovaCell1DatabasePassword: MTIzNDU2Nzg=
+  NovaPassword: MTIzNDU2Nzg=
+  OctaviaDatabasePassword: MTIzNDU2Nzg=
+  OctaviaHeartbeatKey: MTIzNDU2Nzg=
+  OctaviaPassword: MTIzNDU2Nzg=
+  PlacementDatabasePassword: MTIzNDU2Nzg=
+  PlacementPassword: MTIzNDU2Nzg=
+  SwiftPassword: MTIzNDU2Nzg=
+kind: Secret
+metadata:
+  name: osp-secret
+  namespace: openstack
+type: Opaque
+---
+apiVersion: core.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: controlplane
+  namespace: openstack
+spec:
+  barbican:
+    enabled: false
+  ceilometer:
+    enabled: false
+  cinder:
+    enabled: false
+  designate:
+    enabled: false
+  dns:
+    template:
+      options:
+      - key: server
+        values:
+        - 192.168.32.254
+      override:
+        service:
+          metadata:
+            annotations:
+              metallb.io/address-pool: ctlplane
+              metallb.io/loadBalancerIPs: 192.168.122.80
+          spec:
+            type: LoadBalancer
+      replicas: 1
+  galera:
+    enabled: true
+    templates:
+      openstack:
+        replicas: 1
+        secret: osp-secret
+        storageRequest: 5G
+  glance:
+    enabled: false
+  heat:
+    enabled: false
+  horizon:
+    enabled: false
+  ironic:
+    enabled: false
+  keystone:
+    apiOverride:
+      route: {}
+    template:
+      databaseInstance: openstack
+      override:
+        service:
+          internal:
+            metadata:
+              annotations:
+                metallb.io/address-pool: internalapi
+                metallb.io/loadBalancerIPs: 172.17.0.80
+            spec:
+              type: LoadBalancer
+      preserveJobs: false
+      replicas: 1
+      secret: osp-secret
+  manila:
+    enabled: false
+  memcached:
+    templates:
+      memcached:
+        replicas: 1
+  neutron:
+    enabled: false
+    apiOverride:
+      route: {}
+    template:
+      customServiceConfig: |
+        [DEFAULT]
+        vlan_transparent = true
+        agent_down_time = 600
+        router_distributed = true
+        router_scheduler_driver = neutron.scheduler.l3_agent_scheduler.ChanceScheduler
+        allow_automatic_l3agent_failover = true
+        debug = true
+
+        [agent]
+        report_interval = 300
+
+        [database]
+        max_retries = -1
+        db_max_retries = -1
+
+        [keystone_authtoken]
+        region_name = regionOne
+        memcache_use_advanced_pool = True
+
+        [oslo_messaging_notifications]
+        driver = noop
+
+        [oslo_middleware]
+        enable_proxy_headers_parsing = true
+
+        [oslo_policy]
+        policy_file = /etc/neutron/policy.yaml
+
+        [ovs]
+        igmp_snooping_enable = true
+
+        [ovn]
+        ovsdb_probe_interval = 60000
+        ovn_emit_need_to_frag = true
+
+        [ml2]
+{% endraw %}
+        global_physnet_mtu = {{ stack_outputs.network_mtu.ctlplane }}
+        path_mtu = {{ stack_outputs.network_mtu.tenant }}
+{% raw %}
+        type_drivers = geneve,vxlan,vlan,flat,local
+        tenant_network_types = geneve,flat
+      ml2MechanismDrivers:
+      - ovn
+      - baremetal
+      databaseInstance: openstack
+      networkAttachments:
+      - internalapi
+      override:
+        service:
+          internal:
+            metadata:
+              annotations:
+                metallb.io/address-pool: internalapi
+                metallb.io/loadBalancerIPs: 172.17.0.80
+            spec:
+              type: LoadBalancer
+      preserveJobs: false
+      replicas: 1
+      secret: osp-secret
+  nova:
+    enabled: false
+  octavia:
+    enabled: false
+  ovn:
+    template:
+      ovnController:
+        networkAttachment: tenant
+        nicMappings:
+          datacentre: ocpbr
+          ironic: ironic
+      ovnDBCluster:
+        ovndbcluster-nb:
+          dbType: NB
+          networkAttachment: internalapi
+          replicas: 1
+          storageRequest: 10G
+        ovndbcluster-sb:
+          dbType: SB
+          networkAttachment: internalapi
+          replicas: 1
+          storageRequest: 10G
+      ovnNorthd:
+        logLevel: info
+        nThreads: 1
+        replicas: 1
+        resources: {}
+        tls: {}
+  placement:
+    enabled: false
+  rabbitmq:
+    templates:
+      rabbitmq:
+        override:
+          service:
+            metadata:
+              annotations:
+                metallb.io/address-pool: internalapi
+                metallb.io/loadBalancerIPs: 172.17.0.85
+            spec:
+              type: LoadBalancer
+        replicas: 1
+  secret: osp-secret
+  storageClass: lvms-local-storage
+  notificationsBus:
+    cluster: rabbitmq
+  swift:
+    enabled: false
+  telemetry:
+    enabled: false
+{% endraw %}
