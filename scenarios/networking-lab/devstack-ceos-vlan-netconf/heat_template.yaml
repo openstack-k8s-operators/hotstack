@@ -2,7 +2,7 @@
 heat_template_version: rocky
 
 description: >
-  Heat template for networking lab with single Arista cEOS switch using simple VLAN trunking (no VXLAN).
+  Heat template for networking lab with single Arista cEOS switch using VLAN trunking and NETCONF OpenConfig.
   Includes 1 switch, 1 devstack node, and 2 ironic nodes.
 
 parameters:
