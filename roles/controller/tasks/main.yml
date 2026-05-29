@@ -205,3 +205,14 @@
       when: hotstack_git_server_enabled | bool
       ansible.builtin.include_role:
         name: hotstack_git_server
+
+    - name: Wait for dependent hosts to be reachable
+      when: wait_for_hosts | length > 0
+      ansible.builtin.wait_for:
+        host: "{{ item.host }}"
+        port: "{{ item.port }}"
+        timeout: "{{ item.timeout | default(1800) }}"
+        sleep: 10
+      loop: "{{ wait_for_hosts }}"
+      loop_control:
+        label: "{{ item.host }}:{{ item.port }}"
