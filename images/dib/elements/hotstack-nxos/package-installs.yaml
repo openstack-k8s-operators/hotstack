@@ -1,0 +1,11 @@
+---
+bash-completion:
+iproute:
+jq:
+nmap-ncat:
+nmstate:
+python3-jinja2:
+qemu-kvm:
+tcpdump:
+telnet:
+vim-enhanced:

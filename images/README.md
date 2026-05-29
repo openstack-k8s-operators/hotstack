@@ -27,6 +27,10 @@ deployments. The tasks are executed using the `make` utility.
 - **ceos**: A CentOS 9 Stream image that runs Arista cEOS (containerized EOS) as
   a podman container with macvlan networking. Built using diskimage-builder (DIB)
   with the `hotstack-ceos` element
+- **nxos**: A CentOS 9 Stream image that runs Cisco NXOS (Nexus 9300v) as a
+  nested KVM virtual machine with macvtap passthrough networking. Uses GNS3's
+  custom OVMF firmware for UEFI boot. Built using diskimage-builder (DIB) with
+  the `hotstack-nxos` element
 
 ## Download Pre-built Images
 
@@ -105,6 +109,16 @@ The following sections describe how to build images locally using the included M
   (default: `.ceos-build`).
 - `CEOS_TAR_IMAGE`: Path to the Arista cEOS tar.xz image file (e.g.,
   `cEOS64-lab-4.35.3F.tar.xz`). This is required when building the cEOS image.
+- `NXOS_IMAGE_NAME`: The name of the NXOS image file to be created (default:
+  `nxos-switch-host.qcow2`).
+- `NXOS_IMAGE_FORMAT`: The desired format for the NXOS image (default: `qcow2`).
+  Set to `raw` to convert to raw format after building.
+- `NXOS_DIB_VENV`: Path to the Python virtual environment for diskimage-builder
+  (default: `~/nxos-dib-venv`).
+- `NXOS_DIB_WORKDIR`: Working directory for DIB build artifacts and cache
+  (default: `.nxos-build`).
+- `NXOS_QCOW2_IMAGE`: Path to the Cisco NXOS qcow2 image file (e.g.,
+  `nexus9300v64.10.5.3.F.qcow2`). This is required when building the NXOS image.
 
 **Note**: Raw format is required for cloud backends using Ceph, as Ceph cannot
 directly use qcow2 images for VM disks.
@@ -163,6 +177,19 @@ directly use qcow2 images for VM disks.
   - `switch-host_convert`: A target that converts the image to the format
     specified by `SWITCH_HOST_IMAGE_FORMAT` (in-place conversion if `raw`).
   - `switch-host_clean`: A target that removes the switch-host image file.
+- `nxos`: Builds the NXOS switch-host image using diskimage-builder (DIB).
+  Depends on `nxos_verify_image`, `nxos_dib_setup`, `nxos_dib_build`, and
+  `nxos_convert`. Not included in `all` or `clean` targets.
+  - `nxos_verify_image`: Validates that `NXOS_QCOW2_IMAGE` is set and exists.
+  - `nxos_dib_setup`: Creates a Python virtual environment and installs
+    diskimage-builder.
+  - `nxos_dib_build`: Builds the NXOS image using DIB with the configuration
+    from `dib/nxos-image.yaml` and the custom `hotstack-nxos` element from
+    `dib/elements/`.
+  - `nxos_convert`: Converts the image to the format specified by
+    `NXOS_IMAGE_FORMAT` (in-place conversion if `raw`).
+  - `nxos_clean`: Removes the NXOS image, virtual environment, and build
+    artifacts.
 
 ### MicroShift Image Variables
 
@@ -435,3 +462,49 @@ make clean
 3. See `dib/elements/hotstack-ceos/README.rst` for details on runtime
    configuration via cloud-init, including network interface setup and startup
    configuration.
+
+#### Building and uploading the NXOS image to glance
+
+1. Build the NXOS image (using diskimage-builder):
+
+   ```shell
+   make nxos NXOS_QCOW2_IMAGE=/path/to/nexus9300v64.10.5.3.F.qcow2
+   ```
+
+   This will create a Python virtual environment, install diskimage-builder,
+   download the GNS3 OVMF firmware, build the image using the configuration
+   from `dib/nxos-image.yaml`, and keep it in qcow2 format (default).
+
+2. Upload the NXOS image to Glance:
+
+   ```shell
+   openstack image create hotstack-nxos \
+     --disk-format qcow2 \
+     --file nxos-switch-host.qcow2 \
+     --property hw_firmware_type=uefi \
+     --property hw_machine_type=q35 \
+     --property hw_vif_model=e1000
+   ```
+
+   **Note**: The `hw_vif_model=e1000` property is recommended for switch images
+   to avoid virtio checksum offloading issues when connected via OVS/OVN bridge
+   networks.
+
+   **Note**: To convert to raw format (required for Ceph backends):
+
+   ```shell
+   make nxos \
+     NXOS_QCOW2_IMAGE=/path/to/nexus9300v64.10.5.3.F.qcow2 \
+     NXOS_IMAGE_FORMAT=raw
+
+   openstack image create hotstack-nxos \
+     --disk-format raw \
+     --file nxos-switch-host.qcow2 \
+     --property hw_firmware_type=uefi \
+     --property hw_machine_type=q35 \
+     --property hw_vif_model=e1000
+   ```
+
+3. See `dib/elements/hotstack-nxos/README.rst` for details on runtime
+   configuration via cloud-init, including macvtap passthrough networking,
+   NXOS interface mapping, and POAP bootstrap support.

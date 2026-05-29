@@ -30,6 +30,11 @@ SONIC_IMAGE_FORMAT           ?= qcow2
 SONIC_DIB_VENV               ?= $(HOME)/sonic-dib-venv
 SONIC_DIB_WORKDIR            ?= $(CURDIR)/.sonic-build
 SONIC_DOCKER_IMAGE           ?=
+NXOS_IMAGE_NAME              ?= nxos-switch-host.qcow2
+NXOS_IMAGE_FORMAT            ?= qcow2
+NXOS_DIB_VENV                ?= $(HOME)/nxos-dib-venv
+NXOS_DIB_WORKDIR             ?= $(CURDIR)/.nxos-build
+NXOS_QCOW2_IMAGE             ?=
 
 # Switch vendor image locations (optional, leave empty if not available)
 # These will be copied into the image at /opt/<model>/ during build
@@ -369,4 +374,59 @@ sonic_clean:
 	fi
 	@if [ -d "$(SONIC_DIB_WORKDIR)" ]; then \
 		sudo rm -rf $(SONIC_DIB_WORKDIR); \
+	fi
+
+nxos: nxos_verify_image nxos_dib_setup nxos_dib_build nxos_convert
+
+nxos_verify_image:
+	@if [ -z "$(NXOS_QCOW2_IMAGE)" ]; then \
+		echo "ERROR: NXOS_QCOW2_IMAGE is not set."; \
+		echo "Please provide the path to the NXOS qcow2 file:"; \
+		echo "  make nxos NXOS_QCOW2_IMAGE=/path/to/nexus9300v64.10.5.3.F.qcow2"; \
+		exit 1; \
+	fi
+	@test -f $(NXOS_QCOW2_IMAGE) || (echo "ERROR: NXOS image not found: $(NXOS_QCOW2_IMAGE)" && exit 1)
+	@echo "Using NXOS image: $(NXOS_QCOW2_IMAGE)"
+
+nxos_dib_setup:
+	@if [ ! -d "$(NXOS_DIB_VENV)" ]; then \
+		echo "Creating Python virtual environment at $(NXOS_DIB_VENV)..."; \
+		python3 -m venv $(NXOS_DIB_VENV); \
+		. $(NXOS_DIB_VENV)/bin/activate && \
+		pip install --upgrade pip setuptools wheel && \
+		pip install diskimage-builder; \
+	else \
+		echo "Virtual environment already exists at $(NXOS_DIB_VENV)"; \
+	fi
+
+nxos_dib_build: nxos_dib_setup
+	@echo "Building NXOS image using diskimage-builder..."
+	@mkdir -p $(NXOS_DIB_WORKDIR)/cache
+	@. $(NXOS_DIB_VENV)/bin/activate && \
+		cd $(CURDIR) && \
+		ELEMENTS_PATH=$(CURDIR)/dib/elements \
+		DIB_IMAGE_CACHE=$(NXOS_DIB_WORKDIR)/cache \
+		DIB_DEBUG_TRACE=1 \
+		DIB_NXOS_IMAGE=$(NXOS_QCOW2_IMAGE) \
+		diskimage-builder dib/nxos-image.yaml
+	@echo "NXOS image built successfully: $(NXOS_IMAGE_NAME)"
+
+nxos_convert:
+ifeq ($(NXOS_IMAGE_FORMAT),raw)
+	@echo "Converting NXOS image to raw format (in-place)..."
+	qemu-img convert -p -f qcow2 -O raw $(NXOS_IMAGE_NAME) $(NXOS_IMAGE_NAME).tmp
+	mv $(NXOS_IMAGE_NAME).tmp $(NXOS_IMAGE_NAME)
+	@echo "NXOS image converted to raw format: $(NXOS_IMAGE_NAME)"
+endif
+
+nxos_clean:
+	rm -f $(NXOS_IMAGE_NAME)
+	rm -f $(NXOS_IMAGE_NAME).tmp
+	rm -rf $(NXOS_DIB_VENV)
+	@if [ -z "$(NXOS_DIB_WORKDIR)" ] || [ "$(NXOS_DIB_WORKDIR)" = "/" ]; then \
+		echo "ERROR: NXOS_DIB_WORKDIR is not set or is dangerous: $(NXOS_DIB_WORKDIR)"; \
+		exit 1; \
+	fi
+	@if [ -d "$(NXOS_DIB_WORKDIR)" ]; then \
+		sudo rm -rf $(NXOS_DIB_WORKDIR); \
 	fi
