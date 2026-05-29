@@ -29,3 +29,4 @@
       vars:
         controller_ansible_host: "{{ stack_outputs.controller_ansible_host }}"
         ansible_inventory: "{{ stack_outputs.ansible_inventory }}"
+        wait_for_hosts: "{{ stack_outputs.wait_for_hosts | default([]) }}"

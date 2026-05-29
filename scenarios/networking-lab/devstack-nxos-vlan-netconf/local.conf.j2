@@ -101,8 +101,12 @@ OVN_BRIDGE_MAPPINGS=public:br-ex
 # Enable Ironic
 enable_plugin ironic https://opendev.org/openstack/ironic
 
+# Enable etcd3 for tooz coordination (DLM) in networking-generic-switch
+enable_service etcd3
+GENERIC_SWITCH_USER_MAX_SESSIONS=1
+
 # Enable networking-generic-switch plugin
-enable_plugin networking-generic-switch https://opendev.org/openstack/networking-generic-switch refs/changes/62/990062/8
+enable_plugin networking-generic-switch https://opendev.org/openstack/networking-generic-switch refs/changes/62/990062/6
 
 # Enable networking-baremetal plugin
 enable_plugin networking-baremetal https://opendev.org/openstack/networking-baremetal
@@ -135,11 +139,10 @@ device_type = netconf_openconfig
 host = switch.stack.lab
 port = 830
 username = admin
-password = admin
+password = password
 hostkey_verify = false
-ngs_mac_address = 22:57:f8:dd:01:01
+device_params = name:nexus
+ngs_mac_address = 22:57:f8:dd:01:10
 ngs_physical_networks = public
-ngs_trunk_ports = Ethernet1
-ngs_netconf_target = running
-ngs_save_configuration = true
-ngs_netconf_save_config = <config><commands xmlns="http://arista.com/yang/cli"><command>write memory</command></commands></config>
+ngs_trunk_ports = eth1/1
+ngs_max_connections = 1
