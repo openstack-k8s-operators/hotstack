@@ -1,0 +1,151 @@
+#!/bin/bash
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+# NXOS Nested KVM Switch Startup Script
+#
+# Creates macvtap interfaces for L2 passthrough, prepares a QEMU disk
+# overlay, opens /dev/tapN file descriptors, and execs into qemu-kvm.
+# Invoked by nxos.service (Type=simple) -- systemd manages the QEMU
+# process directly.
+
+set -euo pipefail
+
+CONFIG_FILE="/etc/hotstack-nxos/config"
+IMAGE_CONFIG="/etc/hotstack-nxos/image-config"
+WORK_DIR="/var/lib/hotstack-nxos"
+
+MGMT_INTERFACE="eth0"
+SWITCH_INTERFACE_START="eth1"
+SWITCH_INTERFACE_COUNT=4
+NXOS_RAM=8192
+NXOS_VCPUS=4
+CONSOLE_PORT=55001
+
+log() { echo "$(date '+%Y-%m-%d %H:%M:%S') [start-nxos] $*" >&2; }
+die() { log "ERROR: $*"; exit 1; }
+
+# -------------------------------------------------------------------
+# Load configuration
+# -------------------------------------------------------------------
+
+[[ -f "${IMAGE_CONFIG}" ]] || die "Image config not found: ${IMAGE_CONFIG}"
+# shellcheck source=/dev/null
+source "${IMAGE_CONFIG}"
+
+[[ -f "${CONFIG_FILE}" ]] || die "Config not found: ${CONFIG_FILE}"
+# shellcheck source=/dev/null
+source "${CONFIG_FILE}"
+
+[[ -f "${NXOS_QCOW2}" ]] || die "NXOS base image not found: ${NXOS_QCOW2}"
+[[ -f "${OVMF_FIRMWARE}" ]] || die "OVMF firmware not found: ${OVMF_FIRMWARE}"
+
+log "Configuration:"
+log "  MGMT_INTERFACE=${MGMT_INTERFACE}"
+log "  SWITCH_INTERFACE_START=${SWITCH_INTERFACE_START}"
+log "  SWITCH_INTERFACE_COUNT=${SWITCH_INTERFACE_COUNT}"
+log "  NXOS_RAM=${NXOS_RAM} NXOS_VCPUS=${NXOS_VCPUS}"
+log "  CONSOLE_PORT=${CONSOLE_PORT}"
+log "  NXOS_QCOW2=${NXOS_QCOW2}"
+log "  OVMF_FIRMWARE=${OVMF_FIRMWARE}"
+
+mkdir -p "${WORK_DIR}"
+
+# -------------------------------------------------------------------
+# Parse interface names
+# -------------------------------------------------------------------
+
+IFACE_BASE="${SWITCH_INTERFACE_START%%[0-9]*}"
+IFACE_NUM="${SWITCH_INTERFACE_START##*[!0-9]}"
+
+# -------------------------------------------------------------------
+# Create macvtap interfaces
+# -------------------------------------------------------------------
+
+log "Creating macvtap interfaces..."
+declare -a TAP_INDICES=()
+declare -a TAP_MACS=()
+
+for ((i = 0; i < SWITCH_INTERFACE_COUNT; i++)); do
+    iface="${IFACE_BASE}$((IFACE_NUM + i))"
+    macvtap="macvtap-${iface}"
+
+    [[ -d "/sys/class/net/${iface}" ]] || die "Interface ${iface} not found"
+    mac=$(< "/sys/class/net/${iface}/address")
+
+    ip link set "${iface}" up
+
+    if [[ ! -d "/sys/class/net/${macvtap}" ]]; then
+        ip link add link "${iface}" name "${macvtap}" type macvtap mode passthru
+    fi
+    ip link set "${macvtap}" up
+
+    tap_index=$(< "/sys/class/net/${macvtap}/ifindex")
+    TAP_INDICES+=("${tap_index}")
+    TAP_MACS+=("${mac}")
+
+    log "  ${iface} (${mac}) -> ${macvtap} (tap${tap_index})"
+done
+
+# -------------------------------------------------------------------
+# Create overlay disk
+# -------------------------------------------------------------------
+
+OVERLAY_DISK="${WORK_DIR}/nxos-disk.qcow2"
+if [[ ! -f "${OVERLAY_DISK}" ]]; then
+    log "Creating overlay disk from ${NXOS_QCOW2}..."
+    qemu-img create -f qcow2 -o preallocation=metadata,extended_l2=on -b "${NXOS_QCOW2}" -F qcow2 "${OVERLAY_DISK}"
+fi
+
+# -------------------------------------------------------------------
+# Open tap device FDs and exec into qemu-kvm
+# -------------------------------------------------------------------
+
+log "Launching QEMU (exec)..."
+log "Console available at: telnet localhost ${CONSOLE_PORT}"
+
+QEMU_ARGS=(
+    -enable-kvm
+    -machine q35
+    -cpu host
+    -bios "${OVMF_FIRMWARE}"
+    -m "${NXOS_RAM}"
+    -smp "${NXOS_VCPUS}"
+    -drive "file=${OVERLAY_DISK},if=none,id=disk0,format=qcow2"
+    -device "virtio-scsi-pci,id=scsi0"
+    -device "scsi-hd,drive=disk0,bus=scsi0.0"
+)
+
+# FDs start at 3 (after stdin/stdout/stderr)
+for ((i = 0; i < SWITCH_INTERFACE_COUNT; i++)); do
+    fd=$((i + 3))
+    QEMU_ARGS+=(
+        -netdev "tap,id=net${i},fd=${fd},vhost=off"
+        -device "e1000,netdev=net${i},mac=${TAP_MACS[${i}]}"
+    )
+done
+
+QEMU_ARGS+=(
+    -serial "tcp:localhost:${CONSOLE_PORT},server,nowait"
+    -nographic
+)
+
+# Open /dev/tapN on FDs 3, 4, 5, ... then exec into qemu-kvm
+for ((i = 0; i < SWITCH_INTERFACE_COUNT; i++)); do
+    fd=$((i + 3))
+    eval "exec ${fd}<>/dev/tap${TAP_INDICES[${i}]}"
+done
+
+exec /usr/libexec/qemu-kvm "${QEMU_ARGS[@]}"

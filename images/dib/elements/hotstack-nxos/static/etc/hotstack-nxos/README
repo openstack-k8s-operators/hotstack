@@ -1,0 +1,21 @@
+This directory contains NXOS runtime configuration files.
+
+Files in this directory:
+- config: Runtime configuration for the NXOS nested KVM switch
+- image-config: Image paths set at build time (NXOS_QCOW2, OVMF_FIRMWARE)
+
+The config file is populated by cloud-init user-data during instance boot.
+
+Supported config variables:
+  MGMT_INTERFACE       Host management interface (default: eth0)
+  SWITCH_INTERFACE_START  First switch data interface (default: eth1)
+  SWITCH_INTERFACE_COUNT  Number of switch data interfaces (default: 4)
+  NXOS_RAM             RAM for the NXOS VM in MB (default: 8192)
+  NXOS_VCPUS           vCPUs for the NXOS VM (default: 2)
+  CONSOLE_PORT         Telnet console port (default: 55001)
+
+Interface mapping:
+  eth0  = Host management (CentOS, NM-managed, DHCP)
+  eth1  = NXOS mgmt0 (macvtap passthrough)
+  eth2  = NXOS Ethernet1/1 (macvtap, trunk port)
+  eth3+ = NXOS Ethernet1/2+ (macvtap, access ports)
