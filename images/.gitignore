@@ -1,9 +1,0 @@
-controller.qcow2
-controller.d/
-blank-image.qcow2
-nat64-appliance.qcow2
-switch-host.qcow2
-switch-host-base.qcow2
-.ci-framework/
-.nat64-build/
-.controller-build/
