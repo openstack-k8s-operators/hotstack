@@ -22,6 +22,8 @@ nfs_exports:
   - path: "{{ sushy_emulator_state_nfs_path }}"
     mode: '0777'  # World writable for container access
 
+wait_for_hosts: []
+
 controller_install_openstack_client: false
 
 # Hotstack git server for GitOps deployments
