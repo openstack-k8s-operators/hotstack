@@ -11,6 +11,11 @@ MICROSHIFT_RPM_ARCHIVE       ?=
 BLANK_IMAGE_NAME             ?= blank-image.qcow2
 BLANK_IMAGE_FORMAT           ?= raw
 BLANK_IMAGE_SIZE             ?= 1M
+UEFI_NETBOOT_IMAGE_NAME      ?= uefi-netboot.img
+UEFI_NETBOOT_IMAGE_SIZE      ?= 10M
+UEFI_NETBOOT_ESP_SIZE        ?= 8M
+HOT_PXE_CHAIN_DIR           ?= $(CURDIR)/hot-pxe-chain
+HOT_PXE_CHAIN_CONTAINER_IMAGE ?= localhost/hot-pxe-chain-build:latest
 NAT64_IMAGE_NAME             ?= nat64-appliance.qcow2
 NAT64_IMAGE_FORMAT           ?= raw
 NAT64_CIFMW_DIR              ?= $(CURDIR)/.ci-framework
@@ -45,7 +50,7 @@ SONIC_IMAGE                 ?=
 
 all: controller microshift blank nat64
 
-clean: controller_clean microshift_clean blank_clean nat64_clean
+clean: controller_clean microshift_clean blank_clean nat64_clean uefi-netboot_clean
 
 controller: controller_dib_setup controller_dib_build controller_convert
 
@@ -142,6 +147,38 @@ blank:
 
 blank_clean:
 	rm -f $(BLANK_IMAGE_NAME)
+
+uefi-netboot: uefi-netboot_build_efi uefi-netboot_disk
+
+uefi-netboot_build_efi:
+	@echo "Building HotPxeChain.efi in container..."
+	podman build -t $(HOT_PXE_CHAIN_CONTAINER_IMAGE) $(HOT_PXE_CHAIN_DIR)
+	@echo "Extracting HotPxeChain.efi from container..."
+	podman create --name hot-pxe-chain-extract $(HOT_PXE_CHAIN_CONTAINER_IMAGE) /bin/true
+	podman cp hot-pxe-chain-extract:/edk2/Build/HotPxeChainPkg/RELEASE_GCC/X64/HotPxeChain.efi \
+		$(HOT_PXE_CHAIN_DIR)/HotPxeChain.efi
+	podman rm hot-pxe-chain-extract
+	@echo "HotPxeChain.efi extracted to $(HOT_PXE_CHAIN_DIR)/HotPxeChain.efi"
+
+uefi-netboot_disk: uefi-netboot_build_efi
+	@echo "Creating GPT+ESP disk image..."
+	truncate -s $(UEFI_NETBOOT_IMAGE_SIZE) $(UEFI_NETBOOT_IMAGE_NAME)
+	sgdisk --clear \
+		--new=1:2048:+$(UEFI_NETBOOT_ESP_SIZE) \
+		--typecode=1:EF00 \
+		--change-name=1:ESP \
+		$(UEFI_NETBOOT_IMAGE_NAME)
+	mformat -i $(UEFI_NETBOOT_IMAGE_NAME)@@1M -v RESCUE ::
+	mmd -i $(UEFI_NETBOOT_IMAGE_NAME)@@1M ::EFI
+	mmd -i $(UEFI_NETBOOT_IMAGE_NAME)@@1M ::EFI/BOOT
+	mcopy -i $(UEFI_NETBOOT_IMAGE_NAME)@@1M \
+		$(HOT_PXE_CHAIN_DIR)/HotPxeChain.efi ::EFI/BOOT/BOOTX64.EFI
+	@echo "UEFI netboot image ready: $(UEFI_NETBOOT_IMAGE_NAME)"
+
+uefi-netboot_clean:
+	rm -f $(UEFI_NETBOOT_IMAGE_NAME)
+	rm -f $(HOT_PXE_CHAIN_DIR)/HotPxeChain.efi
+	-podman rmi $(HOT_PXE_CHAIN_CONTAINER_IMAGE) 2>/dev/null
 
 nat64: nat64_setup nat64_build nat64_convert
 

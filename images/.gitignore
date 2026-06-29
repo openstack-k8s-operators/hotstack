@@ -7,3 +7,5 @@ switch-host-base.qcow2
 .ci-framework/
 .nat64-build/
 .controller-build/
+uefi-netboot.img
+hot-pxe-chain/*.efi

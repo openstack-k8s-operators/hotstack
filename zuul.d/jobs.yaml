@@ -111,6 +111,7 @@
     attempts: 1
     vars:
       scenario: sno-2-bm
+      sushy_emulator_os_rescue_pxe_image_uefi: uefi-netboot
     files:
       - ^scenarios/sno-2-bm/.*
       - ^roles/redfish_virtual_bmc/.*

@@ -25,6 +25,8 @@ ovn_k8s_gateway_config_host_routing: true
 enable_iscsi: true
 enable_multipath: true
 
+sushy_emulator_os_rescue_pxe_image_uefi: uefi-netboot
+
 cinder_volume_pvs:
   - /dev/vdc
   - /dev/vdd
