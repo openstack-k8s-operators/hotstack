@@ -150,7 +150,7 @@ Three boot interface modes are supported for the virtual Ironic nodes:
 
 - **`redfish-virtual-media`** (default): Virtual media boot via sushy-tools. Uses `heat_template.yaml`.
 - **`ipxe`**: Rescue-based iPXE network boot via sushy-tools Nova rescue mode. Uses `heat_template_ipxe.yaml`.
-- **`pxe`**: Traditional PXE boot with TFTP/shim (BIOS mode). Uses `heat_template_pxe.yaml`.
+- **`pxe`**: Native UEFI PXE boot via sushy-tools Nova rescue mode. Uses `heat_template_pxe.yaml`. The `uefi-netboot` Glance image contains `HotPxeChain.efi` (a custom UEFI application built from `images/hot-pxe-chain/`) as `/EFI/BOOT/BOOTX64.EFI`. OVMF loads HotPxeChain, which drives the firmware's native PXE stack with clean UEFI identifiers (`PXEClient:Arch:00007`, no iPXE fingerprint), allowing the DHCP server to serve `snponly.efi` as the NBP. Full chain: HotPxeChain → DHCP → NBP (snponly.efi) → iPXE script → kernel/ramdisk.
 
 To switch modes, set `stack_template_path` in `bootstrap_vars.yml` to point to the desired template.
 
@@ -160,7 +160,7 @@ To switch modes, set `stack_template_path` in `bootstrap_vars.yml` to point to t
 - `automation-vars.yml`: Hotloop deployment stages
 - `heat_template.yaml`: OpenStack infrastructure template (redfish-virtual-media)
 - `heat_template_ipxe.yaml`: OpenStack infrastructure template (iPXE boot)
-- `heat_template_pxe.yaml`: OpenStack infrastructure template (PXE boot, BIOS mode)
+- `heat_template_pxe.yaml`: OpenStack infrastructure template (PXE boot via HotPxeChain)
 - `manifests/control-plane/control-plane.yaml`: OpenStack service configuration
 - `test-operator/automation-vars.yml`: Comprehensive test automation
 - `test-operator/tempest-tests.yml`: Tempest test specifications

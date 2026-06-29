@@ -1,0 +1,17 @@
+FROM quay.io/centos/centos:stream10
+
+RUN dnf install -y epel-release \
+    && /usr/bin/crb enable \
+    && dnf install -y \
+        gcc gcc-c++ nasm python3 make libuuid-devel git \
+    && dnf clean all
+
+RUN git clone --depth 1 --recurse-submodules --shallow-submodules \
+        https://github.com/tianocore/edk2.git /edk2
+
+WORKDIR /edk2
+RUN make -C BaseTools
+
+COPY HotPxeChainPkg/ HotPxeChainPkg/
+RUN bash -c 'source edksetup.sh && \
+    build -a X64 -t GCC -b RELEASE -p HotPxeChainPkg/HotPxeChainPkg.dsc'

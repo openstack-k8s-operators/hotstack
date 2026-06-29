@@ -31,6 +31,18 @@ deployments. The tasks are executed using the `make` utility.
   nested KVM virtual machine with macvtap passthrough networking. Uses GNS3's
   custom OVMF firmware for UEFI boot. Built using diskimage-builder (DIB) with
   the `hotstack-nxos` element
+- **uefi-netboot**: A minimal 10MB raw disk image with a GPT partition table
+  and an EFI System Partition containing `HotPxeChain.efi` as the default
+  bootloader (`/EFI/BOOT/BOOTX64.EFI`). HotPxeChain is a custom UEFI
+  application (built from `hot-pxe-chain/` using the edk2 SDK) that drives the
+  firmware's native PXE boot stack: it connects all controllers, locates PXE
+  Base Code protocol handles, performs DHCP (IPv4 first, IPv6 fallback), then
+  TFTP-downloads and chainloads the network boot program (e.g. `snponly.efi`).
+  This produces clean UEFI PXE client identifiers (`PXEClient:Arch:00007`)
+  without iPXE fingerprints, allowing the DHCP server to distinguish the two
+  boot stages. Intended for use as an OpenStack Nova rescue image to test the
+  full PXE chain (HotPxeChain → DHCP → NBP download → iPXE script →
+  kernel/ramdisk)
 
 ## Download Pre-built Images
 
@@ -82,6 +94,15 @@ The following sections describe how to build images locally using the included M
 - `BLANK_IMAGE_FORMAT`: The format for the blank image (default: `raw`). Can be
   set to `qcow2` or any format supported by `qemu-img`.
 - `BLANK_IMAGE_SIZE`: The size of the blank image file in megabytes.
+- `UEFI_NETBOOT_IMAGE_NAME`: The name of the UEFI netboot image file
+  (default: `uefi-netboot.img`).
+- `UEFI_NETBOOT_IMAGE_SIZE`: Total size of the disk image (default: `10M`).
+- `UEFI_NETBOOT_ESP_SIZE`: Size of the EFI System Partition (default: `8M`).
+- `HOT_PXE_CHAIN_DIR`: Path to the `hot-pxe-chain/` source directory containing
+  the UEFI application source and Containerfile (default: `./hot-pxe-chain`).
+- `HOT_PXE_CHAIN_CONTAINER_IMAGE`: Container image tag used for the edk2 build
+  environment (default: `localhost/hot-pxe-chain-build:latest`). Cached after
+  first build.
 - `NAT64_IMAGE_NAME`: The name of the NAT64 appliance image file.
 - `NAT64_IMAGE_FORMAT`: The desired format for the NAT64 image (default: `raw`).
   Set to `qcow2` to keep the original format.
@@ -155,6 +176,16 @@ directly use qcow2 images for VM disks.
 - `blank`: A target that creates a blank image file of the specified size in the
   format specified by `BLANK_IMAGE_FORMAT`.
 - `blank_clean`: A target that removes the blank image file.
+- `uefi-netboot`: Builds `HotPxeChain.efi` in a container (edk2 SDK), then
+  creates a minimal raw disk image with a GPT partition table and an EFI System
+  Partition containing the compiled EFI application as `/EFI/BOOT/BOOTX64.EFI`.
+  Requires `podman`, `sgdisk`, and `mtools`.
+  - `uefi-netboot_build_efi`: Builds the edk2 container image and extracts
+    `HotPxeChain.efi` from it.
+  - `uefi-netboot_disk`: Creates the GPT+ESP disk image and copies
+    `HotPxeChain.efi` onto the ESP.
+- `uefi-netboot_clean`: Removes the uefi-netboot image, extracted EFI
+  binary, and the build container image.
 - `nat64`: A target that depends on `nat64_setup`, `nat64_build`, and
   `nat64_convert`.
   - `nat64_setup`: A target that clones ci-framework and sets up the molecule
@@ -304,6 +335,53 @@ make clean
      --property hw_firmware_type=uefi \
      --property hw_machine_type=q35 \
      --property os_shutdown_timeout=5
+   ```
+
+#### Building and uploading the uefi-netboot image to glance
+
+1. Create the uefi-netboot image:
+
+   ```shell
+   make uefi-netboot
+   ```
+
+   This will:
+   - Build a container image with the edk2 SDK and compile `HotPxeChain.efi`
+     (cached after first run via `podman build`)
+   - Extract the compiled EFI application from the container
+   - Create a 10MB GPT+ESP disk image
+   - Copy `HotPxeChain.efi` as `/EFI/BOOT/BOOTX64.EFI` onto the ESP
+
+2. Upload the uefi-netboot image to Glance:
+
+   ```shell
+   openstack image create uefi-netboot \
+     --disk-format raw \
+     --file uefi-netboot.img \
+     --tag hotstack \
+     --property hw_firmware_type=uefi \
+     --property hw_machine_type=q35 \
+     --property hw_rescue_device=disk
+   ```
+
+   **Note**: The `hw_firmware_type=uefi` and `hw_machine_type=q35` properties
+   are required so that OVMF firmware is used when booting the rescue image.
+
+3. Rescue an instance and watch the console log:
+
+   ```shell
+   openstack server rescue --image uefi-netboot <instance-id>
+   openstack console log show <instance-id>
+   ```
+
+   In the console log, look for `HotPxeChain:` status messages showing
+   controller connection, PXE handle discovery, DHCP progress, and NBP
+   chainloading. The boot sequence is:
+
+   ```
+   HotPxeChain.efi (DHCP with PXEClient:Arch:00007)
+     → snponly.efi (DHCP with iPXE user-class)
+       → iPXE script → kernel + ramdisk
    ```
 
 #### Building and uploading the NAT64 appliance image to glance

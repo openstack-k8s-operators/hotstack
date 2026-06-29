@@ -1,0 +1,38 @@
+## @file
+#  HotPxeChain - UEFI PXE chainloader.
+#
+#  Drives the firmware PXE stack (IPv4, IPv6 fallback) to DHCP for a
+#  network boot program and chainloads it via LoadImage + StartImage.
+#
+#  SPDX-License-Identifier: Apache-2.0
+##
+
+[Defines]
+  INF_VERSION    = 1.25
+  BASE_NAME      = HotPxeChain
+  FILE_GUID      = 7B4E5F1A-D82C-4A93-B618-1F3E9D0C5A72
+  MODULE_TYPE    = UEFI_APPLICATION
+  VERSION_STRING = 1.0
+  ENTRY_POINT    = UefiMain
+
+[Sources]
+  HotPxeChain.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  NetworkPkg/NetworkPkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiLib
+  UefiBootServicesTableLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DevicePathLib
+  PrintLib
+  StackCheckLib
+
+[Protocols]
+  gEfiPxeBaseCodeProtocolGuid    ## CONSUMES
+  gEfiLoadFileProtocolGuid       ## SOMETIMES_CONSUMES
