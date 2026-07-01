@@ -314,6 +314,7 @@ HOTSTACK_CIRROS_URL=http://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-d
 HOTSTACK_CENTOS_STREAM_9_URL=https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-x86_64-9-latest.x86_64.qcow2
 HOTSTACK_CONTROLLER_IMAGE_URL=https://github.com/openstack-k8s-operators/hotstack/releases/download/latest-controller/controller-latest.qcow2
 HOTSTACK_BLANK_IMAGE_URL=https://github.com/openstack-k8s-operators/hotstack/releases/download/latest-blank/blank-image-latest.qcow2
+HOTSTACK_UEFI_NETBOOT_URL=https://github.com/openstack-k8s-operators/hotstack/releases/download/latest-uefi-netboot/uefi-netboot-latest.img
 HOTSTACK_IPXE_BIOS_URL=https://github.com/openstack-k8s-operators/hotstack/releases/download/latest-ipxe/ipxe-bios-latest.img
 HOTSTACK_IPXE_EFI_URL=https://github.com/openstack-k8s-operators/hotstack/releases/download/latest-ipxe/ipxe-efi-latest.img
 HOTSTACK_NAT64_IMAGE_URL=https://github.com/openstack-k8s-operators/openstack-k8s-operators-ci/releases/download/latest/nat64-appliance-latest.qcow2

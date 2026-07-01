@@ -37,7 +37,7 @@ This creates resources needed by HotStack scenarios:
 - Router connecting private and external networks
 - Security group rules (SSH, ICMP) for both admin and hotstack projects
 - Test images (Cirros, CentOS Stream 9) - public
-- HotStack images (controller, blank, nat64, iPXE BIOS/EFI) - downloaded from GitHub releases and uploaded
+- HotStack images (controller, blank, uefi-netboot, nat64, iPXE BIOS/EFI) - downloaded from GitHub releases and uploaded
 - Application credential (hotstack-cred) for the hotstack project
 - `cloud-secret.yaml` file in the repository root (ready for use with HotStack scenarios)
 
