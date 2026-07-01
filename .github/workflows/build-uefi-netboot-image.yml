@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install System Dependencies
         run: |
@@ -85,7 +85,7 @@ jobs:
 
       # yamllint disable rule:line-length
       - name: Create Versioned GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.release_tag.outputs.release_tag }}
           name: "UEFI Netboot Image ${{ steps.release_tag.outputs.release_tag }}"
@@ -125,7 +125,7 @@ jobs:
       # yamllint enable rule:line-length
 
       - name: Update 'latest-uefi-netboot' Release Tag
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: latest-uefi-netboot
           name: "UEFI Netboot Image (Latest)"
