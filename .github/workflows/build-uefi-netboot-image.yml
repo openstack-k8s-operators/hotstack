@@ -35,7 +35,7 @@ jobs:
         run: |
           echo "Building HotPxeChain.efi using container build..."
           cd images
-          docker build -t hot-pxe-chain-build:latest hot-pxe-chain/
+          docker build -f hot-pxe-chain/Containerfile -t hot-pxe-chain-build:latest hot-pxe-chain/
           echo "Container build complete"
 
       - name: Extract HotPxeChain.efi from Container
