@@ -11,7 +11,7 @@ name: Build iPXE Images
 
 jobs:
   build-image:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     # Permission needed to create a release and upload assets
     permissions:
@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install System Dependencies
         run: |
@@ -71,7 +71,7 @@ jobs:
 
       # yamllint disable rule:line-length
       - name: Create Versioned GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.release_tag.outputs.release_tag }}
           name: "iPXE Images ${{ steps.release_tag.outputs.release_tag }}"
@@ -107,7 +107,7 @@ jobs:
       # yamllint enable rule:line-length
 
       - name: Update 'latest-ipxe' Release Tag
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: latest-ipxe
           name: "iPXE Images (Latest)"
