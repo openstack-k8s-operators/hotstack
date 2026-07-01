@@ -97,7 +97,7 @@ jobs:
             - **Format**: raw GPT disk with EFI System Partition
             - **Size**: 10MB
             - **Build type**: ${{ github.event_name == 'schedule' && 'Scheduled (semi-annual)' || 'Manual' }}
-            - **Purpose**: UEFI PXE chainloader for network booting OpenShift nodes
+            - **Purpose**: UEFI PXE chainloader for network booting OpenStack instances
 
             ## Boot Sequence
 
