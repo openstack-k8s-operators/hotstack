@@ -1,0 +1,200 @@
+---
+name: Build UEFI Netboot Image
+
+"on":
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+  # Run quarterly on the 1st day of Jan/Apr/Jul/Oct at 00:00 UTC
+  schedule:
+    - cron: '0 0 1 1,4,7,10 *'
+
+jobs:
+  build-image:
+    runs-on: ubuntu-24.04
+
+    # Permission needed to create a release and upload assets
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          echo "Installing system dependencies for UEFI netboot image..."
+          sudo apt-get update
+          sudo apt-get install -y \
+            gdisk \
+            mtools \
+            make
+          echo "System dependencies installed"
+
+      - name: Build HotPxeChain.efi in Container
+        run: |
+          echo "Building HotPxeChain.efi using container build..."
+          cd images
+          docker build -t hot-pxe-chain-build:latest hot-pxe-chain/
+          echo "Container build complete"
+
+      - name: Extract HotPxeChain.efi from Container
+        run: |
+          echo "Extracting HotPxeChain.efi from container..."
+          docker create --name hot-pxe-chain-extract hot-pxe-chain-build:latest /bin/true
+          docker cp hot-pxe-chain-extract:/edk2/Build/HotPxeChainPkg/RELEASE_GCC/X64/HotPxeChain.efi \
+            images/hot-pxe-chain/HotPxeChain.efi
+          docker rm hot-pxe-chain-extract
+          echo "HotPxeChain.efi extracted"
+          ls -lh images/hot-pxe-chain/HotPxeChain.efi
+
+      - name: Create UEFI Netboot Disk Image
+        run: |
+          echo "Creating GPT+ESP disk image..."
+          cd images
+          truncate -s 10M uefi-netboot.img
+          sgdisk --clear \
+            --new=1:2048:+8M \
+            --typecode=1:EF00 \
+            --change-name=1:ESP \
+            uefi-netboot.img
+          mformat -i uefi-netboot.img@@1M -v RESCUE ::
+          mmd -i uefi-netboot.img@@1M ::EFI
+          mmd -i uefi-netboot.img@@1M ::EFI/BOOT
+          mcopy -i uefi-netboot.img@@1M \
+            hot-pxe-chain/HotPxeChain.efi ::EFI/BOOT/BOOTX64.EFI
+          echo "UEFI netboot image ready"
+          ls -lh uefi-netboot.img
+          cd ..
+
+      - name: Create Release Tag and Rename Image
+        id: release_tag
+        run: |
+          # Generate timestamp-based tag
+          RELEASE_TAG="build-$(date +%Y%m%d-%H%M%S)"
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+          echo "Release tag: $RELEASE_TAG"
+
+          # Rename image to include the release tag
+          TAGGED_IMAGE="uefi-netboot-${RELEASE_TAG}.img"
+          cp images/uefi-netboot.img ${TAGGED_IMAGE}
+
+          echo "tagged_image=$TAGGED_IMAGE" >> $GITHUB_OUTPUT
+          echo "Image renamed to: $TAGGED_IMAGE"
+          ls -lh ${TAGGED_IMAGE}
+
+      # yamllint disable rule:line-length
+      - name: Create Versioned GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_tag.outputs.release_tag }}
+          name: "UEFI Netboot Image ${{ steps.release_tag.outputs.release_tag }}"
+          body: |
+            HotStack UEFI netboot image built by GitHub Actions.
+
+            ## Image Details
+
+            - **Format**: raw GPT disk with EFI System Partition
+            - **Size**: 10MB
+            - **Build type**: ${{ github.event_name == 'schedule' && 'Scheduled (semi-annual)' || 'Manual' }}
+            - **Purpose**: UEFI PXE chainloader for network booting OpenShift nodes
+
+            ## Boot Sequence
+
+            ```
+            HotPxeChain.efi -> DHCP (PXEClient:Arch:00007) -> TFTP snponly.efi
+              -> iPXE DHCP (user-class: iPXE) -> boot script -> kernel + ramdisk
+            ```
+
+            ## Usage
+
+            ```bash
+            # Download the image
+            curl -L -O https://github.com/${{ github.repository }}/releases/download/${{ steps.release_tag.outputs.release_tag }}/${{ steps.release_tag.outputs.tagged_image }}
+
+            # Upload to OpenStack Glance
+            openstack image create uefi-netboot \
+              --disk-format raw \
+              --container-format bare \
+              --property hw_firmware_type=uefi \
+              --property hw_machine_type=q35 \
+              --property os_shutdown_timeout=5 \
+              --file ${{ steps.release_tag.outputs.tagged_image }}
+            ```
+          files: ${{ steps.release_tag.outputs.tagged_image }}
+      # yamllint enable rule:line-length
+
+      - name: Update 'latest-uefi-netboot' Release Tag
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-uefi-netboot
+          name: "UEFI Netboot Image (Latest)"
+          prerelease: true
+          body: |
+            This is the latest UEFI netboot image build. This release is automatically updated.
+
+            **Latest Build**: ${{ steps.release_tag.outputs.release_tag }}
+
+            ## Download
+
+            Use the static URL for the latest build:
+            ```bash
+            curl -L -O https://github.com/${{ github.repository }}/releases/download/latest-uefi-netboot/uefi-netboot-latest.img
+            ```
+
+            Or download a specific version from the [releases page](https://github.com/${{ github.repository }}/releases)
+            to pin your setup to a known-good build.
+
+            ## Usage
+
+            ```bash
+            # Upload to OpenStack Glance
+            openstack image create uefi-netboot \
+              --disk-format raw \
+              --container-format bare \
+              --property hw_firmware_type=uefi \
+              --property hw_machine_type=q35 \
+              --property os_shutdown_timeout=5 \
+              --file uefi-netboot-latest.img
+            ```
+
+            For detailed documentation, see the
+            [HotPxeChain README](https://github.com/${{ github.repository }}/blob/main/images/hot-pxe-chain/README.md).
+          files: ${{ steps.release_tag.outputs.tagged_image }}
+
+      - name: Upload Image with Static Filename to Latest Release
+        run: |
+          echo "Creating static filename copy for easy downloading..."
+
+          # Copy the image with a static name
+          cp ${{ steps.release_tag.outputs.tagged_image }} uefi-netboot-latest.img
+
+          echo "Uploading to latest-uefi-netboot release with static filename..."
+          gh release upload latest-uefi-netboot uefi-netboot-latest.img --clobber --repo ${{ github.repository }}
+
+          echo "Static URL available at:"
+          echo "https://github.com/${{ github.repository }}/releases/download/latest-uefi-netboot/uefi-netboot-latest.img"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Cleanup Old Releases (Keep Last 4)
+        run: |
+          echo "Cleaning up old builds, keeping last 4..."
+
+          # Get all releases with 'build-' prefix, sort by creation date (newest first)
+          # Skip the first 4 (keep them), delete the rest
+          OLD_RELEASES=$(gh release list --limit 100 --json tagName,createdAt --repo ${{ github.repository }} \
+            | jq -r '.[] | select(.tagName | startswith("build-")) | .tagName' \
+            | sort -r \
+            | tail -n +5)
+
+          if [ -n "$OLD_RELEASES" ]; then
+            echo "Deleting old releases:"
+            echo "$OLD_RELEASES"
+            echo "$OLD_RELEASES" | xargs -I {} gh release delete {} --yes --cleanup-tag --repo ${{ github.repository }}
+            echo "Cleanup complete"
+          else
+            echo "No old releases to delete (fewer than 5 total)"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
