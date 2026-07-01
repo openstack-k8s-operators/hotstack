@@ -168,6 +168,10 @@ DEFAULT_NAT64_IMAGE_URL = load_env_var(
     "HOTSTACK_NAT64_IMAGE_URL",
     "https://github.com/openstack-k8s-operators/openstack-k8s-operators-ci/releases/download/latest/nat64-appliance-latest.qcow2",
 )
+DEFAULT_UEFI_NETBOOT_URL = load_env_var(
+    "HOTSTACK_UEFI_NETBOOT_URL",
+    "https://github.com/openstack-k8s-operators/hotstack/releases/download/latest-uefi-netboot/uefi-netboot-latest.img",
+)
 DEFAULT_IPXE_BIOS_URL = load_env_var(
     "HOTSTACK_IPXE_BIOS_URL",
     "https://github.com/openstack-k8s-operators/hotstack/releases/download/latest-ipxe/ipxe-bios-latest.img",
@@ -209,6 +213,16 @@ IMAGE_SPECS = [
         "name": "sushy-tools-blank-image",
         "url_param": "blank_image_url",
         "disk_format": "qcow2",
+        "properties": {
+            "hw_firmware_type": "uefi",
+            "hw_machine_type": "q35",
+            "os_shutdown_timeout": "5",
+        },
+    },
+    {
+        "name": "uefi-netboot",
+        "url_param": "uefi_netboot_url",
+        "disk_format": "raw",
         "properties": {
             "hw_firmware_type": "uefi",
             "hw_machine_type": "q35",
@@ -1176,6 +1190,11 @@ def parse_arguments():
         help="URL to download NAT64 appliance image (default: openstack-k8s-operators-ci latest release)",
     )
     parser.add_argument(
+        "--uefi-netboot-url",
+        default=DEFAULT_UEFI_NETBOOT_URL,
+        help="URL to download UEFI netboot image (default: GitHub latest-uefi-netboot release)",
+    )
+    parser.add_argument(
         "--ipxe-bios-url",
         default=DEFAULT_IPXE_BIOS_URL,
         help="URL to download iPXE BIOS boot image (default: GitHub latest-ipxe release)",
@@ -1302,6 +1321,7 @@ def setup_admin_resources(admin_conn, args):
             image_urls["controller_image_url"] = args.controller_image_url
             image_urls["blank_image_url"] = args.blank_image_url
             image_urls["nat64_image_url"] = args.nat64_image_url
+            image_urls["uefi_netboot_url"] = args.uefi_netboot_url
             image_urls["ipxe_bios_url"] = args.ipxe_bios_url
             image_urls["ipxe_efi_url"] = args.ipxe_efi_url
             image_urls["ubuntu_noble_url"] = args.ubuntu_noble_url
