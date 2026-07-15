@@ -31,9 +31,13 @@ spec:
           items:
           - key: config
             path: config.conf
+      - name: sushy-emulator-htpasswd
+        secret:
+          secretName: sushy-emulator-htpasswd
+          defaultMode: 0600  # u=rw
+          items:
           - key: htpasswd
             path: .htpasswd
-            mode: 0600  # u=rw,g=r,o=r
       - name: os-client-config
         secret:
           secretName: os-client-config
@@ -54,7 +58,12 @@ spec:
         - containerPort: 8000
         volumeMounts:
         - name: sushy-emulator-config
-          mountPath: /etc/sushy-emulator/
+          mountPath: /etc/sushy-emulator/config.conf
+          subPath: config.conf
+        - name: sushy-emulator-htpasswd
+          mountPath: /etc/sushy-emulator/.htpasswd
+          subPath: .htpasswd
+          readOnly: true
         - name: os-client-config
           mountPath: /etc/openstack/
         - name: sushy-emulator-state
