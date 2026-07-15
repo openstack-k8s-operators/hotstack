@@ -248,7 +248,6 @@ def manage_git_daemon(module, base_path):
             f"--base-path={base_path}",
             "--export-all",
             "--reuseaddr",
-            "--enable=receive-pack",
             "--verbose",
             "--detach",
         ]
