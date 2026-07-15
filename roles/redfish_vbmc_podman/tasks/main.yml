@@ -41,15 +41,15 @@
     group: root
 
 - name: Generate htpasswd
+  no_log: true
   register: _htpasswd
   ansible.builtin.command:
-    cmd: >-
-     htpasswd -nbB
-       {{ redfish_vbmc_podman_username | quote }}
-       {{ redfish_vbmc_podman_password | quote }}
+    cmd: "htpasswd -nBi {{ redfish_vbmc_podman_username | quote }}"
+    stdin: "{{ redfish_vbmc_podman_password }}"
   changed_when: false
 
 - name: Create htpasswd file
+  no_log: true
   become: true
   ansible.builtin.copy:
     content: "{{ _htpasswd.stdout + '\n' }}"
