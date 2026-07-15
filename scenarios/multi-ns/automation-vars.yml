@@ -93,6 +93,7 @@ stages:
         --for condition=Ready --timeout=30m
 
   - name: Cloud a - Dataplane SSH key secret
+    no_log: true
     shell: >-
       oc create -n openstack-a secret generic dataplane-ansible-ssh-private-key-secret
       --save-config --dry-run=client
@@ -107,6 +108,7 @@ stages:
         --timeout=30s
 
   - name: Cloud b - Dataplane SSH key secret
+    no_log: true
     shell: >-
       oc create -n openstack-b secret generic dataplane-ansible-ssh-private-key-secret
       --save-config --dry-run=client
@@ -121,6 +123,7 @@ stages:
         --timeout=30s
 
   - name: Cloud a - Nova migration SSH key secret
+    no_log: true
     shell: >-
       oc create -n openstack-a secret generic nova-migration-ssh-key
       --save-config --dry-run=client
@@ -134,6 +137,7 @@ stages:
         --timeout=30s
 
   - name: Cloud b - Nova migration SSH key secret
+    no_log: true
     shell: >-
       oc create -n openstack-b secret generic nova-migration-ssh-key
       --save-config --dry-run=client
