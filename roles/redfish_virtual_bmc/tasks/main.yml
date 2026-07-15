@@ -50,7 +50,6 @@
         - service.yaml
 
     - name: Template the ConfigMap
-      no_log: true
       ansible.builtin.template:
         src: config_map.yaml.j2
         dest: >-
@@ -58,6 +57,18 @@
             [
               _tempdir.path,
               'config_map.yaml'
+            ] | ansible.builtin.path_join
+          }}
+
+    - name: Template the htpasswd Secret
+      no_log: true
+      ansible.builtin.template:
+        src: htpasswd_secret.yaml.j2
+        dest: >-
+          {{
+            [
+              _tempdir.path,
+              'htpasswd_secret.yaml'
             ] | ansible.builtin.path_join
           }}
 
