@@ -23,6 +23,7 @@
   when: ocp_installer_type == 'microshift'
   block:
     - name: Write pull secret to MicroShift node
+      no_log: true
       when: pull_secret | length > 0
       delegate_to: "{{ microshift_host }}"
       become: true
