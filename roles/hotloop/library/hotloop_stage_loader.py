@@ -98,6 +98,7 @@ ALLOWED_STAGE_KEYS = {
     "j2_manifest",
     "kustomize",
     "manifest",
+    "no_log",
     "patches",
     "run_conditions",
     "script",
@@ -356,6 +357,13 @@ def _validate_stage(stage, nested=False):
 
     if nested and "stages" in stage:
         raise ValueError("Nested stages cannot be nested, {stage}".format(stage=stage))
+
+    if "no_log" in stage and not isinstance(stage["no_log"], bool):
+        raise TypeError(
+            "'no_log' must be a boolean, got {no_log_type}".format(
+                no_log_type=type(stage["no_log"])
+            )
+        )
 
     if "run_conditions" in stage:
         _validate_run_conditions(stage["run_conditions"])
