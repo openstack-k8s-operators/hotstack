@@ -24,11 +24,13 @@
   ansible.builtin.add_host: "{{ controller_ansible_host }}"
 
 - name: Read Dataplane SSH private key content
+  no_log: true
   ansible.builtin.slurp:
     src: "{{ dataplane_ssh_private_key_file }}"
   register: _dataplane_ssh_private_key_content
 
 - name: Read Nova migration SSH private key content
+  no_log: true
   ansible.builtin.slurp:
     src: "{{ nova_migration_ssh_private_key_file }}"
   register: _nova_migration_ssh_private_key_content
@@ -100,6 +102,7 @@
         mode: '0644'
 
     - name: Copy Dataplane ssh private key to controller
+      no_log: true
       ansible.builtin.copy:
         content: "{{ _dataplane_ssh_private_key_content.content | b64decode }}"
         dest: >-
@@ -120,6 +123,7 @@
         mode: '0644'
 
     - name: Copy Nova migrate ssh private key to controller
+      no_log: true
       ansible.builtin.copy:
         content: "{{ _nova_migration_ssh_private_key_content.content | b64decode }}"
         dest: >-
@@ -186,6 +190,7 @@
         group: zuul
 
     - name: Write Ironic nodes YAML
+      no_log: true
       when:
         - stack_outputs.ironic_nodes is defined
         - stack_outputs.ironic_nodes | length > 0
