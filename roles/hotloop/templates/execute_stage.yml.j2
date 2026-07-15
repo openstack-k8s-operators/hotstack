@@ -16,12 +16,14 @@
 
 {% if _stage.command is defined %}
 - name: "Stage: {{ _stage.name }} :: Run command"
+  no_log: {{ _stage.no_log | default(false) }}
   ansible.builtin.command:
     cmd: "{{ _stage.command }}"
 {% endif %}
 
 {% if _stage.shell is defined %}
 - name: "Stage: {{ _stage.name }} :: Run shell"
+  no_log: {{ _stage.no_log | default(false) }}
   ansible.builtin.shell:
     cmd: |
 {{ _stage.shell | indent(6, True) }}
@@ -29,26 +31,31 @@
 
 {% if _stage.script is defined %}
 - name: "Stage: {{ _stage.name }} :: Run script"
+  no_log: {{ _stage.no_log | default(false) }}
   ansible.builtin.include_tasks: script.yml
 {% endif %}
 
 {% if _stage.manifest is defined %}
 - name: "Stage: {{ _stage.name }} :: Apply static manifest"
+  no_log: {{ _stage.no_log | default(false) }}
   ansible.builtin.include_tasks: static_manifest.yml
 {% endif %}
 
 {% if _stage.j2_manifest is defined %}
 - name: "Stage: {{ _stage.name }} :: Apply templates manifest"
+  no_log: {{ _stage.no_log | default(false) }}
   ansible.builtin.include_tasks: template_manifest.yml
 {% endif %}
 
 {% if _stage.kustomize is defined %}
 - name: "Stage: {{ _stage.name }} :: Apply kustomize"
+  no_log: {{ _stage.no_log | default(false) }}
   ansible.builtin.include_tasks: kustomize.yml
 {% endif %}
 
 {% if _stage.sync_files is defined %}
 - name: "Stage: {{ _stage.name }} :: Sync files"
+  no_log: {{ _stage.no_log | default(false) }}
   ansible.builtin.include_tasks: sync_files.yml
 {% endif %}
 
