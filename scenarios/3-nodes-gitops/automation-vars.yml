@@ -123,6 +123,7 @@ stages:
         --for condition=Ready --timeout=300s
 
   - name: Deploy OpenStack Secrets
+    no_log: true
     documentation: |
       Create secrets dynamically using SSH keys from controller,
       commit to git, and wait for ArgoCD to sync.
