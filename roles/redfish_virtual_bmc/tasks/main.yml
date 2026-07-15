@@ -28,9 +28,11 @@
         state: present
 
     - name: Generate htpasswd
+      no_log: true
       register: _htpasswd
       ansible.builtin.command:
-        cmd: "htpasswd -nbB {{ redfish_username | quote }} {{ redfish_password | quote }}"
+        cmd: "htpasswd -nBi {{ redfish_username | quote }}"
+        stdin: "{{ redfish_password }}"
 
     - name: Copy files to tempdir
       ansible.builtin.copy:
@@ -48,6 +50,7 @@
         - service.yaml
 
     - name: Template the ConfigMap
+      no_log: true
       ansible.builtin.template:
         src: config_map.yaml.j2
         dest: >-
