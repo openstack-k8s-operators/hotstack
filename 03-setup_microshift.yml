@@ -32,6 +32,7 @@
       ansible.builtin.add_host: "{{ stack_outputs.microshift_ansible_host }}"
 
     - name: Slurp the pull-secret file
+      no_log: true
       register: slurp_pull_secret
       ansible.builtin.slurp:
         src: "{{ pull_secret_file }}"

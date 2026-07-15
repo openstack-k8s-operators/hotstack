@@ -42,6 +42,7 @@
           {{ stack_outputs.ocp_installer_type | default('agent') }} installer
 
     - name: Slurp the pull-secret file
+      no_log: true
       when: pull_secret_stat.stat.exists
       register: slurp_pull_secret
       ansible.builtin.slurp:
