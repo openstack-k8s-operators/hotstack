@@ -63,7 +63,6 @@ The daemon is started on the default port 9418 with:
 - `--base-path` - Base directory for repositories
 - `--export-all` - Export all repositories
 - `--reuseaddr` - Allow quick restarts
-- `--enable=receive-pack` - Allow git push (for testing)
 - `--verbose` - Log connections
 - `--detach` - Run in background
 
