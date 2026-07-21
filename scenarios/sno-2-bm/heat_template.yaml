@@ -513,6 +513,7 @@ resources:
     properties:
       network: {get_resource: ironic-net}
       port_security_enabled: false
+      mac_address: "20:57:f8:bb:00:01"
 
   ironic0:
     type: OS::Nova::Server
@@ -531,6 +532,7 @@ resources:
     properties:
       network: {get_resource: ironic-net}
       port_security_enabled: false
+      mac_address: "20:57:f8:bb:00:02"
 
   ironic1:
     type: OS::Nova::Server
