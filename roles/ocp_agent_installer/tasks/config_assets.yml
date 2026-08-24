@@ -65,6 +65,7 @@
       loop: "{{ ocp_additional_trusted_ca }}"
       loop_control:
         loop_var: ca
+        label: "{{ ca.name }}"
 
     - name: Template additional CA config map
       ansible.builtin.template:

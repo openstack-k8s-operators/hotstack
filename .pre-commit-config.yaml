@@ -65,11 +65,13 @@ repos:
       pass_filenames: false
 
   - repo: https://github.com/ansible/ansible-lint
-    rev: v6.22.2
+    rev: v26.8.0
     hooks:
       - id: ansible-lint
+        # Hook defaults to python3.14; use system python3 (needs >= 3.12).
+        language_version: python3
         additional_dependencies:
-          - ansible-core
+          - ansible-core>=2.19.0
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.6
