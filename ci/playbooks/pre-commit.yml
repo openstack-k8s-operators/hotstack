@@ -3,19 +3,21 @@
   hosts: all
   vars:
     pre_commit_venv_dir: "{{ ansible_user_dir }}/pre-commit-virtualenv"
+    pre_commit_python: /usr/bin/python3.12
   tasks:
     - name: Install packages
       become: true
       ansible.builtin.dnf:
         name:
-          - python3
-          - python3-pip
+          - python3.12
+          - python3.12-pip
           - nmstate
           - libatomic
         state: present
     - name: Pip install
       ansible.builtin.pip:
         virtualenv: "{{ pre_commit_venv_dir }}"
+        virtualenv_command: "{{ pre_commit_python }} -m venv"
         name:
           - pre-commit
           - ansible-core
@@ -28,3 +30,5 @@
       ansible.builtin.command:
         chdir: "{{ zuul.project.src_dir }}"
         cmd: "{{ pre_commit_venv_dir }}/bin/pre-commit run --all"
+      environment:
+        PATH: "{{ pre_commit_venv_dir }}/bin:{{ ansible_env.PATH }}"

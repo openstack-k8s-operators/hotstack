@@ -17,29 +17,27 @@
 - name: Assert
   ansible.builtin.assert:
     that:
-      - ca.name is defined
-      - ca.name | length > 0
-      - ca.url is defined or ca.data is defined
-      - (
-          ca.url | length > 0 or
-          ca.data | length > 0
-        )
+      - ca.name | default('') | length > 0
+      - ca.url | default('') | length > 0 or ca.data | default('') | length > 0
 
 - name: Download the CA bundle if url
-  when: ca.url is defined
+  no_log: true
+  when: ca.url | default('') | length > 0
+  ignore_errors: true
   ansible.builtin.uri:
     url: "{{ ca.url }}"
     method: get
     return_content: true
     validate_certs: false
   register: __get_ca_from_url_result
-  ignore_errors: true
+
 
 - name: Append to _ocp_additional_trusted_ca_map
+  no_log: true
   when: (
-          ca.data is defined or
+          ca.data | default('') | length > 0 or
           (
-            ca.url is defined and
+            ca.url | default('') | length > 0 and
             not __get_ca_from_url_result.failed
           )
         )
