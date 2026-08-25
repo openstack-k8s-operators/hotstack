@@ -61,12 +61,23 @@ install-client:
 	$(call require-root,install-client)
 	@echo "Installing OpenStack client packages on host..."
 	@echo ""
-	@if [ -f /etc/centos-release ] || grep -q "Red Hat" /etc/redhat-release 2>/dev/null; then \
+	@. /etc/os-release; \
+	MAJOR=$${VERSION_ID%%.*}; \
+	if { [ "$$ID" = "centos" ] || [ "$$ID" = "rhel" ]; } && [ "$$MAJOR" -lt 10 ]; then \
 		if ! rpm -q centos-release-openstack-epoxy >/dev/null 2>&1; then \
 			echo "Installing OpenStack Epoxy repository..."; \
 			dnf install -y centos-release-openstack-epoxy; \
 		else \
 			echo "[OK] OpenStack Epoxy repository already installed"; \
+		fi; \
+	elif [ "$$ID" = "centos" ] || [ "$$ID" = "rhel" ]; then \
+		echo "Detected EL$$MAJOR (packages available in EPEL)"; \
+		echo "Enabling CRB repository (required by EPEL)..."; \
+		if [ -x /usr/bin/crb ]; then \
+			/usr/bin/crb enable; \
+		else \
+			dnf install -y dnf-plugins-core; \
+			dnf config-manager --set-enabled crb; \
 		fi; \
 	else \
 		echo "Detected Fedora or other distro (packages available in standard repos)"; \
