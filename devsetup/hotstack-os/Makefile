@@ -3,6 +3,10 @@
 # Default data directory (can be overridden via environment variable or .env file)
 export HOTSTACK_DATA_DIR ?= /var/lib/hotstack-os
 
+# Directory for user-facing extra-vars files written by post-setup
+# (cloud-secret.yaml, hotstack-os-overrides.yaml)
+HOTSTACK_ENV_DIR ?= $(HOME)
+
 # Script directory
 SCRIPT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))/scripts
 
@@ -29,6 +33,7 @@ help:
 	@echo "Post-Installation:"
 	@echo "  sudo make install-client      - Install OpenStack client packages on host (optional)"
 	@echo "  make post-setup               - Create hotstack project/user, resources, and images (no sudo)"
+	@echo '                                  Writes YAML files to HOTSTACK_ENV_DIR (default: $$HOME)'
 	@echo "  make smoke-test               - Run smoke test with Heat stack validation (no sudo)"
 	@echo ""
 	@echo "Management:"
@@ -103,7 +108,9 @@ post-setup:
 	@echo "This will use admin credentials to create shared resources."
 	@echo "Images will be downloaded from GitHub releases."
 	@echo ""
-	./scripts/post-setup.py --cloud-secret-path ../../cloud-secret.yaml
+	./scripts/post-setup.py \
+		--cloud-secret-path $(HOTSTACK_ENV_DIR)/cloud-secret.yaml \
+		--overrides-path $(HOTSTACK_ENV_DIR)/hotstack-os-overrides.yaml
 
 clean: uninstall
 	$(call require-root,clean)

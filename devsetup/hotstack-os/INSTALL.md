@@ -70,6 +70,12 @@ make post-setup
 make smoke-test
 ```
 
+`make post-setup` writes `cloud-secret.yaml` and `hotstack-os-overrides.yaml` to `HOTSTACK_ENV_DIR` (default: `$HOME`). The overrides file sets `os_cloud: hotstack-os` and `dns_servers`. If a file already exists, you are prompted before overwrite; a `.backup-<timestamp>` copy is created if you confirm.
+
+It can also merge `hotstack-os` and `hotstack-os-admin` into `~/.config/openstack/clouds.yaml` after a prompt. Existing cloud entries are not replaced; the file is backed up before it is edited.
+
+Override the extra-vars destination: `make post-setup HOTSTACK_ENV_DIR=/path`
+
 ## Uninstalling
 
 Remove systemd services:
