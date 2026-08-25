@@ -39,7 +39,17 @@ This creates resources needed by HotStack scenarios:
 - Test images (Cirros, CentOS Stream 9) - public
 - HotStack images (controller, blank, uefi-netboot, nat64, iPXE BIOS/EFI) - downloaded from GitHub releases and uploaded
 - Application credential (hotstack-cred) for the hotstack project
-- `cloud-secret.yaml` file in the repository root (ready for use with HotStack scenarios)
+- `cloud-secret.yaml` and `hotstack-os-overrides.yaml` in `HOTSTACK_ENV_DIR` (default: `$HOME`)
+- `os_cloud: hotstack-os` and `dns_servers` in `hotstack-os-overrides.yaml`
+- Optional merge of `hotstack-os` / `hotstack-os-admin` into `~/.config/openstack/clouds.yaml` (existing cloud keys are not replaced)
+
+If `cloud-secret.yaml` or `hotstack-os-overrides.yaml` already exists, `make post-setup` asks before overwriting. Confirming overwrite creates a backup named `<file>.backup-<YYYYMMDD_HHMMSS>`. If `clouds.yaml` is missing those cloud entries, you are prompted to add them; a backup is created before the file is edited.
+
+Override the destination directory:
+
+```bash
+make post-setup HOTSTACK_ENV_DIR=/path
+```
 
 **Note**: Images are downloaded from the latest GitHub releases. If an image is not found, you may need to run the GitHub workflow to build and publish it first.
 
@@ -54,8 +64,8 @@ openstack network list
 openstack flavor list
 openstack image list
 
-# Verify cloud-secret.yaml was created
-ls -l ../../cloud-secret.yaml
+# Verify cloud-secret.yaml and hotstack-os-overrides.yaml were created
+ls -l ~/cloud-secret.yaml ~/hotstack-os-overrides.yaml
 ```
 
 ### 4. Install Ansible and Collections
@@ -77,10 +87,11 @@ ansible-galaxy collection install -r requirements.yml
 # Run any HotStack scenario
 ansible-playbook bootstrap.yml \
   -e @scenarios/sno-2-bm/bootstrap_vars.yml \
-  -e @cloud-secret.yaml
+  -e @$HOME/hotstack-os-overrides.yaml \
+  -e @$HOME/cloud-secret.yaml
 ```
 
-**Note**: The `cloud-secret.yaml` file is automatically created in the repository root by `make post-setup`. If you need to recreate it, simply re-run `make post-setup` or see the [main README](../../README.md#cloud-secret) for manual credential creation.
+**Note**: `make post-setup` writes `cloud-secret.yaml` and `hotstack-os-overrides.yaml` to `HOTSTACK_ENV_DIR` (default `$HOME`). The overrides file sets `os_cloud: hotstack-os` and `dns_servers`. If a file already exists you are prompted before overwrite; a `.backup-<timestamp>` copy is created if you confirm. It can also merge `hotstack-os` / `hotstack-os-admin` into `~/.config/openstack/clouds.yaml` without replacing existing cloud entries. To recreate the extra-vars files, re-run `make post-setup` and answer `y`, or see the [main README](../../README.md#cloud-secret) for manual credential creation.
 
 ## Additional Resources
 

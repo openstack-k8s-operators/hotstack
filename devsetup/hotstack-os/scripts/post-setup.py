@@ -311,6 +311,8 @@ def handle_openstack_error(error, context):
 def backup_file(file_path):
     """Create a timestamped backup of a file if it exists
 
+    Backup name format: <filename>.backup-<YYYYMMDD_HHMMSS>
+
     Args:
         file_path: Path object or string path to the file to backup
 
@@ -322,21 +324,68 @@ def backup_file(file_path):
     if not file_path.exists():
         return None
 
-    # Get all suffixes (e.g., ['.yaml'] or ['.tar', '.gz'])
-    suffixes = "".join(file_path.suffixes)
-    # Get the stem (filename without suffixes)
-    stem = file_path.name[: -len(suffixes)] if suffixes else file_path.name
-
-    # Create backup filename with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_name = f"{stem}.{timestamp}{suffixes}.bak"
-    backup_path = file_path.parent / backup_name
+    backup_path = Path(f"{file_path}.backup-{timestamp}")
 
-    # Rename original file to backup
     file_path.rename(backup_path)
     print_success(f"Backed up existing file to {backup_path}")
 
     return backup_path
+
+
+def confirm_overwrite(file_path):
+    """Prompt before overwriting an existing file
+
+    Missing file: return True (caller may write).
+    Existing file: prompt Overwrite? [y/N]. Yes returns True (caller should
+    backup, then write). No, empty, EOF, or non-tty: keep existing file,
+    return False.
+
+    Args:
+        file_path: Path object or string path to the file
+
+    Returns:
+        True if the caller may write to file_path, False otherwise
+    """
+    file_path = Path(file_path)
+
+    if not file_path.exists():
+        return True
+
+    if not sys.stdin.isatty():
+        print_warning(f"{file_path} exists; skipping overwrite (non-interactive)")
+        return False
+
+    try:
+        reply = (
+            input(f"  {file_path} already exists. Overwrite? [y/N] ").strip().lower()
+        )
+    except EOFError:
+        print()
+        print_warning(f"{file_path} exists; skipping overwrite (non-interactive)")
+        return False
+
+    if reply not in ("y", "yes"):
+        print_info(f"Keeping existing {file_path}")
+        return False
+
+    return True
+
+
+def prompt_yes_no(message):
+    """Ask a y/N question. Default N. Non-tty and EOF return False."""
+    if not sys.stdin.isatty():
+        print_warning("Skipping prompt (non-interactive)")
+        return False
+
+    try:
+        reply = input(f"  {message}").strip().lower()
+    except EOFError:
+        print()
+        print_warning("Skipping prompt (non-interactive)")
+        return False
+
+    return reply in ("y", "yes")
 
 
 def create_hotstack_project_and_user(admin_conn):
@@ -721,30 +770,39 @@ def setup_ssh_keypair(conn, keypair_name="hotstack", public_key_path=None):
         return None
 
 
-def create_application_credential(conn, cred_name="hotstack-cred"):
+def create_application_credential(conn, cred_name="hotstack-cred", replace=False):
     """Create application credential for the hotstack project
 
     Args:
         conn: OpenStack connection object (must be connected as hotstack user)
         cred_name: Name for the application credential (default: hotstack-cred)
+        replace: If True, delete an existing credential with the same name
+            before creating a new one (needed to obtain a new secret)
 
     Returns:
         Application credential object or None if creation fails
     """
     try:
-        # Check if application credential already exists
         existing_cred = conn.identity.find_application_credential(
             conn.current_user_id, cred_name, ignore_missing=True
         )
         if existing_cred:
-            print_warning(
-                f"Application credential '{cred_name}' already exists but secret cannot be retrieved"
-            )
-            print_warning("To create a new one, delete the existing credential first:")
-            print_warning(f"  openstack application credential delete {cred_name}")
-            return None
+            if not replace:
+                print_warning(
+                    f"Application credential '{cred_name}' already exists "
+                    "but secret cannot be retrieved"
+                )
+                print_warning(
+                    "To create a new one, delete the existing credential first:"
+                )
+                print_warning(f"  openstack application credential delete {cred_name}")
+                return None
 
-        # Create new application credential (unrestricted)
+            conn.identity.delete_application_credential(
+                conn.current_user_id, existing_cred, ignore_missing=True
+            )
+            print_success(f"Deleted existing application credential '{cred_name}'")
+
         app_cred = conn.identity.create_application_credential(
             user=conn.current_user_id,
             name=cred_name,
@@ -760,6 +818,8 @@ def create_application_credential(conn, cred_name="hotstack-cred"):
 def write_cloud_secret_file(app_cred, auth_url, output_path):
     """Write cloud-secret.yaml file with application credential
 
+    Caller must already have confirmed overwrite (and backed up if needed).
+
     Args:
         app_cred: Application credential object
         auth_url: Keystone auth URL
@@ -771,8 +831,7 @@ def write_cloud_secret_file(app_cred, auth_url, output_path):
     output_path = Path(output_path)
 
     try:
-        # Create backup if file already exists
-        backup_file(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
         cloud_secret_data = {
             "hotstack_cloud_secrets": {
@@ -796,6 +855,139 @@ def write_cloud_secret_file(app_cred, auth_url, output_path):
     except Exception as e:
         print_warning(f"Failed to write cloud-secret.yaml: {e}")
         return None
+
+
+def write_overrides_file(output_path, dns_ip, os_cloud):
+    """Write hotstack-os-overrides.yaml with os_cloud and dns_servers
+
+    Args:
+        output_path: Path to write the file
+        dns_ip: Internal DNS (dnsmasq) IP for hotstack-os
+        os_cloud: OpenStack cloud name from clouds.yaml
+
+    Returns:
+        Tuple of (path, status) where status is "created", "kept", or "failed"
+    """
+    output_path = Path(output_path)
+
+    if not confirm_overwrite(output_path):
+        return output_path, "kept"
+
+    try:
+        backup_file(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        content = f"---\nos_cloud: {os_cloud}\ndns_servers:\n  - {dns_ip}\n"
+        output_path.write_text(content)
+        print_success(f"Created {output_path}")
+        return output_path, "created"
+    except Exception as e:
+        print_warning(f"Failed to write hotstack-os-overrides.yaml: {e}")
+        return None, "failed"
+
+
+def build_hotstack_cloud_entries(cloud_name, admin_cloud_name):
+    """Build OpenStack clouds.yaml entries for hotstack-os user and admin"""
+    admin_password = load_env_var("KEYSTONE_ADMIN_PASSWORD", "admin")
+    region = load_env_var("REGION_NAME", "RegionOne")
+    auth_url = "http://keystone.hotstack-os.local:5000/v3"
+
+    return {
+        admin_cloud_name: {
+            "auth": {
+                "auth_url": auth_url,
+                "project_name": "admin",
+                "username": "admin",
+                "password": admin_password,
+                "project_domain_name": "Default",
+                "user_domain_name": "Default",
+            },
+            "region_name": region,
+            "identity_api_version": "3",
+        },
+        cloud_name: {
+            "auth": {
+                "auth_url": auth_url,
+                "project_name": "hotstack",
+                "username": "hotstack",
+                "password": "hotstack",
+                "project_domain_name": "Default",
+                "user_domain_name": "Default",
+            },
+            "region_name": region,
+            "identity_api_version": "3",
+        },
+    }
+
+
+def ensure_clouds_yaml(output_path, cloud_name, admin_cloud_name):
+    """Merge missing hotstack-os cloud entries into clouds.yaml
+
+    Existing cloud keys are never replaced. The file is backed up before
+    any write. Invalid YAML is left untouched.
+
+    Args:
+        output_path: Path to clouds.yaml (default ~/.config/openstack/clouds.yaml)
+        cloud_name: User cloud key (default hotstack-os)
+        admin_cloud_name: Admin cloud key (default hotstack-os-admin)
+
+    Returns:
+        Tuple of (path, status): created, merged, kept, present, skipped, or failed
+    """
+    output_path = Path(output_path)
+    desired = build_hotstack_cloud_entries(cloud_name, admin_cloud_name)
+    file_existed = output_path.exists()
+    data = {}
+
+    if file_existed:
+        try:
+            loaded = yaml.safe_load(output_path.read_text())
+        except yaml.YAMLError as e:
+            print_warning(f"Invalid YAML in {output_path}: {e}")
+            print_warning("Skipping clouds.yaml update")
+            return output_path, "skipped"
+
+        if loaded is None:
+            data = {}
+        elif not isinstance(loaded, dict):
+            print_warning(
+                f"{output_path} is not a YAML mapping; skipping clouds.yaml update"
+            )
+            return output_path, "skipped"
+        else:
+            data = loaded
+
+        if "clouds" in data and not isinstance(data["clouds"], dict):
+            print_warning(
+                f"{output_path} has a non-mapping 'clouds' key; skipping update"
+            )
+            return output_path, "skipped"
+
+    clouds = data.setdefault("clouds", {})
+    missing = [name for name in desired if name not in clouds]
+    if not missing:
+        print_info(f"Cloud entries already present in {output_path}")
+        return output_path, "present"
+
+    missing_list = ", ".join(missing)
+    prompt = f"{output_path} is missing: {missing_list}. Add them? [y/N] "
+    if not prompt_yes_no(prompt):
+        if file_existed:
+            print_info(f"Keeping existing {output_path}")
+        return output_path, "kept"
+
+    try:
+        backup_file(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        for name in missing:
+            clouds[name] = desired[name]
+        data["clouds"] = clouds
+        with open(output_path, "w") as f:
+            yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
+        print_success(f"Updated {output_path} with: {missing_list}")
+        return output_path, "created" if not file_existed else "merged"
+    except Exception as e:
+        print_warning(f"Failed to update clouds.yaml: {e}")
+        return None, "failed"
 
 
 def setup_networking(conn, args):
@@ -1011,30 +1203,61 @@ def setup_hotstack_connection(args):
 def setup_application_credential(conn, cred_name, output_path):
     """Create application credential and write cloud-secret.yaml file
 
+    If output_path already exists and overwrite is declined, skip creating a
+    new application credential so an unused secret is not minted.
+
     Args:
         conn: OpenStack connection object (hotstack user)
         cred_name: Name for the application credential
         output_path: Path to write cloud-secret.yaml file
 
     Returns:
-        Path to created cloud-secret.yaml file, or None if creation failed
+        Tuple of (path, status) where status is "created", "kept", or "failed"
     """
-    app_cred = create_application_credential(conn, cred_name=cred_name)
+    output_path = Path(output_path)
+
+    if not confirm_overwrite(output_path):
+        return output_path, "kept"
+
+    # User confirmed writing a new secret (or the file does not exist).
+    # Replace any existing credential so we can obtain a new secret.
+    app_cred = create_application_credential(conn, cred_name=cred_name, replace=True)
     if not app_cred:
-        return None
+        return None, "failed"
+
+    # Backup only after a new credential exists so a failed create cannot
+    # leave the user without their previous cloud-secret.yaml.
+    backup_file(output_path)
 
     # Get auth URL from connection
     auth_url = conn.auth.get("auth_url", "http://keystone.hotstack-os.local:5000")
 
-    return write_cloud_secret_file(app_cred, auth_url, output_path=output_path)
+    written = write_cloud_secret_file(app_cred, auth_url, output_path=output_path)
+    if written:
+        return written, "created"
+    return None, "failed"
 
 
-def print_completion_message(args, cloud_secret_path, external_network):
+def print_completion_message(
+    args,
+    cloud_secret_path,
+    cloud_secret_status,
+    overrides_path,
+    overrides_status,
+    clouds_yaml_path,
+    clouds_yaml_status,
+    external_network,
+):
     """Print completion message with next steps
 
     Args:
         args: Parsed command-line arguments
-        cloud_secret_path: Path to created cloud-secret.yaml file (or None)
+        cloud_secret_path: Path to cloud-secret.yaml file (or None)
+        cloud_secret_status: "created", "kept", "skipped", or "failed"
+        overrides_path: Path to hotstack-os-overrides.yaml file (or None)
+        overrides_status: "created", "kept", or "failed"
+        clouds_yaml_path: Path to clouds.yaml (or None)
+        clouds_yaml_status: "created", "merged", "kept", "present", "skipped", or "failed"
         external_network: External network object (or None)
     """
     print()
@@ -1049,9 +1272,34 @@ def print_completion_message(args, cloud_secret_path, external_network):
         print(f"SSH keypair '{args.ssh_keypair_name}' configured for VM access")
         print()
 
-    if cloud_secret_path:
+    if cloud_secret_status == "created":
         print(f"Application credential created and saved to: {cloud_secret_path}")
-        print("You can now run HotsTac(k)os scenarios with this credential")
+        print("You can now run HotStack scenarios with this credential")
+        print()
+    elif cloud_secret_status == "kept":
+        print(f"Kept existing application credential file: {cloud_secret_path}")
+        print()
+
+    if overrides_status == "created":
+        print(f"Wrote scenario overrides to: {overrides_path}")
+        print()
+    elif overrides_status == "kept":
+        print(f"Kept existing scenario overrides file: {overrides_path}")
+        print()
+
+    if clouds_yaml_status == "created":
+        print(f"Created OpenStack clouds.yaml at: {clouds_yaml_path}")
+        print()
+    elif clouds_yaml_status == "merged":
+        print(f"Added missing cloud entries to: {clouds_yaml_path}")
+        print()
+    elif clouds_yaml_status == "kept":
+        print(f"Kept existing OpenStack clouds.yaml: {clouds_yaml_path}")
+        print()
+    elif clouds_yaml_status == "present":
+        print(
+            f"OpenStack clouds.yaml already has hotstack-os entries: {clouds_yaml_path}"
+        )
         print()
 
     if not args.skip_images:
@@ -1235,8 +1483,27 @@ def parse_arguments():
     )
     parser.add_argument(
         "--cloud-secret-path",
-        default="cloud-secret.yaml",
-        help="Path to write cloud-secret.yaml file (default: cloud-secret.yaml in current directory)",
+        default=str(Path.home() / "cloud-secret.yaml"),
+        help=(
+            "Path to write cloud-secret.yaml file "
+            f"(default: {Path.home() / 'cloud-secret.yaml'})"
+        ),
+    )
+    parser.add_argument(
+        "--overrides-path",
+        default=str(Path.home() / "hotstack-os-overrides.yaml"),
+        help=(
+            "Path to write hotstack-os-overrides.yaml file "
+            f"(default: {Path.home() / 'hotstack-os-overrides.yaml'})"
+        ),
+    )
+    parser.add_argument(
+        "--clouds-yaml-path",
+        default=str(Path.home() / ".config/openstack/clouds.yaml"),
+        help=(
+            "Path to OpenStack clouds.yaml "
+            f"(default: {Path.home() / '.config/openstack/clouds.yaml'})"
+        ),
     )
     parser.add_argument(
         "--skip-app-credential",
@@ -1343,19 +1610,20 @@ def setup_project_resources(args):
         args: Parsed command-line arguments
 
     Returns:
-        Path to created cloud-secret.yaml file, or None
+        Tuple of (cloud_secret_path, cloud_secret_status)
     """
     # Skip if both keypair and app credential are disabled
     if args.skip_keypair and args.skip_app_credential:
-        return None
+        return None, "skipped"
 
     # Set up hotstack user connection (after project/user are created)
     hotstack_conn = setup_hotstack_connection(args)
 
     # Create application credential and cloud-secret.yaml
     cloud_secret_path = None
+    cloud_secret_status = "skipped"
     if not args.skip_app_credential:
-        cloud_secret_path = setup_application_credential(
+        cloud_secret_path, cloud_secret_status = setup_application_credential(
             hotstack_conn, args.app_credential_name, args.cloud_secret_path
         )
 
@@ -1367,7 +1635,7 @@ def setup_project_resources(args):
             public_key_path=args.ssh_public_key,
         )
 
-    return cloud_secret_path
+    return cloud_secret_path, cloud_secret_status
 
 
 def main():
@@ -1389,10 +1657,27 @@ def main():
     external_network = setup_admin_resources(admin_conn, args)
 
     # Set up project resources (application credential, SSH keypair)
-    cloud_secret_path = setup_project_resources(args)
+    cloud_secret_path, cloud_secret_status = setup_project_resources(args)
+
+    dns_ip = args.dns_nameservers[0]
+    clouds_yaml_path, clouds_yaml_status = ensure_clouds_yaml(
+        args.clouds_yaml_path, args.cloud, args.admin_cloud
+    )
+    overrides_path, overrides_status = write_overrides_file(
+        args.overrides_path, dns_ip, args.cloud
+    )
 
     # Print completion message
-    print_completion_message(args, cloud_secret_path, external_network)
+    print_completion_message(
+        args,
+        cloud_secret_path,
+        cloud_secret_status,
+        overrides_path,
+        overrides_status,
+        clouds_yaml_path,
+        clouds_yaml_status,
+        external_network,
+    )
 
 
 if __name__ == "__main__":
