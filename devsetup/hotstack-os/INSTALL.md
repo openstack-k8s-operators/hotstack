@@ -4,7 +4,7 @@ This guide covers installing HotsTac(k)os as systemd services.
 
 ## Prerequisites
 
-- CentOS Stream 9, RHEL 9, or Fedora (recent version)
+- CentOS Stream 9 or 10, RHEL 9, or Fedora (recent version)
 - Root/sudo access
 - At least 8 GB RAM and 50 GB disk space
 
