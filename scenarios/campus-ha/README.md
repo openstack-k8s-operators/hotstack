@@ -55,6 +55,6 @@ ansible-playbook -i inventory.yml bootstrap.yml \
 
 - OpenStack cloud with substantial resources
 - 3 flavors: hotstack.small, hotstack.large, hotstack.xxlarge
-- hotstack-controller and ipxe-boot-usb images
+- hotstack-controller and ipxe-rescue-uefi images
 - Pull secret for OpenShift installation
 - Support for trunk ports and VLANs

@@ -41,12 +41,12 @@ parameters:
   ocp_master_params:
     type: json
     default:
-      image: ipxe-boot-usb
+      image: ipxe-rescue-uefi
       flavor: hotstack.xxlarge
   ocp_worker_params:
     type: json
     default:
-      image: ipxe-boot-usb
+      image: ipxe-rescue-uefi
       flavor: hotstack.xxlarge
   compute_params:
     type: json

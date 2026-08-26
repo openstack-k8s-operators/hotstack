@@ -203,7 +203,7 @@ in psi clouds.
     image: hotstack-controller
     flavor: g.standard.xs
   ocp_master_params:
-    image: ipxe-boot-usb
+    image: ipxe-rescue-uefi
     flavor: ocp4.single-node
   compute_params:
     image: CentOS-Stream-9-latest
@@ -357,7 +357,7 @@ modification include:
       image: hotstack-controller
       flavor: ci.standard.small
     ocp_master_params:
-      image: ipxe-boot-usb
+      image: ipxe-rescue-uefi
       flavor: ci.standard.small
     compute_params:
       image: CentOS-Stream-9-latest

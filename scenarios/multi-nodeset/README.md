@@ -154,7 +154,7 @@ The scenario includes comprehensive update workflows:
 - OpenStack cloud with nested virtualization support
 - Flavors: hotstack.small (controller), hotstack.xxlarge (SNO master),
   hotstack.medium (BMH nodes)
-- Images: hotstack-controller, ipxe-boot-usb, CentOS-Stream-GenericCloud-9, sushy-tools-blank-image
+- Images: hotstack-controller, ipxe-rescue-uefi, CentOS-Stream-GenericCloud-9, sushy-tools-blank-image
 - Support for trunk ports, VLANs, and virtual media
 - Pull secret for OpenShift installation
 - Network connectivity for all defined subnets

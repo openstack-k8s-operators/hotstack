@@ -71,7 +71,7 @@ ansible-playbook -i inventory.yml 06-test-operator.yml \
 - **Instances**: 7 total (1 controller, 3 masters, 3 compute)
 - **Flavors**: hotstack.small (controller), hotstack.xxlarge (masters),
   hotstack.large (compute)
-- **Images**: hotstack-controller, ipxe-boot-usb,
+- **Images**: hotstack-controller, ipxe-rescue-uefi,
   CentOS-Stream-GenericCloud-9
 - **Features**: Trunk ports, VLANs, multiple networks, additional Cinder
   volumes

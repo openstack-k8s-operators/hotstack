@@ -114,7 +114,7 @@ This scenario is ideal for:
 
 - OpenStack cloud with substantial resources (7 instances)
 - 4 flavors: hotstack.small, hotstack.mlarge, hotstack.large, hotstack.xxlarge
-- Images: hotstack-controller, ipxe-boot-usb, CentOS-Stream-GenericCloud-9, sushy-tools-blank-image
+- Images: hotstack-controller, ipxe-rescue-uefi, CentOS-Stream-GenericCloud-9, sushy-tools-blank-image
 - Support for trunk ports, VLANs, and virtual media
 - Pull secret for OpenShift installation
 

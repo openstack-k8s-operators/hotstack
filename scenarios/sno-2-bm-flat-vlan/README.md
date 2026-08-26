@@ -180,7 +180,7 @@ The scenario includes extensive test automation:
 - OpenStack cloud with nested virtualization support
 - Flavors: hotstack.small (controller), hotstack.xxlarge (SNO master),
   hotstack.medium (Ironic nodes)
-- Images: hotstack-controller, ipxe-boot-usb, CentOS-Stream-GenericCloud-9,
+- Images: hotstack-controller, ipxe-rescue-uefi, CentOS-Stream-GenericCloud-9,
   sushy-tools-blank-image
 - Network connectivity for all defined subnets
 - Adequate storage for local volumes and databases
