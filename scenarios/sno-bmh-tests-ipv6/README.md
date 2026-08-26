@@ -77,7 +77,7 @@ ansible-playbook -i inventory.yml 06-test-operator.yml \
 - OpenStack cloud: 6 instances (controller, NAT64, SNO master, 2 BMHs)
 - Flavors: hotstack.small, hotstack.medium, hotstack.mlarge,
   hotstack.xxlarge
-- Images: hotstack-controller, nat64-appliance, ipxe-boot-usb,
+- Images: hotstack-controller, nat64-appliance, ipxe-rescue-uefi,
   CentOS-Stream-GenericCloud-9, sushy-tools-blank-image
 - Trunk ports, VLANs, IPv6 support
 - OpenShift pull secret

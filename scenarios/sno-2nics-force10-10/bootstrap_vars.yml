@@ -42,7 +42,7 @@ stack_parameters:
     image: hotstack-controller
     flavor: hotstack.small
   ocp_master_params:
-    image: ipxe-boot-usb
+    image: ipxe-rescue-uefi
     flavor: hotstack.xxlarge
   switch_params:
     image: hotstack-switch-host

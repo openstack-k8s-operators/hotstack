@@ -177,7 +177,7 @@ Each image is tagged with:
 
 - OpenStack cloud with snapshot support
 - Flavors: hotstack.small (controller), hotstack.xxlarge (SNO master)
-- Images: hotstack-controller, ipxe-boot-usb
+- Images: hotstack-controller, ipxe-rescue-uefi
 - Pull secret for OpenShift installation
 - **Time**: Minimum 25+ hours for complete SnapSet creation
 - Network connectivity for all defined subnets

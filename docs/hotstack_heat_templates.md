@@ -70,7 +70,7 @@ for example: `networker_params`, `ironic_params`.
 
     ```json
     {
-      "image": "ipxe-boot-usb",
+      "image": "ipxe-rescue-uefi",
       "flavor": "hotstack.xxlarge"
     }
     ```

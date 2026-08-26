@@ -48,5 +48,5 @@ ansible-playbook -i inventory.yml 06-test-operator.yml \
 
 - OpenStack cloud with sufficient resources
 - 3 flavors: hotstack.small, hotstack.large, hotstack.xxlarge
-- hotstack-controller and ipxe-boot-usb images
+- hotstack-controller and ipxe-rescue-uefi images
 - Pull secret for OpenShift installation

@@ -51,7 +51,7 @@ stack_parameters:
     image: nat64-appliance
     flavor: hotstack.small
   ocp_master_params:
-    image: ipxe-boot-usb
+    image: ipxe-rescue-uefi
     flavor: hotstack.xxlarge
   bmh_params:
     image: CentOS-Stream-GenericCloud-9

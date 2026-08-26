@@ -128,7 +128,7 @@ ansible-playbook -i inventory.yml 06-test-operator.yml \
 - OpenStack cloud with substantial resources (8 instances total)
 - Flavors: hotstack.small (controller), hotstack.xxlarge (masters),
   hotstack.medium (Ironic nodes)
-- Images: hotstack-controller, ipxe-boot-usb, CentOS-Stream-GenericCloud-9, sushy-tools-blank-image
+- Images: hotstack-controller, ipxe-rescue-uefi, CentOS-Stream-GenericCloud-9, sushy-tools-blank-image
 - Support for trunk ports, VLANs, and virtual media
 - Pull secret for OpenShift installation
 - Network connectivity for all defined subnets

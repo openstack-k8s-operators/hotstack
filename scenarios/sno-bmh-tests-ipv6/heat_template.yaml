@@ -30,7 +30,7 @@ parameters:
   ocp_master_params:
     type: json
     default:
-      image: ipxe-boot-usb
+      image: ipxe-rescue-uefi
       flavor: hotstack.xxlarge
   bmh_params:
     type: json
