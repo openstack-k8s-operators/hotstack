@@ -34,6 +34,7 @@ help:
 	@echo "  sudo make install-client      - Install OpenStack client packages on host (optional)"
 	@echo "  make post-setup               - Create hotstack project/user, resources, and images (no sudo)"
 	@echo '                                  Writes YAML files to HOTSTACK_ENV_DIR (default: $$HOME)'
+	@echo "  make post-setup YES=1         - Same as above, auto-confirm all prompts (overwrite files)"
 	@echo "  make smoke-test               - Run smoke test with Heat stack validation (no sudo)"
 	@echo ""
 	@echo "Management:"
@@ -110,7 +111,8 @@ post-setup:
 	@echo ""
 	./scripts/post-setup.py \
 		--cloud-secret-path $(HOTSTACK_ENV_DIR)/cloud-secret.yaml \
-		--overrides-path $(HOTSTACK_ENV_DIR)/hotstack-os-overrides.yaml
+		--overrides-path $(HOTSTACK_ENV_DIR)/hotstack-os-overrides.yaml \
+		$(if $(filter 1,$(YES)),--yes)
 
 clean: uninstall
 	$(call require-root,clean)

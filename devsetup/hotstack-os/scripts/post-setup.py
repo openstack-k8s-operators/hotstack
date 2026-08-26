@@ -29,6 +29,10 @@ from openstack import exceptions
 import yaml
 
 
+# Global flag: when True, all interactive prompts auto-confirm (set via --yes)
+ASSUME_YES = False
+
+
 # ANSI color codes and status indicators
 class Colors:
     RED = "\033[0;31m"
@@ -337,6 +341,7 @@ def confirm_overwrite(file_path):
     """Prompt before overwriting an existing file
 
     Missing file: return True (caller may write).
+    ASSUME_YES set: return True unconditionally (auto-confirmed).
     Existing file: prompt Overwrite? [y/N]. Yes returns True (caller should
     backup, then write). No, empty, EOF, or non-tty: keep existing file,
     return False.
@@ -350,6 +355,10 @@ def confirm_overwrite(file_path):
     file_path = Path(file_path)
 
     if not file_path.exists():
+        return True
+
+    if ASSUME_YES:
+        print_info(f"Auto-confirmed overwrite of {file_path} (--yes)")
         return True
 
     if not sys.stdin.isatty():
@@ -373,7 +382,12 @@ def confirm_overwrite(file_path):
 
 
 def prompt_yes_no(message):
-    """Ask a y/N question. Default N. Non-tty and EOF return False."""
+    """Ask a y/N question. Default N. Non-tty and EOF return False.
+    ASSUME_YES returns True unconditionally."""
+    if ASSUME_YES:
+        print_info(f"Auto-confirmed (--yes): {message.strip()}")
+        return True
+
     if not sys.stdin.isatty():
         print_warning("Skipping prompt (non-interactive)")
         return False
@@ -1510,6 +1524,12 @@ def parse_arguments():
         action="store_true",
         help="Skip application credential creation and cloud-secret.yaml generation",
     )
+    parser.add_argument(
+        "--yes",
+        "-y",
+        action="store_true",
+        help="Auto-confirm all interactive prompts (overwrite files, add cloud entries, etc.)",
+    )
 
     args = parser.parse_args()
 
@@ -1640,7 +1660,11 @@ def setup_project_resources(args):
 
 def main():
     """Main execution function"""
+    global ASSUME_YES
     args = parse_arguments()
+
+    if args.yes:
+        ASSUME_YES = True
 
     print("HotsTac(k)os post-setup...")
 
