@@ -164,6 +164,28 @@ if command -v firewall-cmd >/dev/null 2>&1; then
             echo -e "  $OK Masquerade already enabled on $DEFAULT_ZONE zone"
         fi
 
+        # Create inter-zone policy for TCP MSS clamping.
+        # VMs on the provider network may use jumbo MTU internally. When their
+        # traffic is forwarded out the 1500-byte uplink, the advertised MSS must
+        # be clamped so remote servers don't send segments too large for the path.
+        POLICY_NAME="hotstack-nat"
+        if ! firewall-cmd --permanent --get-policies | grep -qw "$POLICY_NAME"; then
+            firewall-cmd --permanent --new-policy="$POLICY_NAME" >/dev/null
+            echo -e "  $OK Created $POLICY_NAME firewall policy"
+        else
+            echo -e "  $OK $POLICY_NAME firewall policy already exists"
+        fi
+        if ! firewall-cmd --permanent --policy="$POLICY_NAME" --query-ingress-zone=hotstack-external &>/dev/null; then
+            firewall-cmd --permanent --policy="$POLICY_NAME" --add-ingress-zone=hotstack-external >/dev/null
+        fi
+        if ! firewall-cmd --permanent --policy="$POLICY_NAME" --query-egress-zone="$DEFAULT_ZONE" &>/dev/null; then
+            firewall-cmd --permanent --policy="$POLICY_NAME" --add-egress-zone="$DEFAULT_ZONE" >/dev/null
+        fi
+        firewall-cmd --permanent --policy="$POLICY_NAME" --set-target=ACCEPT >/dev/null
+        firewall-cmd --permanent --policy="$POLICY_NAME" --add-rich-rule='rule family="ipv4" tcp-mss-clamp value=1460' >/dev/null 2>&1 || true
+        firewall-cmd --permanent --policy="$POLICY_NAME" --add-rich-rule='rule family="ipv6" tcp-mss-clamp value=1440' >/dev/null 2>&1 || true
+        echo -e "  $OK TCP MSS clamping configured on $POLICY_NAME policy"
+
         # Reload firewall to apply changes
         firewall-cmd --reload >/dev/null
         echo -e "  $OK Firewall configured for provider network"
