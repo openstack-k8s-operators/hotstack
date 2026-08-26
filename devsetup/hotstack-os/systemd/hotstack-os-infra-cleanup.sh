@@ -47,9 +47,16 @@ else
 fi
 
 
-# Remove HotsTac(k)os firewall zone
+# Remove HotsTac(k)os firewall policy and zone
 if command -v firewall-cmd >/dev/null 2>&1; then
     if systemctl is-enabled firewalld.service &>/dev/null && firewall-cmd --state &>/dev/null; then
+        if firewall-cmd --permanent --get-policies 2>/dev/null | grep -qw hotstack-nat; then
+            echo "Removing hotstack-nat firewall policy..."
+            firewall-cmd --permanent --delete-policy=hotstack-nat >/dev/null
+            echo -e "$OK Removed hotstack-nat policy"
+        else
+            echo -e "$OK hotstack-nat policy not found"
+        fi
         if firewall-cmd --get-zones | grep -q hotstack-external; then
             echo "Removing hotstack-external firewall zone..."
             firewall-cmd --permanent --delete-zone=hotstack-external >/dev/null
