@@ -1,0 +1,73 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+# This file contains tasks that run on the controller
+
+- name: Create directories on controller
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ microshift_installer_bin_dir }}"
+    - "{{ microshift_installer_kube_config_dir }}"
+    - "{{ microshift_installer_download_dir }}"
+
+- name: Download OpenShift client
+  ansible.builtin.get_url:
+    url: "{{ microshift_installer_client_url }}"
+    dest: "{{ microshift_installer_download_dir }}/openshift-client-linux.tar.gz"
+    mode: '0644'
+
+- name: Extract oc client to bin directory
+  ansible.builtin.unarchive:
+    src: "{{ microshift_installer_download_dir }}/openshift-client-linux.tar.gz"
+    dest: "{{ microshift_installer_bin_dir }}"
+    remote_src: true
+    creates: "{{ microshift_installer_bin_dir }}/oc"
+
+- name: Write kubeconfig on controller
+  ansible.builtin.copy:
+    content: "{{ hostvars[groups['microshifts'][0]]['kubeconfig_content']['content'] | b64decode }}"
+    dest: "{{ microshift_installer_kube_config_dir }}/config"
+    mode: '0600'
+
+- name: Update kubeconfig server address
+  vars:
+    microshift_api_address: "{{ hostvars[groups['microshifts'][0]]['ansible_host'] }}"
+  ansible.builtin.replace:
+    path: "{{ microshift_installer_kube_config_dir }}/config"
+    regexp: 'https://127\.0\.0\.1:6443'
+    replace: "https://{{ microshift_api_address }}:6443"
+
+- name: Configure bash completion for oc
+  become: true
+  ansible.builtin.shell: |
+    {{ microshift_installer_bin_dir }}/oc completion bash > /etc/bash_completion.d/oc_bash_completion
+  args:
+    creates: /etc/bash_completion.d/oc_bash_completion
+
+- name: Verify cluster access from controller
+  changed_when: false
+  register: nodes_output
+  environment:
+    KUBECONFIG: "{{ microshift_installer_kube_config_dir }}/config"
+  ansible.builtin.command:
+    cmd: "{{ microshift_installer_bin_dir }}/oc get nodes"
+
+- name: Display cluster nodes
+  ansible.builtin.debug:
+    var: nodes_output.stdout_lines

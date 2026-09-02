@@ -1,0 +1,106 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+# This file contains tasks that run on the MicroShift node
+
+- name: Assert required variables are defined
+  ansible.builtin.assert:
+    that:
+      - subscription_manager_org_id is defined
+      - subscription_manager_org_id | length > 0
+      - subscription_manager_activation_key is defined
+      - subscription_manager_activation_key | length > 0
+      - microshift_config is defined
+      - microshift_config is mapping
+      - microshift_config | length > 0
+      - microshift_nmstate_config is defined
+      - microshift_nmstate_config is mapping
+      - microshift_nmstate_config | length > 0
+    fail_msg: >-
+      Required variables not defined or invalid.
+      Check subscription_manager_org_id, subscription_manager_activation_key,
+      microshift_config, and microshift_nmstate_config.
+
+- name: Register system with subscription-manager
+  ansible.builtin.command:
+    cmd: >-
+      subscription-manager register
+      --org="{{ subscription_manager_org_id }}"
+      --activationkey="{{ subscription_manager_activation_key }}"
+
+- name: Enable required repositories
+  loop:
+    - "rhocp-{{ microshift_installer_version }}-for-rhel-9-x86_64-rpms"
+    - "fast-datapath-for-rhel-9-x86_64-rpms"
+  ansible.builtin.command:
+    cmd: subscription-manager repos --enable="{{ item }}"
+
+- name: Install MicroShift and dependencies
+  ansible.builtin.dnf:
+    name: "{{ microshift_installer_packages }}"
+    state: present
+
+- name: Create hotstack configuration directory
+  ansible.builtin.file:
+    path: /etc/hotstack
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Write nmstate network configuration
+  ansible.builtin.copy:
+    content: "{{ microshift_nmstate_config | to_nice_yaml }}"
+    dest: /etc/hotstack/nmstate-config.yaml
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Apply nmstate network configuration
+  ansible.builtin.command:
+    cmd: nmstatectl apply /etc/hotstack/nmstate-config.yaml
+
+- name: Create MicroShift configuration directory
+  ansible.builtin.file:
+    path: /etc/microshift
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Configure MicroShift
+  ansible.builtin.copy:
+    content: "{{ microshift_config | to_nice_yaml }}"
+    dest: /etc/microshift/config.yaml
+    mode: '0644'
+    owner: root
+    group: root
+
+- name: Start and enable MicroShift service
+  ansible.builtin.systemd:
+    name: microshift
+    state: "{{ microshift_installer_service_state }}"
+    enabled: "{{ microshift_installer_service_enable }}"
+
+- name: Wait for MicroShift to be ready
+  ansible.builtin.wait_for:
+    path: "{{ microshift_installer_kubeconfig_path }}"
+    timeout: "{{ microshift_installer_wait_timeout }}"
+
+- name: Read kubeconfig content
+  register: kubeconfig_content
+  ansible.builtin.slurp:
+    src: "{{ microshift_installer_kubeconfig_path }}"
