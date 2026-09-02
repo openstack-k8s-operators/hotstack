@@ -5,6 +5,11 @@
       - name: container
         label: pod-centos-9-stream
 - nodeset:
+    name: hotstack-pod-test
+    nodes:
+      - name: hotstack
+        label: pod-centos-9-stream
+- nodeset:
     name: hotstack-image-vexxhost
     nodes:
       - name: hotstack
