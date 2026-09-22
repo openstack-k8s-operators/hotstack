@@ -41,6 +41,11 @@ NXOS_IMAGE_FORMAT            ?= qcow2
 NXOS_DIB_VENV                ?= $(HOME)/nxos-dib-venv
 NXOS_DIB_WORKDIR             ?= $(CURDIR)/.nxos-build
 NXOS_QCOW2_IMAGE             ?=
+VJUNOS_IMAGE_NAME            ?= vjunos-switch-host.qcow2
+VJUNOS_IMAGE_FORMAT          ?= qcow2
+VJUNOS_DIB_VENV              ?= $(HOME)/vjunos-dib-venv
+VJUNOS_DIB_WORKDIR           ?= $(CURDIR)/.vjunos-build
+VJUNOS_QCOW2_IMAGE           ?=
 
 # Switch vendor image locations (optional, leave empty if not available)
 # These will be copied into the image at /opt/<model>/ during build
@@ -468,4 +473,59 @@ nxos_clean:
 	fi
 	@if [ -d "$(NXOS_DIB_WORKDIR)" ]; then \
 		sudo rm -rf $(NXOS_DIB_WORKDIR); \
+	fi
+
+vjunos: vjunos_verify_image vjunos_dib_setup vjunos_dib_build vjunos_convert
+
+vjunos_verify_image:
+	@if [ -z "$(VJUNOS_QCOW2_IMAGE)" ]; then \
+		echo "ERROR: VJUNOS_QCOW2_IMAGE is not set."; \
+		echo "Please provide the path to the vJunos-switch qcow2 file:"; \
+		echo "  make vjunos VJUNOS_QCOW2_IMAGE=/path/to/vJunos-switch-26.2R1.7.qcow2"; \
+		exit 1; \
+	fi
+	@test -f $(VJUNOS_QCOW2_IMAGE) || (echo "ERROR: vJunos image not found: $(VJUNOS_QCOW2_IMAGE)" && exit 1)
+	@echo "Using vJunos image: $(VJUNOS_QCOW2_IMAGE)"
+
+vjunos_dib_setup:
+	@if [ ! -d "$(VJUNOS_DIB_VENV)" ]; then \
+		echo "Creating Python virtual environment at $(VJUNOS_DIB_VENV)..."; \
+		python3 -m venv $(VJUNOS_DIB_VENV); \
+		. $(VJUNOS_DIB_VENV)/bin/activate && \
+		pip install --upgrade pip setuptools wheel && \
+		pip install diskimage-builder; \
+	else \
+		echo "Virtual environment already exists at $(VJUNOS_DIB_VENV)"; \
+	fi
+
+vjunos_dib_build: vjunos_dib_setup
+	@echo "Building vJunos image using diskimage-builder..."
+	@mkdir -p $(VJUNOS_DIB_WORKDIR)/cache
+	@. $(VJUNOS_DIB_VENV)/bin/activate && \
+		cd $(CURDIR) && \
+		ELEMENTS_PATH=$(CURDIR)/dib/elements \
+		DIB_IMAGE_CACHE=$(VJUNOS_DIB_WORKDIR)/cache \
+		DIB_DEBUG_TRACE=1 \
+		DIB_VJUNOS_IMAGE=$(VJUNOS_QCOW2_IMAGE) \
+		diskimage-builder dib/vjunos-image.yaml
+	@echo "vJunos image built successfully: $(VJUNOS_IMAGE_NAME)"
+
+vjunos_convert:
+ifeq ($(VJUNOS_IMAGE_FORMAT),raw)
+	@echo "Converting vJunos image to raw format (in-place)..."
+	qemu-img convert -p -f qcow2 -O raw $(VJUNOS_IMAGE_NAME) $(VJUNOS_IMAGE_NAME).tmp
+	mv $(VJUNOS_IMAGE_NAME).tmp $(VJUNOS_IMAGE_NAME)
+	@echo "vJunos image converted to raw format: $(VJUNOS_IMAGE_NAME)"
+endif
+
+vjunos_clean:
+	rm -f $(VJUNOS_IMAGE_NAME)
+	rm -f $(VJUNOS_IMAGE_NAME).tmp
+	rm -rf $(VJUNOS_DIB_VENV)
+	@if [ -z "$(VJUNOS_DIB_WORKDIR)" ] || [ "$(VJUNOS_DIB_WORKDIR)" = "/" ]; then \
+		echo "ERROR: VJUNOS_DIB_WORKDIR is not set or is dangerous: $(VJUNOS_DIB_WORKDIR)"; \
+		exit 1; \
+	fi
+	@if [ -d "$(VJUNOS_DIB_WORKDIR)" ]; then \
+		sudo rm -rf $(VJUNOS_DIB_WORKDIR); \
 	fi

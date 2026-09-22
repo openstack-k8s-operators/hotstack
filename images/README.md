@@ -31,6 +31,11 @@ deployments. The tasks are executed using the `make` utility.
   nested KVM virtual machine with macvtap passthrough networking. Uses GNS3's
   custom OVMF firmware for UEFI boot. Built using diskimage-builder (DIB) with
   the `hotstack-nxos` element
+- **vjunos**: A CentOS 9 Stream image that runs Juniper vJunos-switch as a
+  nested KVM virtual machine with macvtap passthrough networking. The unmodified
+  vendor QCOW2 is launched by QEMU with a vmm-data USB config disk for initial
+  Junos configuration. Built using diskimage-builder (DIB) with the
+  `hotstack-vjunos` element
 - **uefi-netboot**: A minimal 10MB raw disk image with a GPT partition table
   and an EFI System Partition containing `HotPxeChain.efi` as the default
   bootloader (`/EFI/BOOT/BOOTX64.EFI`). HotPxeChain is a custom UEFI
@@ -140,6 +145,16 @@ The following sections describe how to build images locally using the included M
   (default: `.nxos-build`).
 - `NXOS_QCOW2_IMAGE`: Path to the Cisco NXOS qcow2 image file (e.g.,
   `nexus9300v64.10.5.3.F.qcow2`). This is required when building the NXOS image.
+- `VJUNOS_IMAGE_NAME`: The name of the vJunos image file to be created (default:
+  `vjunos-switch-host.qcow2`).
+- `VJUNOS_IMAGE_FORMAT`: The desired format for the vJunos image (default: `qcow2`).
+  Set to `raw` to convert to raw format after building.
+- `VJUNOS_DIB_VENV`: Path to the Python virtual environment for diskimage-builder
+  (default: `~/vjunos-dib-venv`).
+- `VJUNOS_DIB_WORKDIR`: Working directory for DIB build artifacts and cache
+  (default: `.vjunos-build`).
+- `VJUNOS_QCOW2_IMAGE`: Path to the Juniper vJunos-switch qcow2 image file (e.g.,
+  `vJunos-switch-26.2R1.7.qcow2`). This is required when building the vJunos image.
 
 **Note**: Raw format is required for cloud backends using Ceph, as Ceph cannot
 directly use qcow2 images for VM disks.
@@ -220,6 +235,19 @@ directly use qcow2 images for VM disks.
   - `nxos_convert`: Converts the image to the format specified by
     `NXOS_IMAGE_FORMAT` (in-place conversion if `raw`).
   - `nxos_clean`: Removes the NXOS image, virtual environment, and build
+    artifacts.
+- `vjunos`: Builds the vJunos switch-host image using diskimage-builder (DIB).
+  Depends on `vjunos_verify_image`, `vjunos_dib_setup`, `vjunos_dib_build`, and
+  `vjunos_convert`. Not included in `all` or `clean` targets.
+  - `vjunos_verify_image`: Validates that `VJUNOS_QCOW2_IMAGE` is set and exists.
+  - `vjunos_dib_setup`: Creates a Python virtual environment and installs
+    diskimage-builder.
+  - `vjunos_dib_build`: Builds the vJunos image using DIB with the configuration
+    from `dib/vjunos-image.yaml` and the custom `hotstack-vjunos` element from
+    `dib/elements/`.
+  - `vjunos_convert`: Converts the image to the format specified by
+    `VJUNOS_IMAGE_FORMAT` (in-place conversion if `raw`).
+  - `vjunos_clean`: Removes the vJunos image, virtual environment, and build
     artifacts.
 
 ### MicroShift Image Variables
@@ -586,3 +614,45 @@ make clean
 3. See `dib/elements/hotstack-nxos/README.rst` for details on runtime
    configuration via cloud-init, including macvtap passthrough networking,
    NXOS interface mapping, and POAP bootstrap support.
+
+#### Building and uploading the vJunos image to glance
+
+1. Build the vJunos image (using diskimage-builder):
+
+   ```shell
+   make vjunos VJUNOS_QCOW2_IMAGE=/path/to/vJunos-switch-26.2R1.7.qcow2
+   ```
+
+   This will create a Python virtual environment, install diskimage-builder,
+   build the image using the configuration from `dib/vjunos-image.yaml`, and
+   keep it in qcow2 format (default).
+
+2. Upload the vJunos image to Glance:
+
+   ```shell
+   openstack image create hotstack-vjunos \
+     --disk-format qcow2 \
+     --file vjunos-switch-host.qcow2 \
+     --property hw_firmware_type=uefi \
+     --property hw_machine_type=q35 \
+     --property hw_vif_model=e1000
+   ```
+
+   **Note**: To convert to raw format (required for Ceph backends):
+
+   ```shell
+   make vjunos \
+     VJUNOS_QCOW2_IMAGE=/path/to/vJunos-switch-26.2R1.7.qcow2 \
+     VJUNOS_IMAGE_FORMAT=raw
+
+   openstack image create hotstack-vjunos \
+     --disk-format raw \
+     --file vjunos-switch-host.qcow2 \
+     --property hw_firmware_type=uefi \
+     --property hw_machine_type=q35 \
+     --property hw_vif_model=e1000
+   ```
+
+3. See `dib/elements/hotstack-vjunos/README.rst` for details on runtime
+   configuration via cloud-init, including macvtap passthrough networking,
+   vJunos interface mapping, and vmm-data config disk injection.

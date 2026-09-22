@@ -1,0 +1,22 @@
+This directory contains vJunos-switch runtime configuration files.
+
+Files in this directory:
+- config: Runtime configuration for the vJunos-switch nested KVM switch
+- image-config: Image paths set at build time (VJUNOS_QCOW2)
+- juniper.conf: Optional Junos configuration file for initial switch config
+
+The config file is populated by cloud-init user-data during instance boot.
+
+Supported config variables:
+  MGMT_INTERFACE       Host management interface (default: eth0)
+  SWITCH_INTERFACE_START  First switch data interface (default: eth1)
+  SWITCH_INTERFACE_COUNT  Number of switch data interfaces (default: 4)
+  VJUNOS_RAM           RAM for the vJunos VM in MB (default: 5120)
+  VJUNOS_VCPUS         vCPUs for the vJunos VM (default: 4)
+  CONSOLE_PORT         Telnet console port (default: 8601)
+
+Interface mapping:
+  eth0  = Host management (CentOS, NM-managed, DHCP)
+  eth1  = vJunos fxp0 (management, macvtap passthrough)
+  eth2  = vJunos ge-0/0/0 (macvtap, trunk port)
+  eth3+ = vJunos ge-0/0/1+ (macvtap, access ports)
