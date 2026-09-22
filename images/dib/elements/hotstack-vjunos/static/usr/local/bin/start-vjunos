@@ -1,0 +1,176 @@
+#!/bin/bash
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+# vJunos-switch Nested KVM Startup Script
+#
+# Creates macvtap interfaces for L2 passthrough, builds a vmm-data config
+# disk from juniper.conf if present, prepares a QEMU disk overlay, opens
+# /dev/tapN file descriptors, and execs into qemu-kvm.
+# Invoked by vjunos.service (Type=simple) -- systemd manages the QEMU
+# process directly.
+
+set -euo pipefail
+
+CONFIG_FILE="/etc/hotstack-vjunos/config"
+IMAGE_CONFIG="/etc/hotstack-vjunos/image-config"
+JUNIPER_CONF="/etc/hotstack-vjunos/juniper.conf"
+WORK_DIR="/var/lib/hotstack-vjunos"
+
+MGMT_INTERFACE="eth0"
+SWITCH_INTERFACE_START="eth1"
+SWITCH_INTERFACE_COUNT=4
+VJUNOS_RAM=5120
+VJUNOS_VCPUS=4
+CONSOLE_PORT=8601
+
+log() { echo "$(date '+%Y-%m-%d %H:%M:%S') [start-vjunos] $*" >&2; }
+die() { log "ERROR: $*"; exit 1; }
+
+# -------------------------------------------------------------------
+# Load configuration
+# -------------------------------------------------------------------
+
+[[ -f "${IMAGE_CONFIG}" ]] || die "Image config not found: ${IMAGE_CONFIG}"
+# shellcheck source=/dev/null
+source "${IMAGE_CONFIG}"
+
+[[ -f "${CONFIG_FILE}" ]] || die "Config not found: ${CONFIG_FILE}"
+# shellcheck source=/dev/null
+source "${CONFIG_FILE}"
+
+[[ -f "${VJUNOS_QCOW2}" ]] || die "vJunos base image not found: ${VJUNOS_QCOW2}"
+
+log "Configuration:"
+log "  MGMT_INTERFACE=${MGMT_INTERFACE}"
+log "  SWITCH_INTERFACE_START=${SWITCH_INTERFACE_START}"
+log "  SWITCH_INTERFACE_COUNT=${SWITCH_INTERFACE_COUNT}"
+log "  VJUNOS_RAM=${VJUNOS_RAM} VJUNOS_VCPUS=${VJUNOS_VCPUS}"
+log "  CONSOLE_PORT=${CONSOLE_PORT}"
+log "  VJUNOS_QCOW2=${VJUNOS_QCOW2}"
+
+mkdir -p "${WORK_DIR}"
+
+# -------------------------------------------------------------------
+# Parse interface names
+# -------------------------------------------------------------------
+
+IFACE_BASE="${SWITCH_INTERFACE_START%%[0-9]*}"
+IFACE_NUM="${SWITCH_INTERFACE_START##*[!0-9]}"
+
+# -------------------------------------------------------------------
+# Create macvtap interfaces
+# -------------------------------------------------------------------
+
+log "Creating macvtap interfaces..."
+declare -a TAP_INDICES=()
+declare -a TAP_MACS=()
+
+for ((i = 0; i < SWITCH_INTERFACE_COUNT; i++)); do
+    iface="${IFACE_BASE}$((IFACE_NUM + i))"
+    macvtap="macvtap-${iface}"
+
+    [[ -d "/sys/class/net/${iface}" ]] || die "Interface ${iface} not found"
+    mac=$(< "/sys/class/net/${iface}/address")
+
+    ip link set "${iface}" up
+
+    if [[ ! -d "/sys/class/net/${macvtap}" ]]; then
+        ip link add link "${iface}" name "${macvtap}" type macvtap mode passthru
+    fi
+    ip link set "${macvtap}" up
+
+    tap_index=$(< "/sys/class/net/${macvtap}/ifindex")
+    TAP_INDICES+=("${tap_index}")
+    TAP_MACS+=("${mac}")
+
+    log "  ${iface} (${mac}) -> ${macvtap} (tap${tap_index})"
+done
+
+# -------------------------------------------------------------------
+# Build vmm-data config disk (if juniper.conf is present)
+# -------------------------------------------------------------------
+
+CONFIG_DISK="${WORK_DIR}/config.img"
+
+if [[ -f "${JUNIPER_CONF}" ]]; then
+    log "Building vmm-data config disk from ${JUNIPER_CONF}..."
+
+    STAGING=$(mktemp -d -p "${WORK_DIR}")
+    mkdir -p "${STAGING}/config"
+    cp "${JUNIPER_CONF}" "${STAGING}/config/juniper.conf"
+    tar -czf "${WORK_DIR}/vmm-config.tgz" -C "${STAGING}" .
+
+    qemu-img create -f raw "${CONFIG_DISK}" 32M
+    mkfs.vfat -n "vmm-data" "${CONFIG_DISK}"
+
+    MNTDIR=$(mktemp -d -p "${WORK_DIR}")
+    mount -o loop "${CONFIG_DISK}" "${MNTDIR}"
+    cp "${WORK_DIR}/vmm-config.tgz" "${MNTDIR}/"
+    umount "${MNTDIR}"
+
+    rm -rf "${STAGING}" "${MNTDIR}" "${WORK_DIR}/vmm-config.tgz"
+    log "Config disk created: ${CONFIG_DISK}"
+else
+    log "No juniper.conf found, skipping config disk creation"
+fi
+
+# -------------------------------------------------------------------
+# Open tap device FDs and exec into qemu-kvm
+# -------------------------------------------------------------------
+
+log "Launching QEMU (exec)..."
+log "Console available at: telnet localhost ${CONSOLE_PORT}"
+
+QEMU_ARGS=(
+    -enable-kvm
+    -machine q35
+    -cpu host
+    -m "${VJUNOS_RAM}"
+    -smp "${VJUNOS_VCPUS},sockets=${VJUNOS_VCPUS},cores=1,threads=1"
+    -smbios "type=1,product=VM-VEX"
+    -drive "file=${VJUNOS_QCOW2},if=virtio,id=disk0,format=qcow2"
+)
+
+# Attach vmm-data config disk as USB storage (matching vrnetlab pattern)
+if [[ -f "${CONFIG_DISK}" ]]; then
+    QEMU_ARGS+=(
+        -device "qemu-xhci,id=usb"
+        -drive "file=${CONFIG_DISK},format=raw,if=none,id=config_disk"
+        -device "usb-storage,drive=config_disk,id=usb-disk0,removable=off,write-cache=on"
+    )
+fi
+
+# FDs start at 3 (after stdin/stdout/stderr)
+for ((i = 0; i < SWITCH_INTERFACE_COUNT; i++)); do
+    fd=$((i + 3))
+    QEMU_ARGS+=(
+        -netdev "tap,id=net${i},fd=${fd},vhost=off"
+        -device "virtio-net-pci,netdev=net${i},mac=${TAP_MACS[${i}]}"
+    )
+done
+
+QEMU_ARGS+=(
+    -serial "tcp:localhost:${CONSOLE_PORT},server,nowait"
+    -nographic
+)
+
+# Open /dev/tapN on FDs 3, 4, 5, ... then exec into qemu-kvm
+for ((i = 0; i < SWITCH_INTERFACE_COUNT; i++)); do
+    fd=$((i + 3))
+    eval "exec ${fd}<>/dev/tap${TAP_INDICES[${i}]}"
+done
+
+exec /usr/libexec/qemu-kvm "${QEMU_ARGS[@]}"
