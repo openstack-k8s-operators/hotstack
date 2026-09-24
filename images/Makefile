@@ -2,6 +2,7 @@ CONTROLLER_IMAGE_NAME        ?= controller.qcow2
 CONTROLLER_IMAGE_FORMAT      ?= raw
 CONTROLLER_DIB_VENV          ?= $(HOME)/controller-dib-venv
 CONTROLLER_DIB_WORKDIR       ?= $(CURDIR)/.controller-build
+CONTROLLER_BASE_IMAGE_FILE   ?= CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2
 MICROSHIFT_VERSION           ?= 4.20
 MICROSHIFT_IMAGE_NAME        ?= microshift-$(MICROSHIFT_VERSION).qcow2
 MICROSHIFT_IMAGE_FORMAT      ?= qcow2
@@ -20,7 +21,7 @@ NAT64_IMAGE_NAME             ?= nat64-appliance.qcow2
 NAT64_IMAGE_FORMAT           ?= raw
 NAT64_CIFMW_DIR              ?= $(CURDIR)/.ci-framework
 NAT64_BASEDIR                ?= $(CURDIR)/.nat64-build
-SWITCH_HOST_IMAGE_URL        ?= https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-x86_64-9-latest.x86_64.qcow2
+SWITCH_HOST_IMAGE_URL        ?= https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2
 SWITCH_HOST_BASE_IMAGE       ?= switch-host-base.qcow2
 SWITCH_HOST_IMAGE_NAME       ?= switch-host.qcow2
 SWITCH_HOST_IMAGE_FORMAT     ?= raw
@@ -72,6 +73,7 @@ controller_dib_build: controller_dib_setup
 		cd $(CURDIR) && \
 		ELEMENTS_PATH=$(CURDIR)/dib/elements \
 		DIB_IMAGE_CACHE=$(CONTROLLER_DIB_WORKDIR)/cache \
+		BASE_IMAGE_FILE=$(CONTROLLER_BASE_IMAGE_FILE) \
 		DIB_DEBUG_TRACE=1 \
 		diskimage-builder dib/controller-image.yaml
 	@echo "Controller image built successfully: $(CONTROLLER_IMAGE_NAME)"
