@@ -9,7 +9,7 @@
     - package-installs
     - hotstack-controller
   environment:
-    DIB_RELEASE: '9-stream'
+    DIB_RELEASE: '10-stream'
     DIB_PYTHON_VERSION: '3'
     DIB_IMAGE_SIZE: '10'
     DIB_TIMEZONE: 'UTC'
@@ -38,7 +38,7 @@
               type: '8300'
               size: 512MiB
               mkfs:
-                type: xfs
+                type: ext4
                 mount:
                   mount_point: /boot
                   fstab:
@@ -48,7 +48,7 @@
               type: '8300'
               size: 100%
               mkfs:
-                type: xfs
+                type: ext4
                 mount:
                   mount_point: /
                   fstab:

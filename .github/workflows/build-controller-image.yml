@@ -82,7 +82,7 @@ jobs:
 
             ## Image Details
 
-            - **Base**: CentOS Stream 9
+            - **Base**: CentOS Stream 10
             - **Build Tool**: diskimage-builder (DIB)
             - **Format**: qcow2
             - **Build type**: ${{ github.event_name == 'schedule' && 'Scheduled (weekly)' || (inputs.release_tag == '' && 'Manual (auto-versioned)' || 'Manual (versioned)') }}
