@@ -106,7 +106,7 @@ enable_service etcd3
 GENERIC_SWITCH_USER_MAX_SESSIONS=1
 
 # Enable networking-generic-switch plugin
-enable_plugin networking-generic-switch https://opendev.org/openstack/networking-generic-switch refs/changes/90/993090/2
+enable_plugin networking-generic-switch https://opendev.org/openstack/networking-generic-switch refs/changes/23/1007523/4
 
 # Enable networking-baremetal plugin
 enable_plugin networking-baremetal https://opendev.org/openstack/networking-baremetal
@@ -135,15 +135,16 @@ enable_router_ha_binding_events = False
 
 [[post-config|/etc/neutron/plugins/ml2/ml2_conf_genericswitch.ini]]
 [genericswitch:switch]
-device_type = restconf_openconfig
+device_type = netconf_juniper
 host = switch.stack.lab
-port = 80
-username = admin
-password = password
-ngs_restconf_scheme = http
-ngs_verify_ssl = False
-ngs_restconf_content_type = application/yang.data+json
+port = 830
+username = jnpr
+password = jnpr123
+hostkey_verify = false
 ngs_mac_address = 22:57:f8:dd:01:10
 ngs_physical_networks = public
-ngs_trunk_ports = eth1/1
+ngs_trunk_ports = ge-0/0/0
 ngs_max_connections = 1
+ngs_netconf_validate = false
+ngs_netconf_confirmed_commit = false
+ngs_netconf_timeout = 120

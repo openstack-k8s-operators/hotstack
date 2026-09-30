@@ -46,6 +46,8 @@ VJUNOS_IMAGE_FORMAT          ?= qcow2
 VJUNOS_DIB_VENV              ?= $(HOME)/vjunos-dib-venv
 VJUNOS_DIB_WORKDIR           ?= $(CURDIR)/.vjunos-build
 VJUNOS_QCOW2_IMAGE           ?=
+VJUNOS_VMM_DATA_IMAGE        ?= vjunos-vmm-data.qcow2
+VJUNOS_VMM_DATA_CONF         ?= $(CURDIR)/vjunos/vjunos-startup.conf
 
 # Switch vendor image locations (optional, leave empty if not available)
 # These will be copied into the image at /opt/<model>/ during build
@@ -529,3 +531,20 @@ vjunos_clean:
 	@if [ -d "$(VJUNOS_DIB_WORKDIR)" ]; then \
 		sudo rm -rf $(VJUNOS_DIB_WORKDIR); \
 	fi
+
+vjunos_config_disk:
+	@test -f $(VJUNOS_VMM_DATA_CONF) || (echo "ERROR: vJunos config not found: $(VJUNOS_VMM_DATA_CONF)" && exit 1)
+	@echo "Building vJunos vmm-data config disk..."
+	$(eval VJUNOS_STAGING := $(shell mktemp -d))
+	mkdir -p $(VJUNOS_STAGING)/config
+	cp $(VJUNOS_VMM_DATA_CONF) $(VJUNOS_STAGING)/config/juniper.conf
+	tar -czf $(VJUNOS_STAGING)/vmm-config.tgz -C $(VJUNOS_STAGING) config/
+	truncate -s 32M $(VJUNOS_STAGING)/vmm-data.raw
+	mformat -i $(VJUNOS_STAGING)/vmm-data.raw -v vmm-data ::
+	mcopy -i $(VJUNOS_STAGING)/vmm-data.raw $(VJUNOS_STAGING)/vmm-config.tgz ::
+	qemu-img convert -f raw -O qcow2 $(VJUNOS_STAGING)/vmm-data.raw $(VJUNOS_VMM_DATA_IMAGE)
+	rm -rf $(VJUNOS_STAGING)
+	@echo "vJunos vmm-data config disk ready: $(VJUNOS_VMM_DATA_IMAGE)"
+
+vjunos_config_disk_clean:
+	rm -f $(VJUNOS_VMM_DATA_IMAGE)
