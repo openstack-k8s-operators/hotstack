@@ -35,7 +35,11 @@ stages:
       - "oc wait -n sushy-emulator configmaps sushy-emulator-config --for jsonpath='{.metadata.name}'=sushy-emulator-config --timeout=30s"
 
   - name: "Sushy Emulator : htpasswd Secret"
-    manifest: htpasswd_secret.yaml
+    shell: >-
+      oc create -n sushy-emulator secret generic sushy-emulator-htpasswd
+      --save-config --dry-run=client
+      --from-literal=htpasswd={{ _htpasswd.stdout | trim | quote }}
+      --type=Opaque -o yaml | oc apply -f -
     wait_conditions:
       - "oc wait -n sushy-emulator secret sushy-emulator-htpasswd --for jsonpath='{.metadata.name}'=sushy-emulator-htpasswd --timeout=30s"
 
