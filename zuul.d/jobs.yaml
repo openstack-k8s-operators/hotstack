@@ -46,6 +46,10 @@
       hotstack_overrides:
         stack_parameters:
           cdrom_disk_bus: sata
+          ocp_master_params:
+            image: ipxe-rescue-uefi
+          ocp_worker_params:
+            image: ipxe-rescue-uefi
           compute_params:
             image: cs9stream-genericcloud
           networker_params:
