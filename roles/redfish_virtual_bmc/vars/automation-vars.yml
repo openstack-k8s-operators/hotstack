@@ -38,7 +38,7 @@ stages:
     shell: >-
       oc create -n sushy-emulator secret generic sushy-emulator-htpasswd
       --save-config --dry-run=client
-      --from-literal=htpasswd={{ _htpasswd.stdout | trim | quote }}
+      --from-literal=htpasswd="$(printf '%s' {{ redfish_password | quote }} | htpasswd -nBi {{ redfish_username | quote }})"
       --type=Opaque -o yaml | oc apply -f -
     wait_conditions:
       - "oc wait -n sushy-emulator secret sushy-emulator-htpasswd --for jsonpath='{.metadata.name}'=sushy-emulator-htpasswd --timeout=30s"
