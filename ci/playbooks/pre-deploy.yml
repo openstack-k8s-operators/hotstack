@@ -4,14 +4,15 @@
   gather_facts: false
   vars:
     hotstack_work_dir: "{{ ansible_user_dir }}/hotstack"
+    _cp_registries: >-
+      {{ ([content_provider_registry_ip ~ ':5001']
+          if content_provider_registry_ip is defined else []) +
+         ([s2i_content_provider_registry_ip ~ ':5001']
+          if s2i_content_provider_registry_ip is defined else []) }}
   tasks:
     - name: Configure insecure registry
-      when: content_provider_registry_ip is defined
+      when: _cp_registries | length > 0
       block:
-        - name: Set content provider registry
-          ansible.builtin.set_fact:
-            content_provider_registry: "{{ content_provider_registry_ip }}:5001"
-
         - name: Fetch stack outputs from remote to zuul executor
           no_log: true
           ansible.builtin.fetch:
@@ -43,10 +44,10 @@
               ansible.builtin.command:
                 cmd: >-
                   oc patch image.config.openshift.io/cluster --type=merge -p
-                  '{"spec":{"registrySources":{"insecureRegistries":["{{ content_provider_registry }}"],
-                  "allowedRegistries":["{{ content_provider_registry }}",
-                  "quay.io","registry.redhat.io","image-registry.openshift-image-registry.svc:5000",
-                  "registry.ci.openshift.org","ghcr.io","gcr.io","docker.io"]}}}'
+                  '{"spec":{"registrySources":{"insecureRegistries":{{ _cp_registries | to_json }},
+                  "allowedRegistries":{{ (_cp_registries + ["quay.io", "registry.redhat.io",
+                  "image-registry.openshift-image-registry.svc:5000",
+                  "registry.ci.openshift.org", "ghcr.io", "gcr.io", "docker.io"]) | to_json }}}}}'
               changed_when: true
 
             - name: Wait for MachineConfigPool to start updating
@@ -85,13 +86,14 @@
                   oc wait co --all --for=condition=Available=True --timeout=600s
               changed_when: false
 
-            - name: Verify insecure registry is configured
+            - name: Verify insecure registries are configured
               ansible.builtin.command:
                 cmd: >-
                   oc get image.config.openshift.io/cluster
                   -o jsonpath='{.spec.registrySources.insecureRegistries}'
               register: _insecure_registries
-              failed_when: content_provider_registry not in _insecure_registries.stdout
+              failed_when: >-
+                _cp_registries | difference(_insecure_registries.stdout | from_json) | length > 0
               changed_when: false
 
             - name: Log configured insecure registries
