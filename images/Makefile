@@ -56,6 +56,9 @@ FORCE10_9_IMAGE             ?=
 NXOS_IMAGE                  ?=
 SONIC_IMAGE                 ?=
 
+# diskimage-builder source URL (installed via pip directly from git)
+DIB_SRC_URL                  ?= https://opendev.org/openstack/diskimage-builder
+
 all: controller microshift blank nat64
 
 clean: controller_clean microshift_clean blank_clean nat64_clean uefi-netboot_clean
@@ -68,7 +71,7 @@ controller_dib_setup:
 		python3 -m venv $(CONTROLLER_DIB_VENV); \
 		. $(CONTROLLER_DIB_VENV)/bin/activate && \
 		pip install --upgrade pip setuptools wheel && \
-		pip install diskimage-builder; \
+		pip install git+$(DIB_SRC_URL); \
 	else \
 		echo "Virtual environment already exists at $(CONTROLLER_DIB_VENV)"; \
 	fi
@@ -113,7 +116,7 @@ microshift_dib_setup:
 		python3 -m venv $(MICROSHIFT_DIB_VENV); \
 		. $(MICROSHIFT_DIB_VENV)/bin/activate && \
 		pip install --upgrade pip setuptools wheel && \
-		pip install diskimage-builder; \
+		pip install git+$(DIB_SRC_URL); \
 	else \
 		echo "Virtual environment already exists at $(MICROSHIFT_DIB_VENV)"; \
 	fi
@@ -330,7 +333,7 @@ ceos_dib_setup:
 		python3 -m venv $(CEOS_DIB_VENV); \
 		. $(CEOS_DIB_VENV)/bin/activate && \
 		pip install --upgrade pip setuptools wheel && \
-		pip install diskimage-builder; \
+		pip install git+$(DIB_SRC_URL); \
 	else \
 		echo "Virtual environment already exists at $(CEOS_DIB_VENV)"; \
 	fi
@@ -385,7 +388,7 @@ sonic_dib_setup:
 		python3 -m venv $(SONIC_DIB_VENV); \
 		. $(SONIC_DIB_VENV)/bin/activate && \
 		pip install --upgrade pip setuptools wheel && \
-		pip install diskimage-builder; \
+		pip install git+$(DIB_SRC_URL); \
 	else \
 		echo "Virtual environment already exists at $(SONIC_DIB_VENV)"; \
 	fi
@@ -440,7 +443,7 @@ nxos_dib_setup:
 		python3 -m venv $(NXOS_DIB_VENV); \
 		. $(NXOS_DIB_VENV)/bin/activate && \
 		pip install --upgrade pip setuptools wheel && \
-		pip install diskimage-builder; \
+		pip install git+$(DIB_SRC_URL); \
 	else \
 		echo "Virtual environment already exists at $(NXOS_DIB_VENV)"; \
 	fi
@@ -495,7 +498,7 @@ vjunos_dib_setup:
 		python3 -m venv $(VJUNOS_DIB_VENV); \
 		. $(VJUNOS_DIB_VENV)/bin/activate && \
 		pip install --upgrade pip setuptools wheel && \
-		pip install diskimage-builder; \
+		pip install git+$(DIB_SRC_URL); \
 	else \
 		echo "Virtual environment already exists at $(VJUNOS_DIB_VENV)"; \
 	fi
