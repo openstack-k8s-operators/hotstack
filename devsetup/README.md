@@ -137,12 +137,12 @@ Download and upload the CentOS Stream 9 cloud image:
 
 ```shell
 curl -L -O https://cloud.centos.org/centos/9-stream/x86_64/images/\
-CentOS-Stream-GenericCloud-x86_64-9-latest.x86_64.qcow2
+CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2
 openstack image create CentOS-Stream-GenericCloud-9 \
   --property hw_firmware_type=uefi \
   --property hw_machine_type=q35 \
   --disk-format qcow2 \
-  --file CentOS-Stream-GenericCloud-x86_64-9-latest.x86_64.qcow2 \
+  --file CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2 \
   --public
 ```
 

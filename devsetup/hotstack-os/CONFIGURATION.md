@@ -311,7 +311,7 @@ Image URLs used by `make post-setup` to download and upload images to Glance:
 
 ```bash
 HOTSTACK_CIRROS_URL=http://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img
-HOTSTACK_CENTOS_STREAM_9_URL=https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-x86_64-9-latest.x86_64.qcow2
+HOTSTACK_CENTOS_STREAM_9_URL=https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2
 HOTSTACK_CONTROLLER_IMAGE_URL=https://github.com/openstack-k8s-operators/hotstack/releases/download/latest-controller/controller-latest.qcow2
 HOTSTACK_BLANK_IMAGE_URL=https://github.com/openstack-k8s-operators/hotstack/releases/download/latest-blank/blank-image-latest.qcow2
 HOTSTACK_UEFI_NETBOOT_URL=https://github.com/openstack-k8s-operators/hotstack/releases/download/latest-uefi-netboot/uefi-netboot-latest.img

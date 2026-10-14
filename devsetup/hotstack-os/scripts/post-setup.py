@@ -158,7 +158,7 @@ DEFAULT_CIRROS_URL = load_env_var(
 )
 DEFAULT_CENTOS_STREAM_9_URL = load_env_var(
     "HOTSTACK_CENTOS_STREAM_9_URL",
-    "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-x86_64-9-latest.x86_64.qcow2",
+    "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2",
 )
 DEFAULT_CONTROLLER_IMAGE_URL = load_env_var(
     "HOTSTACK_CONTROLLER_IMAGE_URL",
