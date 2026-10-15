@@ -1,0 +1,48 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+# Name of the content provider Zuul job to discover in the buildset.
+hotstack_content_provider_status_job_name: ""
+
+# Zuul web base URL (no trailing slash) of the tenant running the
+# provider buildset. Zuul does not expose the web URL to jobs, so it
+# must be set by the consumer (e.g. in zuul job vars). Everything else
+# comes straight from the zuul job context (zuul.tenant, zuul.pipeline,
+# zuul.change, zuul.patchset).
+hotstack_content_provider_status_zuul_web_url: ""
+
+# Console marker printed by the content provider; the first capture
+# group yields the status page URL.
+hotstack_content_provider_status_marker_pattern: 'S2I_CONTENT_PROVIDER_STATUS_URL:\s+(\S+)'
+
+# Timeouts (seconds) for the discovery steps: the provider job to appear
+# and start in the buildset, the status page marker to show up in the
+# provider's console stream, and the provider to reach the paused state.
+hotstack_content_provider_status_discover_timeout: 3600
+hotstack_content_provider_status_marker_timeout: 3600
+hotstack_content_provider_status_pause_timeout: 14400
+hotstack_content_provider_status_poll_delay: 30
+
+# Retries for the status document to report ready once the provider is
+# paused. The provider publishes the ready document before it pauses, so
+# this is only a short safety net.
+hotstack_content_provider_status_ready_retries: 12
+hotstack_content_provider_status_ready_delay: 5
+
+# Path of the vars file the role writes with the discovered provider
+# status. Consuming playbooks load it with ansible.builtin.include_vars;
+# override it when discovering multiple providers on the same host.
+hotstack_content_provider_status_vars_file: "{{ ansible_user_dir }}/hotstack/content-provider-status.yml"

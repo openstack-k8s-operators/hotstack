@@ -8,6 +8,56 @@
     run: ci/playbooks/pre-commit.yml
 
 - job:
+    name: hotstack-s2i-content-provider
+    parent: s2i-openstack-container-content-provider
+    description: |
+      Build the s2i ironic images for hotstack-s2i-content-provider-consumer,
+      exercising the content provider status page publication. The s2i
+      repository is taken from the buildset, so a Depends-On footer on
+      a s2i change tests its status page code speculatively.
+    vars:
+      s2i_ci_images:
+        - ironic/ironic-api
+        - ironic/ironic-conductor
+        - ironic/ironic-graphical-console
+
+- job:
+    name: hotstack-s2i-content-provider-wait
+    parent: base-minimal
+    nodeset: hotstack-pod
+    description: |
+      Wait for the s2i content provider job to start executing. The
+      provider can sit in the queue for a long time (semaphores and
+      builder capacity), so this job carries that wait with a long
+      timeout and gates hotstack-s2i-content-provider-consumer on the
+      provider being running.
+    timeout: 18000
+    run: ci/playbooks/content-provider-status-wait.yml
+    vars:
+      hotstack_content_provider_status_zuul_web_url: https://gateway-cloud-softwarefactory.apps.ocp.cloud.ci.centos.org/zuul
+      hotstack_content_provider_status_job_name: hotstack-s2i-content-provider
+      hotstack_content_provider_status_discover_timeout: 17400
+
+- job:
+    name: hotstack-s2i-content-provider-consumer
+    parent: base-minimal
+    nodeset: hotstack-content-provider-consumer
+    description: |
+      Consume the s2i content provider status page, in parallel with
+      the provider (no Zuul dependency on it): discover the provider
+      job in the buildset via the Zuul status API, scrape its live
+      console stream for the status page marker, wait for the provider
+      to pause, then fetch and validate the published status document.
+    timeout: 2700
+    run: ci/playbooks/content-provider-status-consumer.yml
+    vars:
+      hotstack_content_provider_status_zuul_web_url: https://gateway-cloud-softwarefactory.apps.ocp.cloud.ci.centos.org/zuul
+      hotstack_content_provider_status_job_name: hotstack-s2i-content-provider
+      hotstack_content_provider_status_discover_timeout: 300
+      hotstack_content_provider_status_marker_timeout: 600
+      hotstack_content_provider_status_pause_timeout: 1500
+
+- job:
     name: devsetup-hotstack-os
     parent: base-minimal
     nodeset: hotstack-image-vexxhost
