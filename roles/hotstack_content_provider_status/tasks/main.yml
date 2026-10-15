@@ -1,0 +1,36 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+# Discover the status page of a content provider job that runs in
+# parallel with this job and write the published content to a vars file.
+
+- name: Validate the content provider discovery inputs
+  ansible.builtin.import_tasks: assert.yml
+
+- name: Find the content provider job in the buildset pipeline
+  ansible.builtin.import_tasks: discover.yml
+
+- name: Scrape the provider console stream for the status URL marker
+  ansible.builtin.import_tasks: scrape.yml
+
+- name: Wait for the content provider to pause
+  ansible.builtin.import_tasks: wait_for_paused.yml
+
+- name: Fetch the status document and write the vars file
+  ansible.builtin.import_tasks: fetch.yml
+
+- name: Load the content provider status vars
+  ansible.builtin.import_tasks: load.yml

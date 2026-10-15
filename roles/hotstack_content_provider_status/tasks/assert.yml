@@ -1,0 +1,39 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Require the content provider role variables
+  ansible.builtin.assert:
+    that:
+      - hotstack_content_provider_status_job_name | length > 0
+      - hotstack_content_provider_status_zuul_web_url | length > 0
+    fail_msg: >-
+      Set hotstack_content_provider_status_job_name (the content provider
+      job to discover) and hotstack_content_provider_status_zuul_web_url
+      (the zuul web base URL, which zuul does not expose to jobs), e.g.
+      in the zuul job vars.
+
+- name: Require the zuul job context
+  ansible.builtin.assert:
+    that:
+      - zuul.tenant is defined and zuul.tenant | length > 0
+      - zuul.pipeline is defined and zuul.pipeline | length > 0
+      - zuul.change is defined and zuul.change | string | length > 0
+      - zuul.patchset is defined and zuul.patchset | string | length > 0
+    fail_msg: >-
+      This role requires a zuul job context with a change trigger
+      (zuul.tenant, zuul.pipeline, zuul.change, zuul.patchset): it
+      discovers content providers in the same buildset and pipeline as
+      the calling job.

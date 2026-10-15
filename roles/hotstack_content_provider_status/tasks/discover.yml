@@ -1,0 +1,35 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Wait for the content provider job to start
+  hotstack_get_content_provider_build:
+    zuul_web_url: "{{ hotstack_content_provider_status_zuul_web_url }}"
+    tenant: "{{ zuul.tenant }}"
+    pipeline: "{{ zuul.pipeline }}"
+    change: "{{ zuul.change }}"
+    patchset: "{{ zuul.patchset }}"
+    job_name: "{{ hotstack_content_provider_status_job_name }}"
+    wait_for: started
+    timeout: "{{ hotstack_content_provider_status_discover_timeout }}"
+    poll_delay: "{{ hotstack_content_provider_status_poll_delay }}"
+  register: _cp_build_info
+
+- name: Show the discovered content provider build
+  ansible.builtin.debug:
+    msg: >-
+      Discovered {{ hotstack_content_provider_status_job_name }} build
+      {{ _cp_build_info.uuid }} in the buildset:
+      {{ _cp_build_info.report_url }}.
