@@ -187,6 +187,7 @@
     ! -name "*.xz"
     ! -name "*.html"
     ! -name "*.mp4"
+    ! -name "*.webm"
     -exec gzip {} \;
   register: gzip_result
   ignore_errors: true
