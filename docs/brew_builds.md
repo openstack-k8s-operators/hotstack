@@ -13,6 +13,7 @@ and metadata from 'brew' registries rather than the ones from CDN or quay.io.
 - [Table of Contents](#table-of-contents)
 - [Get brew registry secret](#get-brew-registry-secret)
 - [Patch you pull-secret to include the brew registry secret](#patch-you-pull-secret-to-include-the-brew-registry-secret)
+- [Generate hotstack vars from published CI-files](#generate-hotstack-vars-from-published-ci-files)
 - [Set hotstack variables to enable brew builds](#set-hotstack-variables-to-enable-brew-builds)
   - [Set variable to create ImageContentSourcePolicy (ICSP)](#set-variable-to-create-imagecontentsourcepolicy-icsp)
   - [Additional CA trusts](#additional-ca-trusts)
@@ -57,6 +58,69 @@ podman login --authfile ${PULL_SECRET_FILE} \
 
 Configure the `pull_secret_file` variable in Hotstack to reference the
 generated pull-secret file..
+
+## Generate hotstack vars from published CI-files
+
+Downstream builds publish CI-files that can be used to generate most of
+the variables required to test a downstream build with Hotstack. The
+CI-files are published per RHOSO version, and the `latest` directory is
+a link to the most recent build:
+
+- `index`: The openstack-operators index image reference.
+- `bundle`: The openstack-operator bundle image reference.
+- `proxy.yaml`: Image mirrors and additional values for the build.
+
+Instead of maintaining the variables manually, run the
+`generate-ci-files-vars.yaml` playbook with the URL to the CI-files:
+
+```shell
+ansible-playbook generate-ci-files-vars.yaml \
+  -e hot_ci_files_url=<url-to>/CI-files/latest
+```
+
+This generates `ci-files-vars.yaml` (override the path with the
+`hot_ci_files_dest` variable) containing the following variables:
+
+- `openstack_operators_image`: From the `index` file.
+- `openstack_operator_channel`: From the
+  `cifmw_ci_gen_kustomize_values_sub_channel` key in `proxy.yaml`
+  (can be overridden with `-e openstack_operator_channel=<channel>`).
+- `image_content_source_policy_mirrors`: From the
+  `cifmw_openshift_setup_digest_mirrors` key in `proxy.yaml`.
+- `edpm_podman_registries`: Derived, per repository, from the same
+  mirrors.
+
+Then run the Hotstack scenario playbooks and include the generated file
+as the last `-e @<file>`, i.e. after the scenario `bootstrap_vars.yml`,
+so that the generated values override the scenario defaults:
+
+```shell
+ansible-playbook ... \
+  -e @scenarios/<scenario>/bootstrap_vars.yml \
+  -e @ci-files-vars.yaml \
+  bootstrap.yml
+```
+
+The following remains manual:
+
+- The pull-secret, which must include credentials for the registries
+  used by the build, see
+  [Get brew registry secret](#get-brew-registry-secret) and
+  [Patch you pull-secret to include the brew registry secret](
+  #patch-you-pull-secret-to-include-the-brew-registry-secret).
+- The `enable_image_content_source_policy` to apply the derived
+  mirrors, see
+  [Set variable to create ImageContentSourcePolicy (ICSP)](
+  #set-variable-to-create-imagecontentsourcepolicy-icsp).
+- Additional CA trusts, see
+  [Additional CA trusts](#additional-ca-trusts).
+- EDPM container registry logins, see
+  [Set EDPM container registry logins](#set-edpm-container-registry-logins).
+- The `hotstack_edpm_bootstrap_command`, see
+  [Set hotstack EDPM bootstrap command variables](
+  #set-hotstack-edpm-bootstrap-command-variables).
+- The `hotstack_rhos_release_args` for the EDPM bootstrap command.
+
 
 ## Set hotstack variables to enable brew builds
 
