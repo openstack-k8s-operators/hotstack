@@ -8,6 +8,25 @@
         - vexxhost-hotstack-ipxe-image
         - vexxhost-hotstack-controller-image
         # - vexxhost-hotstack-blank-image
+        - hotstack-s2i-content-provider:
+            voting: false
+            files: &s2i-content-provider-consumer-files
+              - ^roles/hotstack_content_provider_status/.*
+              - ^ci/playbooks/content-provider-status-.*\.yml
+        - hotstack-s2i-content-provider-wait:
+            voting: false
+            files: *s2i-content-provider-consumer-files
+        - hotstack-s2i-content-provider-consumer:
+            voting: false
+            files: *s2i-content-provider-consumer-files
+            dependencies:
+              - hotstack-s2i-content-provider-wait
+        - noop:
+            voting: false
+            files: *s2i-content-provider-consumer-files
+            dependencies:
+              - hotstack-s2i-content-provider
+              - hotstack-s2i-content-provider-consumer
     github-experimental-trigger:
       jobs:
         - vexxhost-hotstack-sno-2-bm

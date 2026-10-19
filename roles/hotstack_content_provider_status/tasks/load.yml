@@ -1,0 +1,30 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+# Load the vars file written by an earlier run of this role (possibly
+# in an earlier zuul playbook) as facts for consuming tasks. The file
+# lives on the remote host, so include_vars cannot read it from the
+# controller; slurp it and set the facts here.
+
+- name: Slurp the content provider status vars file
+  ansible.builtin.slurp:
+    src: "{{ hotstack_content_provider_status_vars_file }}"
+  register: _cp_vars_file_raw
+
+- name: Load the content provider status vars
+  ansible.builtin.set_fact:
+    "{{ item.key }}": "{{ item.value }}"
+  loop: "{{ _cp_vars_file_raw.content | b64decode | from_yaml | dict2items }}"
