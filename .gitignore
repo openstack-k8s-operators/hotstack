@@ -6,6 +6,7 @@ cloud-secret.*.yaml.bak
 dataplane_ssh_keys_vars.yaml
 *-outputs.yaml
 hotstack_overrides.yaml
+ci-files-vars.yaml
 images/*.qcow2
 images/.*-build/
 images/*.d/

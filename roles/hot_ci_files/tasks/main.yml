@@ -1,0 +1,42 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+- name: Generate vars file from published CI files
+  when: hot_ci_files_url | default('') | length > 0
+  block:
+    - name: Generate vars file from CI files
+      hot_ci_files:
+        url: "{{ hot_ci_files_url }}"
+        dest: "{{ hot_ci_files_dest }}"
+        edpm_insecure: "{{ hot_ci_files_edpm_insecure }}"
+        validate_certs: "{{ hot_ci_files_validate_certs }}"
+      register: __hot_ci_files
+
+    - name: Display CI-Files vars summary
+      ansible.builtin.debug:
+        msg: >-
+          Generated {{ hot_ci_files_dest }} from
+          {{ hot_ci_files_url }}: index image
+          {{ __hot_ci_files.index_image }}, channel
+          {{ __hot_ci_files.channel }},
+          {{ __hot_ci_files.mirror_count }} mirror entries.
+
+- name: Display hint when CI files URL is not set
+  when: hot_ci_files_url | default('') | length == 0
+  ansible.builtin.debug:
+    msg: >-
+      hot_ci_files_url is not set, nothing to do. Example:
+      -e hot_ci_files_url=https://<host>/xyz/xyz-CI-files/latest
