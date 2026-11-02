@@ -1,0 +1,15 @@
+---
+# The nodeset's OSD service spec (all modes): every nodeset deploys
+# its own OSDs into the cluster.
+
+- name: Apply the osd service spec of this nodeset
+  # One spec per nodeset (service_id osd-<nodeset>, explicit host
+  # placement): each nodeset carries its own data devices, so label
+  # placement cannot be used - it would apply this nodeset's paths to
+  # every osd host of the cluster.
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ceph.cephadm.ceph_orch_apply:
+    image: "{{ xedpm_ceph_container_image }}"
+    spec: "{{ _ceph_osd_spec | to_nice_yaml }}"

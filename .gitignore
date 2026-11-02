@@ -13,3 +13,5 @@ images/*.d/
 *.tar.gz
 scenarios/**/*-poap.tar.gz
 scenarios/**/*-poap.tar.gz.b64
+custom-services/ceph/.molecule-collections/
+custom-services/ceph/.molecule-venv/

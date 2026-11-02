@@ -1,0 +1,67 @@
+# Custom ansible-runner image for the ceph custom data plane service:
+# the openstack-ansibleee-runner base plus the ceph.cephadm and
+# xedpm.ceph collections (see ansibleee-cephadm/README.md).
+#
+# Build and push (see the Makefile in this directory):
+#   make -C custom-services/ceph build IMAGE_TAG=<tag>
+#   make -C custom-services/ceph push IMAGE_TAG=<tag>
+
+# Base image to extend; to override:
+#   make build ANSIBLEEE_RUNNER_IMAGE=<image:tag> ...
+ARG ANSIBLEEE_RUNNER_IMAGE=quay.io/openstack-k8s-operators/openstack-ansibleee-runner:latest
+FROM ${ANSIBLEEE_RUNNER_IMAGE}
+
+# cephadm-ansible git ref to install the ceph.cephadm collection
+# from; to override:
+#   make build CEPHADM_ANSIBLE_REF=<ref>
+ARG CEPHADM_ANSIBLE_REF=v5.0.0
+
+ARG ANSIBLEEE_RUNNER_IMAGE
+
+LABEL name="openstack-ansibleee-runner-cephadm" \
+      summary="openstack-ansibleee-runner with ceph.cephadm and xedpm.ceph" \
+      description="openstack-ansibleee-runner with the ceph.cephadm collection and the xedpm.ceph collection for the ceph custom data plane service" \
+      org.opencontainers.image.title="openstack-ansibleee-runner-cephadm" \
+      org.opencontainers.image.base.name="${ANSIBLEEE_RUNNER_IMAGE}" \
+      org.opencontainers.image.version="${CEPHADM_ANSIBLE_REF}"
+
+# git is required by ansible-galaxy for git URL requirements; the
+# ubi-minimal based runner image does not ship it.
+RUN if ! command -v git >/dev/null 2>&1; then \
+        if command -v microdnf >/dev/null 2>&1; then \
+            microdnf -y install git && microdnf clean all; \
+        else \
+            dnf -y install git && dnf clean all; \
+        fi; \
+    fi
+
+# The ceph.cephadm collection is not currently installable from Ansible
+# Galaxy (https://github.com/ceph/cephadm-ansible/issues/374), so install
+# it from the upstream git ref instead.
+RUN ansible-galaxy collection install \
+      git+https://github.com/ceph/cephadm-ansible.git,${CEPHADM_ANSIBLE_REF} \
+      -p /usr/share/ansible/collections
+
+# cephadm-ansible v5.0.0 modules' primary import only works in a git
+# checkout, not from an installed collection. Applied with git apply;
+# a failed apply (e.g. the collection was updated) fails the build.
+# Upstream fix (open): https://github.com/ceph/cephadm-ansible/pull/359
+COPY ansibleee-cephadm/cephadm-ansible-pr359.patch /tmp/
+RUN cd /usr/share/ansible/collections/ansible_collections/ceph/cephadm \
+    && git apply -p1 /tmp/cephadm-ansible-pr359.patch
+
+# Install the xedpm.ceph collection
+COPY collection/ /tmp/xedpm-ceph-src/
+RUN ansible-galaxy collection build /tmp/xedpm-ceph-src --output-path /tmp \
+    && ansible-galaxy collection install /tmp/xedpm-ceph-*.tar.gz -p /usr/share/ansible/collections \
+    && rm -rf /tmp/xedpm-ceph-src /tmp/xedpm-ceph-*.tar.gz
+
+# Smoke tests: run every module used by the ceph service in check mode
+# through the same module packaging path used when the modules execute
+# on remote hosts, and syntax-check the service playbook exactly as the
+# dataplane operator invokes it (spec.playbook: xedpm.ceph.deploy).
+# Broken content fails the image build instead of the deployment.
+COPY ansibleee-cephadm/smoke-test.yml /tmp/cephadm-ee-smoke-test.yml
+RUN ansible-playbook -i localhost, /tmp/cephadm-ee-smoke-test.yml \
+    && ansible-playbook --syntax-check -i localhost, xedpm.ceph.deploy \
+    && rm -f /tmp/cephadm-ee-smoke-test.yml

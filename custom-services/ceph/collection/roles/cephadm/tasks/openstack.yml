@@ -1,0 +1,55 @@
+---
+- name: Compose the client.openstack keyring on the bootstrap host
+  # no_log: the rendered keyring contains the client key.
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  no_log: true
+  ansible.builtin.template:
+    src: client.openstack.keyring.j2
+    dest: /etc/ceph/ceph.client.openstack.keyring
+    mode: "0640"
+
+- name: Register the client.openstack cephx user
+  # ceph auth import creates or replaces the entity. --mount makes the
+  # keyring visible inside the cephadm shell container (the shell does
+  # not mount /etc/ceph).
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      cephadm shell --mount /etc/ceph/ceph.client.openstack.keyring
+      -- ceph auth import -i /mnt/ceph.client.openstack.keyring
+  changed_when: false
+
+- name: List the existing Ceph pools
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ansible.builtin.command:
+    cmd: cephadm shell -- ceph osd pool ls
+  register: _ceph_pools
+  changed_when: false
+
+- name: Create the OpenStack pools
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ansible.builtin.command:
+    cmd: cephadm shell -- ceph osd pool create {{ item }}
+  loop: "{{ xedpm_ceph_openstack_pools }}"
+  when: item not in _ceph_pools.stdout_lines
+
+- name: Enable the rbd application on the OpenStack pools
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ansible.builtin.command:
+    cmd: cephadm shell -- ceph osd pool application enable {{ item }} rbd
+  loop: "{{ xedpm_ceph_openstack_pools }}"
+  register: _ceph_pool_enable
+  failed_when:
+    - _ceph_pool_enable.rc != 0
+    - "'already has application' not in _ceph_pool_enable.stderr"
+  changed_when: _ceph_pool_enable.rc == 0

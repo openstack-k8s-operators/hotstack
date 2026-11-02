@@ -1,0 +1,23 @@
+---
+namespace: xedpm
+name: ceph
+version: 1.0.0
+readme: README.md
+authors:
+  - hotstack contributors
+description: Deploy Ceph on OpenStack data plane nodes with cephadm
+license:
+  - Apache-2.0
+tags:
+  - storage
+  - infrastructure
+  - ceph
+  - cephadm
+  - edpm
+  - dataplane
+repository: https://github.com/openstack-k8s-operators/hotstack
+documentation: https://github.com/openstack-k8s-operators/hotstack/tree/main/custom-services/ceph
+homepage: https://github.com/openstack-k8s-operators/hotstack
+issues: https://github.com/openstack-k8s-operators/hotstack/issues
+build_ignore:
+  - roles/cephadm/molecule

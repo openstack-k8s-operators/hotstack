@@ -1,0 +1,68 @@
+---
+# Wait for the cluster to converge, in deployment order, as separate
+# tasks so the job log shows where it is.
+
+- name: Wait for the Ceph monitors to be up
+  # Join mode verified the quorum in its wait-for-cluster gate: the
+  # monitors belong to the nodeset that deployed them.
+  when: not _ceph_join_mode
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ansible.builtin.shell:
+    cmd: cephadm shell -- ceph status -f json 2>/dev/null || echo '{}'
+  register: _ceph_status_raw
+  changed_when: false
+  until: >-
+    (_ceph_status_json.quorum_names | default([]) | length)
+    == xedpm_ceph_mon_count
+  vars:
+    _ceph_status_json: "{{ _ceph_status_raw.stdout | from_json }}"
+  retries: 10
+  delay: 30
+
+- name: Wait for the Ceph OSDs of this nodeset to be up
+  # Counted per host rather than as a cluster total: once several
+  # nodesets deploy OSDs, the cluster also runs the other nodesets'
+  # OSDs and a cluster total would never match this nodeset's share.
+  # The hosts are matched by both name forms: the crush map names
+  # them after the node's kernel hostname (the short name on
+  # preProvisioned nodesets, the FQDN on operator-provisioned ones),
+  # while the registration and the service spec use the canonical
+  # FQDNs. The filter iterates the tree's host nodes, so a host given
+  # in both forms still counts its OSDs once.
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ansible.builtin.shell:
+    cmd: cephadm shell -- ceph osd tree -f json 2>/dev/null || echo '{"nodes":[]}'
+  register: _ceph_osd_tree_raw
+  changed_when: false
+  until: >-
+    (_ceph_osd_tree_raw.stdout | from_json
+     | xedpm.ceph.osd_up_count(_ceph_osd_spec_hosts + _ceph_osd_hosts))
+    == (_ceph_osd_hosts | length)
+       * (hostvars[_ceph_osd_hosts | first].xedpm_ceph_osd_paths | length)
+  retries: 60
+  delay: 30
+
+- name: Wait for the Ceph cluster to become healthy
+  # Join mode gates on its own OSDs only (the task above): the
+  # cluster health also depends on the other nodesets - it stays
+  # WARN while they are still deploying OSDs or while the data
+  # placed on this nodeset's OSDs rebalances.
+  when: not _ceph_join_mode
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ansible.builtin.shell:
+    cmd: cephadm shell -- ceph status -f json 2>/dev/null || echo '{}'
+  register: _ceph_status_raw
+  changed_when: false
+  until: >-
+    (_ceph_status_json.health.status | default(''))
+    == xedpm_ceph_expected_health
+  vars:
+    _ceph_status_json: "{{ _ceph_status_raw.stdout | from_json }}"
+  retries: 10
+  delay: 30

@@ -1,0 +1,32 @@
+---
+# Managed by the ceph data plane service (xedpm.ceph)
+{% for net in xedpm_ceph_public_network_cidrs %}
+# cephadm host management (ssh), and mon, mgr and OSD access for the
+# RBD clients (the compute nodes and the control plane) on the public
+# networks.
+- rule_name: 100 allow cephadm host management from {{ net }}
+  rule:
+    proto: tcp
+    dport: 22
+    source: {{ net }}
+- rule_name: 110 allow ceph mon from {{ net }}
+  rule:
+    proto: tcp
+    dport:
+      - 3300
+      - 6789
+    source: {{ net }}
+- rule_name: 111 allow ceph osd and mgr from {{ net }}
+  rule:
+    proto: tcp
+    dport: "6800:7300"
+    source: {{ net }}
+{% endfor %}
+# OSD replication on the cluster networks.
+{% for net in xedpm_ceph_cluster_network_cidrs %}
+- rule_name: 112 allow ceph osd replication from {{ net }}
+  rule:
+    proto: tcp
+    dport: "6800:7300"
+    source: {{ net }}
+{% endfor %}

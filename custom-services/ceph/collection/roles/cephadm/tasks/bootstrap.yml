@@ -1,0 +1,34 @@
+---
+# Create the cluster: only the run that finds no cluster bootstraps
+# one (guarded by the include's when); joining nodesets wait for the
+# deployed cluster instead, and re-runs skip it.
+
+- name: Write the initial ceph.conf for bootstrap
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ansible.builtin.template:
+    src: bootstrap-ceph.conf.j2
+    dest: "/home/{{ xedpm_ceph_ssh_user }}/cephadm-ssh/ceph.conf"
+    mode: "0644"
+
+- name: Bootstrap the Ceph cluster
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ceph.cephadm.cephadm_bootstrap:
+    fsid: "{{ _ceph_fsid }}"
+    # cephadm refuses FQDN hostnames unless explicitly allowed.
+    allow_fqdn_hostname: true
+    mon_ip: "{{ _ceph_mon_ip }}"
+    image: "{{ xedpm_ceph_container_image }}"
+    cluster_network: "{{ xedpm_ceph_cluster_network_cidrs | join(',') }}"
+    config: "/home/{{ xedpm_ceph_ssh_user }}/cephadm-ssh/ceph.conf"
+    ssh_user: "{{ xedpm_ceph_ssh_user }}"
+    ssh_private_key: "/home/{{ xedpm_ceph_ssh_user }}/cephadm-ssh/cephadm"
+    ssh_public_key: "/home/{{ xedpm_ceph_ssh_user }}/cephadm-ssh/cephadm.pub"
+    skip_dashboard: true
+    skip_monitoring_stack: true
+    skip_firewalld: true
+    output_config: /etc/ceph/ceph.conf
+    output_keyring: /etc/ceph/ceph.client.admin.keyring

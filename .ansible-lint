@@ -3,6 +3,11 @@ profile: production
 exclude_paths:
   - roles/*/files/
   - ci/playbooks/pre-hotstack-os.yml
+  # EE-only playbooks: reference collections that are built into the
+  # custom ansible-runner image, not installed on the linting host.
+  # The image build validates them (smoke test + syntax check).
+  - custom-services/ceph/ansibleee-cephadm/smoke-test.yml
+  - custom-services/ceph/collection/playbooks/deploy.yml
 strict: true
 quiet: false
 verbosity: 1

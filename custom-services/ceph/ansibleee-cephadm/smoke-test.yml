@@ -1,0 +1,56 @@
+---
+# Verifies the modules used to deploy Ceph load and execute (check
+# mode) through the collection module packaging path. The image build
+# runs this playbook automatically; to run it manually against a
+# built image (from the repo root):
+#   pushd custom-services/ceph/ansibleee-cephadm
+#   podman run --rm --entrypoint /bin/bash \
+#     -v "$PWD/smoke-test.yml:/tmp/smoke-test.yml:Z" \
+#     <registry>/openstack-ansibleee-runner-cephadm:<tag> \
+#     -c 'ansible-playbook -i localhost, /tmp/smoke-test.yml'
+#   popd
+- name: ceph.cephadm collection smoke test
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: cephadm_bootstrap module loads
+      ceph.cephadm.cephadm_bootstrap:
+        mon_ip: 127.0.0.1
+      check_mode: true
+
+    - name: ceph_orch_host module loads
+      ceph.cephadm.ceph_orch_host:
+        name: smoke-test-host
+        address: 127.0.0.1
+      check_mode: true
+
+    - name: ceph_orch_apply module loads
+      ceph.cephadm.ceph_orch_apply:
+        spec: |
+          service_type: osd
+      check_mode: true
+
+    - name: ceph_orch_daemon module loads
+      ceph.cephadm.ceph_orch_daemon:
+        daemon_id: "0"
+        daemon_type: osd
+        state: started
+      check_mode: true
+
+    - name: xedpm.ceph mask_host_bits filter works (network derivations)
+      ansible.builtin.assert:
+        that:
+          - "'172.18.0.100/24' | xedpm.ceph.mask_host_bits == '172.18.0.0/24'"
+        success_msg: mask_host_bits filter masks host bits correctly
+
+    - name: osp.edpm edpm_nftables role is installed (firewall rules)
+      ansible.builtin.stat:
+        path: /usr/share/ansible/collections/ansible_collections/osp/edpm/roles/edpm_nftables
+      register: _edpm_nftables_role
+
+    - name: Assert the edpm_nftables role is installed
+      ansible.builtin.assert:
+        that:
+          - _edpm_nftables_role.stat.exists
+        success_msg: osp.edpm.edpm_nftables is installed

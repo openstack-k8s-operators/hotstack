@@ -1,0 +1,102 @@
+---
+dependency:
+  name: galaxy
+  enabled: false
+driver:
+  name: default
+platforms:
+  - name: hci-0
+    groups:
+      - hci
+  - name: hci-1
+    groups:
+      - hci
+  - name: hci-2
+    groups:
+      - hci
+  - name: hci-3
+    groups:
+      - hci
+  - name: compute-0
+    groups:
+      - hci
+  - name: typo-0
+    groups:
+      - typo
+  - name: solo-0
+    groups:
+      - onemon
+  - name: m-0
+    groups:
+      - noosd
+provisioner:
+  name: ansible
+  inventory:
+    group_vars:
+      all:
+        ansible_connection: local
+        # Nodeset-level (nodeTemplate) ansibleVars are group vars in
+        # the operator inventory; the paths are read through hostvars.
+        xedpm_ceph_osd_paths:
+          - /dev/vdb
+          - /dev/vdc
+    host_vars:
+      hci-0:
+        xedpm_ceph_host_labels:
+          - mon
+          - mgr
+          - osd
+        storage_ip: 172.18.0.100
+        storage_cidr: 24
+        storagemgmt_ip: 172.20.0.100
+        storagemgmt_cidr: 24
+      hci-1:
+        xedpm_ceph_host_labels:
+          - mon
+          - mgr
+          - osd
+        storage_ip: 172.18.0.101
+        storage_cidr: 24
+        storagemgmt_ip: 172.20.0.101
+        storagemgmt_cidr: 24
+      hci-2:
+        xedpm_ceph_host_labels:
+          - mon
+          - mgr
+          - osd
+        storage_ip: 172.18.0.102
+        storage_cidr: 24
+        storagemgmt_ip: 172.20.0.102
+        storagemgmt_cidr: 24
+      # hci-3 defines no labels: it must fall back to the role
+      # default [] (no daemons), so it needs no cluster network.
+      hci-3:
+        storage_ip: 172.18.0.104
+        storage_cidr: 24
+      compute-0:
+        # Compute-only node: explicitly empty label list, no cluster
+        # network needed.
+        xedpm_ceph_host_labels: []
+        storage_ip: 172.18.0.103
+        storage_cidr: 24
+      typo-0:
+        # Unknown label (typo).
+        xedpm_ceph_host_labels:
+          - osdd
+      solo-0:
+        xedpm_ceph_host_labels:
+          - mon
+          - mgr
+          - osd
+      m-0:
+        xedpm_ceph_host_labels:
+          - mon
+          - mgr
+verifier:
+  name: ansible
+scenario:
+  test_sequence:
+    - dependency
+    - syntax
+    - converge
+    - idempotence

@@ -1,0 +1,5 @@
+[client.openstack]
+	key = {{ _ceph_client_key }}
+	caps mgr = "allow *"
+	caps mon = "profile rbd"
+	caps osd = "profile rbd pool={{ xedpm_ceph_openstack_pools | join(', profile rbd pool=') }}"

@@ -1,0 +1,89 @@
+---
+- name: Capture the play's hosts
+  # The join-mode add_host below makes ansible_play_hosts_all grow
+  # mid-play (ansible picks added hosts up for the remaining tasks),
+  # but every derivation must stay scoped to this nodeset's hosts:
+  # the added admin host has none of the per-node hostvars. Pin the
+  # list as a fact before anything else; the lazy default in
+  # vars/main.yml covers direct validate.yml includes (the molecule
+  # scenarios), where no add_host runs.
+  ansible.builtin.set_fact:
+    _ceph_play_hosts: "{{ ansible_play_hosts_all }}"
+
+- name: Validate the service configuration
+  ansible.builtin.include_tasks: validate.yml
+
+- name: Add the existing cluster's admin host to the inventory
+  # Join mode runs every cluster-global task on the joined cluster's
+  # admin host, which is not part of this nodeset's inventory: add it
+  # with the connection settings the play's own hosts use. Runs after
+  # the validation (which rejects a join host that is part of this
+  # nodeset) and before the first task delegating to it (the PyYAML
+  # install in the preflight tasks included next). The control-plane
+  # dnsmasq serves its name (every nodeset's DNSData feeds it) and
+  # the ansibleee pod resolves through it.
+  when: _ceph_join_mode
+  run_once: true
+  changed_when: false
+  ansible.builtin.add_host:
+    name: "{{ xedpm_ceph_join_host }}"
+    groups: ceph_join_admin
+    ansible_host: "{{ xedpm_ceph_join_host }}"
+    ansible_user: "{{ xedpm_ceph_ssh_user }}"
+    ansible_port: "{{ hostvars[_ceph_play_hosts | first].ansible_port | default(22) }}"
+    ansible_ssh_private_key_file: >-
+      {{ hostvars[_ceph_play_hosts | first].ansible_ssh_private_key_file }}
+
+- name: Install packages and prepare the bootstrap host
+  ansible.builtin.include_tasks: preflight.yml
+
+- name: Configure the Ceph firewall rules
+  ansible.builtin.include_tasks: firewall.yml
+
+- name: Bootstrap the Ceph cluster
+  # Only the run that finds no cluster bootstraps one: re-runs skip
+  # it, and a joining nodeset waits for the deployed cluster instead
+  # (the join-mode gate in the preflight tasks).
+  when: not _ceph_cluster_deployed
+  ansible.builtin.include_tasks: bootstrap.yml
+
+- name: Add the nodeset's hosts to the Ceph cluster
+  ansible.builtin.include_tasks: hosts.yml
+
+- name: Deploy the mon and mgr services and the monitor configuration
+  # Core nodeset only: the mon/mgr placement and the cluster-wide
+  # monitor configuration are owned by the nodeset that deployed the
+  # cluster.
+  when: not _ceph_join_mode
+  ansible.builtin.include_tasks: core.yml
+
+- name: Apply the nodeset's OSD service spec
+  ansible.builtin.include_tasks: osd.yml
+
+- name: Wait for the Ceph cluster to converge
+  ansible.builtin.include_tasks: wait.yml
+
+- name: Create the OpenStack pools and cephx user
+  # Core nodeset only: the pools, the client.openstack caps and the
+  # cluster-wide monitor configuration are owned by the nodeset that
+  # deployed the cluster - a joining nodeset applies its own
+  # ansibleVars, which would silently change them cluster-wide.
+  when: not _ceph_join_mode
+  ansible.builtin.include_tasks: openstack.yml
+
+- name: Distribute the Ceph client files to the nodeset's hosts
+  ansible.builtin.include_tasks: client.yml
+
+- name: Show the final Ceph cluster status
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ansible.builtin.command:
+    cmd: cephadm shell -- ceph -s
+  register: _ceph_s
+  changed_when: false
+
+- name: Ceph cluster status
+  run_once: true
+  ansible.builtin.debug:
+    msg: "{{ _ceph_s.stdout }}"

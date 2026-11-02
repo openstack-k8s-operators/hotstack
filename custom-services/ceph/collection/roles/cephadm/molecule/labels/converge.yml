@@ -1,0 +1,144 @@
+---
+# Runs the role's validate.yml directly (include_role with
+# tasks_from) against the scenario inventory: per-node label
+# overrides, the compute-only empty list, the role-default fallback
+# and the label count checks.
+- name: Converge a valid label topology
+  hosts: hci
+  gather_facts: false
+  vars: &scenario_vars
+    xedpm_ceph_public_network_name: storage
+    xedpm_ceph_cluster_network_name: storagemgmt
+    xedpm_ceph_public_network_cidrs:
+      - 172.18.0.0/24
+    xedpm_ceph_cluster_network_cidrs:
+      - 172.20.0.0/24
+    # The inventory order molecule generates is not the declaration
+    # order, so pin the bootstrap host instead of relying on the
+    # first-host default.
+    xedpm_ceph_bootstrap_host: hci-0
+    xedpm_ceph_config_dir: "{{ molecule_ephemeral_directory }}/config"
+  tasks:
+    - name: Generate the ceph-conf-files fixtures
+      # The role reads the cluster identity from the dataSources
+      # mount; the scenario generates it in the ephemeral directory
+      # instead of keeping fixture files in the tree.
+      ansible.builtin.file:
+        path: "{{ xedpm_ceph_config_dir }}"
+        state: directory
+        mode: "0755"
+    - name: Write the ceph-conf-files fixtures
+      ansible.builtin.copy:
+        dest: "{{ xedpm_ceph_config_dir }}/{{ item.key }}"
+        content: "{{ item.value }}"
+        mode: "0644"
+      loop:
+        - key: fsid
+          value: "a0b1c2d3-4e5f-6a7b-8c9d-e0f1a2b3c4d5"
+        - key: client_key
+          value: "AQBogginAAAAABAAfake-molecule-fixture-key=="
+
+    - name: Run the role's validation tasks
+      ansible.builtin.include_role:
+        name: xedpm.ceph.cephadm
+        tasks_from: validate.yml
+        public: true
+
+    - name: Assert the derived label sets
+      run_once: true
+      ansible.builtin.assert:
+        that:
+          - _ceph_host_labels['hci-0'] == ['mon', 'mgr', 'osd']
+          - _ceph_host_labels['hci-1'] == ['mon', 'mgr', 'osd']
+          - _ceph_host_labels['hci-2'] == ['mon', 'mgr', 'osd']
+          - _ceph_host_labels['hci-3'] == []
+          - _ceph_host_labels['compute-0'] == []
+          - _ceph_mon_hosts == ['hci-0', 'hci-1', 'hci-2']
+          - _ceph_mgr_hosts == ['hci-0', 'hci-1', 'hci-2']
+          - _ceph_osd_hosts == ['hci-0', 'hci-1', 'hci-2']
+          - _ceph_daemon_hosts == ['hci-0', 'hci-1', 'hci-2']
+        success_msg: >-
+          valid topology derives the expected label sets, with the
+          unconfigured node falling back to the [] default (no
+          daemons)
+
+- name: Converge an unknown label
+  hosts: typo
+  gather_facts: false
+  tasks:
+    - name: Expect the validation to fail on the unknown label
+      block:
+        - name: Run the role's validation tasks
+          ansible.builtin.include_role:
+            name: xedpm.ceph.cephadm
+            tasks_from: validate.yml
+      rescue:
+        - name: Assert the failure names the unknown label
+          ansible.builtin.assert:
+            that:
+              - ansible_failed_result.msg is search('may only contain mon, mgr and osd')
+              - ansible_failed_result.msg is search('osdd')
+              - ansible_failed_result.msg is search('typo-0')
+            success_msg: unknown labels are rejected
+
+- name: Converge a mon count mismatch
+  hosts: onemon
+  gather_facts: false
+  tasks:
+    - name: Expect the validation to fail on the mon count
+      block:
+        - name: Run the role's validation tasks
+          ansible.builtin.include_role:
+            name: xedpm.ceph.cephadm
+            tasks_from: validate.yml
+      rescue:
+        - name: Assert the failure reports the mon count mismatch
+          ansible.builtin.assert:
+            that:
+              - ansible_failed_result.msg is search('hosts must carry the mon label')
+            success_msg: mon count mismatches are rejected
+
+- name: Converge a bootstrap host without the mon label
+  # Single host with relaxed counts so the bootstrap check is reached
+  # (multi-host plays cannot rescue run_once failures without
+  # failing the playbook).
+  hosts: hci-0
+  gather_facts: false
+  vars:
+    xedpm_ceph_mon_count: 1
+    xedpm_ceph_mgr_count: 1
+    xedpm_ceph_bootstrap_host: compute-0
+  tasks:
+    - name: Expect the validation to fail on the bootstrap host
+      block:
+        - name: Run the role's validation tasks
+          ansible.builtin.include_role:
+            name: xedpm.ceph.cephadm
+            tasks_from: validate.yml
+      rescue:
+        - name: Assert the failure names the bootstrap host
+          ansible.builtin.assert:
+            that:
+              - ansible_failed_result.msg is search('does not carry the mon label')
+              - ansible_failed_result.msg is search('compute-0')
+            success_msg: bootstrap hosts without the mon label are rejected
+
+- name: Converge a topology without osd hosts
+  hosts: noosd
+  gather_facts: false
+  vars:
+    xedpm_ceph_mon_count: 1
+    xedpm_ceph_mgr_count: 1
+  tasks:
+    - name: Expect the validation to fail on the missing osd hosts
+      block:
+        - name: Run the role's validation tasks
+          ansible.builtin.include_role:
+            name: xedpm.ceph.cephadm
+            tasks_from: validate.yml
+      rescue:
+        - name: Assert the failure reports the missing osd hosts
+          ansible.builtin.assert:
+            that:
+              - ansible_failed_result.msg is search('No host carries the osd label')
+            success_msg: topologies without osd hosts are rejected

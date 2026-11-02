@@ -1,0 +1,84 @@
+# cephadm-ansible v5.0.0 modules' primary import only works in a git
+# checkout, not from an installed collection. Upstream fix (open):
+# https://github.com/ceph/cephadm-ansible/pull/359 - trimmed to the
+# modules present in v5.0.0 (the ceph_config_key.py hunk is dropped:
+# that module does not exist in v5.0.0). Drop the patch entirely once
+# the fix lands in a release.
+diff --git a/plugins/modules/ceph_config.py b/plugins/modules/ceph_config.py
+index d7a52b7..aed0963 100644
+--- a/plugins/modules/ceph_config.py
++++ b/plugins/modules/ceph_config.py
+@@ -8,7 +8,7 @@
+
+ from ansible.module_utils.basic import AnsibleModule  # type: ignore
+ try:
+-    from ansible.module_utils.ceph_common import exit_module, build_base_cmd_shell, fatal  # type: ignore
++    from ansible_collections.ceph.cephadm.plugins.module_utils.ceph_common import exit_module, build_base_cmd_shell, fatal  # type: ignore
+ except ImportError:
+     from module_utils.ceph_common import exit_module, build_base_cmd_shell, fatal  # type: ignore
+
+diff --git a/plugins/modules/ceph_orch_apply.py b/plugins/modules/ceph_orch_apply.py
+index 2b40be6..ab2ae1f 100644
+--- a/plugins/modules/ceph_orch_apply.py
++++ b/plugins/modules/ceph_orch_apply.py
+@@ -23,7 +23,7 @@
+
+ from ansible.module_utils.basic import AnsibleModule  # type: ignore
+ try:
+-    from ansible.module_utils.ceph_common import exit_module, build_base_cmd_orch  # type: ignore
++    from ansible_collections.ceph.cephadm.plugins.module_utils.ceph_common import exit_module, build_base_cmd_orch  # type: ignore
+ except ImportError:
+     from module_utils.ceph_common import exit_module, build_base_cmd_orch
+
+diff --git a/plugins/modules/ceph_orch_daemon.py b/plugins/modules/ceph_orch_daemon.py
+index 303d193..e7cfbe1 100644
+--- a/plugins/modules/ceph_orch_daemon.py
++++ b/plugins/modules/ceph_orch_daemon.py
+@@ -8,7 +8,7 @@
+
+ from ansible.module_utils.basic import AnsibleModule  # type: ignore
+ try:
+-    from ansible.module_utils.ceph_common import retry, exit_module, build_base_cmd_orch, fatal  # type: ignore
++    from ansible_collections.ceph.cephadm.plugins.module_utils.ceph_common import retry, exit_module, build_base_cmd_orch, fatal  # type: ignore
+ except ImportError:
+     from module_utils.ceph_common import retry, exit_module, build_base_cmd_orch, fatal  # type: ignore
+
+diff --git a/plugins/modules/ceph_orch_host.py b/plugins/modules/ceph_orch_host.py
+index 53eeacb..342e735 100644
+--- a/plugins/modules/ceph_orch_host.py
++++ b/plugins/modules/ceph_orch_host.py
+@@ -20,7 +20,7 @@
+
+ from ansible.module_utils.basic import AnsibleModule  # type: ignore
+ try:
+-    from ansible.module_utils.ceph_common import exit_module, build_base_cmd_orch  # type: ignore
++    from ansible_collections.ceph.cephadm.plugins.module_utils.ceph_common import exit_module, build_base_cmd_orch  # type: ignore
+ except ImportError:
+     from module_utils.ceph_common import exit_module, build_base_cmd_orch
+ import datetime
+diff --git a/plugins/modules/cephadm_bootstrap.py b/plugins/modules/cephadm_bootstrap.py
+index d0ddee7..5a01d54 100644
+--- a/plugins/modules/cephadm_bootstrap.py
++++ b/plugins/modules/cephadm_bootstrap.py
+@@ -21,7 +21,7 @@
+
+ from ansible.module_utils.basic import AnsibleModule  # type: ignore
+ try:
+-    from ansible.module_utils.ceph_common import exit_module  # type: ignore
++    from ansible_collections.ceph.cephadm.plugins.module_utils.ceph_common import exit_module  # type: ignore
+ except ImportError:
+     from module_utils.ceph_common import exit_module
+ import datetime
+diff --git a/plugins/modules/cephadm_registry_login.py b/plugins/modules/cephadm_registry_login.py
+index 2f8be0f..5fa6d06 100644
+--- a/plugins/modules/cephadm_registry_login.py
++++ b/plugins/modules/cephadm_registry_login.py
+@@ -20,7 +20,7 @@
+ from ansible.module_utils.basic import AnsibleModule  # type: ignore
+ from typing import List, Tuple
+ try:
+-    from ansible.module_utils.ceph_common import exit_module, build_base_cmd, fatal  # type: ignore
++    from ansible_collections.ceph.cephadm.plugins.module_utils.ceph_common import exit_module, build_base_cmd, fatal  # type: ignore
+ except ImportError:
+     from module_utils.ceph_common import exit_module, build_base_cmd, fatal
+ import datetime

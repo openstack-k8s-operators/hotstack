@@ -1,0 +1,93 @@
+---
+# Cluster fsid, from the fsid key of the ceph-conf-files secret.
+_ceph_fsid: >-
+  {{ (lookup('ansible.builtin.file', xedpm_ceph_config_dir ~ '/fsid',
+             errors='ignore') or '') | trim }}
+
+# client.openstack cephx key, from the client_key key of the
+# ceph-conf-files secret.
+_ceph_client_key: >-
+  {{ (lookup('ansible.builtin.file', xedpm_ceph_config_dir ~ '/client_key',
+             errors='ignore') or '') | trim }}
+
+# Major Ceph release of xedpm_ceph_container_image, e.g.
+# quay.io/ceph/ceph:v20.2.4 -> 20.
+_ceph_image_release: >-
+  {{ xedpm_ceph_container_image | regex_replace('^.*:', '')
+     | regex_replace('^v', '') | regex_replace('[.].*', '') }}
+
+# Join mode: this run joins an existing cluster through
+# xedpm_ceph_join_host instead of bootstrapping its own (the
+# OSD-only nodesets). An empty join host means this run owns (or
+# grows) the cluster it manages, bootstrapping when none is deployed.
+_ceph_join_mode: "{{ xedpm_ceph_join_host | default('') | length > 0 }}"
+
+# Host every cluster-global task delegates to: the joined cluster's
+# admin host in join mode, the bootstrap host otherwise.
+_ceph_admin_host: >-
+  {{ xedpm_ceph_join_host if (_ceph_join_mode | bool) else xedpm_ceph_bootstrap_host }}
+
+# The nodeset this run manages (the operator injects edpm_nodeset_name
+# into every nodeset's inventory; anything else falls back to
+# 'default'). Scoped to the OSD service spec: one spec per nodeset so
+# each can carry its own data devices.
+_ceph_nodeset_name: "{{ edpm_nodeset_name | default('default') }}"
+
+# Lowercased NetConfig network names (see defaults/main.yml).
+_ceph_public_net_prefix: "{{ xedpm_ceph_public_network_name | default('') | lower }}"
+_ceph_cluster_net_prefix: "{{ xedpm_ceph_cluster_network_name | default('') | lower }}"
+
+# The nodeset's hosts this run manages. Pinned as a fact by the first
+# task of tasks/main.yml: the join-mode add_host there makes
+# ansible_play_hosts_all grow mid-play, but every derivation must
+# stay scoped to this nodeset's hosts. This lazy default covers
+# direct tasks/validate.yml includes (the molecule scenarios), where
+# no add_host runs.
+_ceph_play_hosts: "{{ ansible_play_hosts_all }}"
+
+# Effective ceph orch labels per host: each host's resolved
+# xedpm_ceph_host_labels (per-node override, nodeset-global value or
+# the role default), captured as a per-host fact by the resolve task
+# at the top of tasks/validate.yml. Scoped to _ceph_play_hosts (the
+# nodeset's hosts, captured before the join-mode add_host).
+_ceph_host_labels: >-
+  {{ dict(_ceph_play_hosts | zip(
+       _ceph_play_hosts
+       | map('extract', hostvars, '_ceph_effective_host_labels') )) }}
+
+# Hosts carrying each label (derived from _ceph_host_labels).
+_ceph_mon_hosts: >-
+  {{ _ceph_host_labels | dict2items
+       | selectattr('value', 'superset', ['mon']) | map(attribute='key') | list }}
+_ceph_mgr_hosts: >-
+  {{ _ceph_host_labels | dict2items
+       | selectattr('value', 'superset', ['mgr']) | map(attribute='key') | list }}
+_ceph_osd_hosts: >-
+  {{ _ceph_host_labels | dict2items
+       | selectattr('value', 'superset', ['osd']) | map(attribute='key') | list }}
+
+# Hosts running ceph daemons (any of the mon, mgr or osd labels); the
+# container image is pre-pulled only on these.
+_ceph_daemon_hosts: >-
+  {{ (_ceph_mon_hosts + _ceph_mgr_hosts + _ceph_osd_hosts) | unique }}
+
+# The osd-labelled hosts of this nodeset by their canonical (FQDN)
+# names - the names ceph orch host registered them under.
+_ceph_osd_spec_hosts: >-
+  {{ _ceph_osd_hosts | map('extract', hostvars, 'canonical_hostname') | list }}
+
+# The OSD service spec of this nodeset: the service_id and placement
+# are scoped to the nodeset because each nodeset carries its own data
+# devices - label placement would apply this nodeset's paths to every
+# osd host of the cluster.
+_ceph_osd_spec:
+  service_type: osd
+  service_id: "osd-{{ _ceph_nodeset_name }}"
+  placement:
+    hosts: "{{ _ceph_osd_spec_hosts }}"
+  spec:
+    data_devices:
+      paths: "{{ hostvars[_ceph_osd_hosts | first].xedpm_ceph_osd_paths }}"
+
+# Bootstrap mon address: the bootstrap host's IP on the public network.
+_ceph_mon_ip: "{{ hostvars[xedpm_ceph_bootstrap_host][_ceph_public_net_prefix ~ '_ip'] }}"

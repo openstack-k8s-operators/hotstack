@@ -1,0 +1,11 @@
+# Managed by the ceph data plane service (xedpm.ceph); passed to
+# cephadm bootstrap for the initial cluster configuration.
+[global]
+public_network = {{ xedpm_ceph_public_network_cidrs | join(',') }}
+
+[osd]
+osd_memory_target_autotune = true
+osd_numa_auto_affinity = true
+
+[mgr]
+mgr/cephadm/autotune_memory_target_ratio = 0.2
