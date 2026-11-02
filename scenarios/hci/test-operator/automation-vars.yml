@@ -1,2 +1,116 @@
 ---
-stages: []
+stages:
+  - name: Set a multiattach volume type and create it if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack volume type show multiattach &>/dev/null || \
+          oc rsh openstackclient openstack volume type create multiattach
+
+      oc rsh openstackclient openstack volume type set --property multiattach="<is> True" multiattach
+
+  - name: Create public network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack network show public &>/dev/null || \
+        oc rsh openstackclient openstack network create public \
+          --external \
+          --no-share \
+          --default \
+          --provider-network-type flat \
+          --provider-physical-network datacentre
+
+  - name: Create subnet on public network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack subnet show public_subnet &>/dev/null || \
+        oc rsh openstackclient openstack subnet create public_subnet \
+          --network public \
+          --subnet-range 192.168.122.0/24 \
+          --allocation-pool start=192.168.122.171,end=192.168.122.250 \
+          --gateway 192.168.122.1 \
+          --dhcp
+
+  - name: Create private network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack network show private &>/dev/null || \
+        oc rsh openstackclient openstack network create private --share
+
+  - name: Create subnet on private network if needed
+    shell: |
+      set -xe -o pipefail
+      oc project openstack
+
+      oc rsh openstackclient openstack subnet show private_subnet &>/dev/null || \
+        oc rsh openstackclient openstack subnet create private_subnet \
+          --network private \
+          --subnet-range 10.2.0.0/24 \
+          --allocation-pool start=10.2.0.10,end=10.2.0.250 \
+          --gateway 10.2.0.1 \
+          --dhcp
+
+  - name: Wait for expected compute services
+    shell: |
+      set -xe -o pipefail
+      COMPUTES=3
+      RETRIES=10
+      COUNTER=0
+      oc project openstack
+      until [ $(oc rsh openstackclient openstack compute service list --service nova-compute -f value | wc -l) -eq "$COMPUTES" ]; do
+        if [[ "$COUNTER" -ge "$RETRIES" ]]; then
+          exit 1
+        fi
+        COUNTER=$[$COUNTER +1]
+        sleep 10
+      done
+
+  - name: Run nova-manage discover_hosts and wait for host records
+    # Count the host rows themselves, not the lines of the whole
+    # output: nova-manage prints deprecation warnings to stdout, so a
+    # line count depends on the warning noise.
+    shell: |
+      set -xe -o pipefail
+      COMPUTES=3
+      RETRIES=10
+      COUNTER=0
+      oc project openstack
+      until [ $(oc rsh nova-cell1-conductor-0 nova-manage cell_v2 list_hosts | grep -c edpm-compute) -eq "$COMPUTES" ]; do
+        if [[ "$COUNTER" -ge "$RETRIES" ]]; then
+          exit 1
+        fi
+        oc rsh nova-cell1-conductor-0 nova-manage cell_v2 discover_hosts --verbose
+        COUNTER=$[$COUNTER +1]
+        sleep 10
+      done
+
+  - name: Run tempest
+    documentation: >-
+      Executes the smoke validation tests using the Tempest framework.
+      These tests validate API functionality, resource management, and
+      integration between OpenStack services in the HCI environment -
+      including glance RBD image creation, cinder RBD volume
+      create/attach and boot from volume. Includes both the test
+      execution phase (workflowStep=0) and log collection phase
+      (workflowStep=1) to ensure complete validation results are
+      captured for analysis.
+    manifest: tempest-tests.yml
+    wait_conditions:
+      - >-
+        oc wait -n openstack tempests.test.openstack.org tempest-tests
+        --for condition=ServiceConfigReady --timeout=120s
+    wait_pod_completion:
+      - namespace: openstack
+        labels:
+          operator: test-operator
+          service: tempest
+          workflowStep: "0"
+        timeout: 900
+        poll_interval: 15

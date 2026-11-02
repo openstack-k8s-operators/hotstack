@@ -2,34 +2,144 @@
 stages:
   - name: TopoLVM Dependencies
     documentation: |
-      Install the TopoLVM operator via OLM (Operator Lifecycle Manager).
-      This stage deploys the operator component that will manage TopoLVM
-      resources on the OpenShift cluster. The operator must be installed
-      before creating LVMCluster custom resources.
+      Install the TopoLVM operator via OLM.
     stages: >-
       {{
         lookup("ansible.builtin.template",
                "common/stages/topolvm-deps-stages.yaml.j2")
       }}
 
+  - name: Dependencies
+    stages: >-
+      {{
+        lookup("ansible.builtin.template",
+               "common/stages/deps-stages.yaml.j2")
+      }}
+
   - name: TopoLVM
     documentation: |
-      Installs and configures TopoLVM (Topology-aware Local Volume Manager) which
-      provides dynamic local storage provisioning for the OpenShift cluster. This
-      enables efficient local storage allocation across the 3-node cluster.
+      Installs and configures TopoLVM.
     stages: >-
       {{
         lookup("ansible.builtin.template",
                "common/stages/topolvm-stages.yaml.j2")
       }}
 
-  - name: GitOps
-    documentation: |
-      Install and configure OpenShift GitOps via kustomize from the rhoso-gitops
-      repository. This stage configures the GitOps components and prepares the
-      cluster for GitOps-based deployments.
+  - name: OLM Openstack
     stages: >-
       {{
         lookup("ansible.builtin.template",
-               "common/stages/gitops-stages.yaml.j2")
+               "common/stages/olm-openstack-stages.yaml.j2")
       }}
+
+  - name: NodeNetworkConfigurationPolicy (nncp)
+    manifest: manifests/control-plane/networking/nncp.yaml
+    wait_conditions:
+      - >-
+        oc wait -n openstack nncp -l osp/nncm-config-type=standard
+        --for jsonpath='{.status.conditions[0].reason}'=SuccessfullyConfigured
+        --timeout=180s
+
+  - name: NetworkAttchmentDefinition (NAD)
+    manifest: manifests/control-plane/networking/nad.yaml
+
+  - name: MetalLB - L2Advertisement and IPAddressPool
+    manifest: manifests/control-plane/networking/metallb.yaml
+
+  - name: Netconfig
+    manifest: manifests/control-plane/networking/netconfig.yaml
+
+  - name: OpenstackControlPlane secrets
+    manifest: manifests/control-plane/secrets.yaml
+
+  - name: Ceph secrets
+    j2_manifest: manifests/shared/ceph-secrets.yaml.j2
+
+  - name: Start OpenstackControlPlane deployment
+    manifest: manifests/control-plane/control-plane.yaml
+    wait_conditions:
+      - >-
+        oc -n openstack wait openstackcontrolplanes.core.openstack.org controlplane
+        --for condition=OpenStackControlPlaneDNSReadyCondition --timeout=600s
+      - >-
+        oc -n openstack wait openstackcontrolplanes.core.openstack.org controlplane
+        --for condition=OpenStackControlPlaneCAReadyCondition --timeout=600s
+
+  - name: Dataplane SSH key secret
+    no_log: true
+    shell: >-
+      oc create -n openstack secret generic dataplane-ansible-ssh-private-key-secret
+      --save-config --dry-run=client
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_rsa
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_rsa.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >-
+        oc wait -n openstack secret dataplane-ansible-ssh-private-key-secret
+        --for jsonpath='{.metadata.name}'=dataplane-ansible-ssh-private-key-secret
+        --timeout=30s
+
+  - name: Nova migration SSH key secret
+    no_log: true
+    shell: >-
+      oc create -n openstack secret generic nova-migration-ssh-key
+      --save-config --dry-run=client
+      --from-file=ssh-privatekey=/home/zuul/.ssh/id_nova_migrate
+      --from-file=ssh-publickey=/home/zuul/.ssh/id_nova_migrate.pub
+      --type=Opaque -o yaml | oc apply -f -
+    wait_conditions:
+      - >-
+        oc wait -n openstack secret nova-migration-ssh-key
+        --for jsonpath='{.metadata.name}'=nova-migration-ssh-key
+        --timeout=30s
+
+  - name: Dataplane secrets
+    manifest: manifests/dataplane/secrets.yaml
+
+  - name: Ceph custom service
+    manifest: "{{ role_path }}/../../custom-services/ceph/service-ceph.yaml"
+    patches:
+      - path: metadata.namespace
+        value: openstack
+      - path: spec.openStackAnsibleEERunnerImage
+        value: "{{ custom_ceph_ansibleee_image }}"
+
+  - name: EDPM nodeset
+    j2_manifest: manifests/dataplane/nodeset.yaml.j2
+    patches: "{{ hotstack_default_nodeset_patches }}"
+    wait_conditions:
+      - >-
+        oc -n openstack wait openstackdataplanenodeset edpm
+        --for condition=SetupReady --timeout=10m
+
+  - name: Dataplane Deployment - Step 1
+    manifest: manifests/dataplane/deployment-step1.yaml
+    wait_conditions:
+      - oc wait -n openstack jobs.batch bootstrap-dataplane-step-1-edpm --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch configure-network-dataplane-step-1-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch validate-network-dataplane-step-1-edpm --for condition=Complete --timeout=1m
+      - oc wait -n openstack jobs.batch install-os-dataplane-step-1-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch configure-os-dataplane-step-1-edpm --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch ssh-known-hosts-dataplane-step-1 --for condition=Complete --timeout=1m
+      - oc wait -n openstack jobs.batch run-os-dataplane-step-1-edpm --for condition=Complete --timeout=3m
+      - oc wait -n openstack jobs.batch reboot-os-dataplane-step-1-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack openstackdataplanedeployment dataplane-step-1 --for condition=Ready --timeout=10m
+
+  - name: Dataplane Deployment - Step 2
+    manifest: manifests/dataplane/deployment-step2.yaml
+    wait_conditions:
+      - oc wait -n openstack jobs.batch ceph-dataplane-step-2-edpm --for condition=Complete --timeout=60m
+      - oc wait -n openstack jobs.batch install-certs-dataplane-step-2-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch ovn-dataplane-step-2-edpm --for condition=Complete --timeout=5m
+      - oc wait -n openstack jobs.batch neutron-metadata-dataplane-step-2-edpm --for condition=Complete --timeout=10m
+      - oc wait -n openstack jobs.batch libvirt-dataplane-step-2-edpm --for condition=Complete --timeout=20m
+      - oc wait -n openstack jobs.batch nova-dataplane-step-2-edpm --for condition=Complete --timeout=20m
+      - oc wait -n openstack openstackdataplanedeployment dataplane-step-2 --for condition=Ready --timeout=10m
+      - timeout --foreground 15m hotstack-nova-discover-hosts --namespace openstack --num-computes 3
+
+  - name: Wait for OpenstackControlPlane Setup Ready
+    manifest: manifests/control-plane/control-plane.yaml
+    wait_conditions:
+      - >-
+        oc -n openstack wait openstackcontrolplane controlplane
+        --for condition=Ready --timeout=30m
