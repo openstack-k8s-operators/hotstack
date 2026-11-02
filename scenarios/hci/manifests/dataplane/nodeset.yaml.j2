@@ -1,0 +1,213 @@
+---
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneNodeSet
+metadata:
+  name: edpm
+  namespace: openstack
+spec:
+  env:
+  - name: ANSIBLE_FORCE_COLOR
+    value: "True"
+  networkAttachments:
+  - ctlplane
+  nodeTemplate:
+    ansible:
+      ansiblePort: 22
+      ansibleUser: cloud-admin
+      ansibleVars:
+        # TODO: Replace this ... hacked in hardcoded only upstream repo ...
+        edpm_bootstrap_command: |
+          # REPLACED
+        # Ceph data plane service configuration (the xedpm.ceph.cephadm
+        # role, see custom-services/ceph/). The three HCI nodes are
+        # hyperconverged mon, mgr and osd carriers (the mon and mgr
+        # count validations default to 3).
+        # The classic-AES client.openstack key (compatible with all
+        # clients) needs the aes cipher allowed for authentication,
+        # which also allows creating insecure key types; all three
+        # warnings are part of that transition state.
+        xedpm_ceph_auth_allowed_ciphers: aes,aes256k
+        xedpm_ceph_health_mutes:
+        - AUTH_INSECURE_CLIENT_KEY_TYPE
+        - AUTH_INSECURE_KEYS_ALLOWED
+        - AUTH_INSECURE_KEYS_CREATABLE
+        # The operator's inventory host order is not deterministic;
+        # pin the bootstrap host explicitly (any mon-labelled host).
+        xedpm_ceph_bootstrap_host: edpm-compute-0
+        # NetConfig network names for the Ceph public (mon/client) and
+        # cluster (OSD replication) networks, and the networks as
+        # complete CIDR lists (the NetConfig subnets).
+        xedpm_ceph_public_network_name: storage
+        xedpm_ceph_public_network_cidrs:
+        - 172.18.0.0/24
+        xedpm_ceph_cluster_network_name: storagemgmt
+        xedpm_ceph_cluster_network_cidrs:
+        - 172.20.0.0/24
+        xedpm_ceph_container_image: quay.io/ceph/ceph:v20.2.4
+        xedpm_ceph_host_labels:
+        - mon
+        - mgr
+        - osd
+        xedpm_ceph_osd_paths:
+        - /dev/vdb
+        - /dev/vdc
+        - /dev/vdd
+        xedpm_ceph_openstack_pools:
+        - vms
+        - images
+        - volumes
+        - backups
+        # centos-release-ceph-tentacle enables the CentOS Storage SIG
+        # repository that provides cephadm; must match the Ceph release
+        # line of xedpm_ceph_container_image.
+        xedpm_ceph_repo_packages:
+        - centos-release-ceph-tentacle
+        edpm_network_config_hide_sensitive_logs: false
+        # The os-net-config template below is jinja evaluated by
+        # edpm-ansible on the nodes at deployment time; the raw block
+        # keeps this manifest's own rendering from touching it.
+        edpm_network_config_template: |
+{% raw %}
+          ---
+          {% set mtu_list = [ctlplane_mtu] %}
+          {% for network in nodeset_networks %}
+          {{ mtu_list.append(lookup('vars', networks_lower[network] ~ '_mtu')) }}
+          {%- endfor %}
+          {% set min_viable_mtu = mtu_list | max %}
+          network_config:
+            - type: ovs_bridge
+              name: {{ neutron_physical_bridge_name }}
+              mtu: {{ min_viable_mtu }}
+              use_dhcp: false
+              dns_servers: {{ ctlplane_dns_nameservers }}
+              domain: {{ dns_search_domains }}
+              addresses:
+                - ip_netmask: {{ ctlplane_ip }}/{{ ctlplane_cidr }}
+              routes: {{ ctlplane_host_routes }}
+              members:
+                - type: interface
+                  name: nic1
+                  mtu: {{ min_viable_mtu }}
+                  primary: true
+          {% for network in nodeset_networks %}
+                - type: vlan
+                  mtu: {{ lookup('vars', networks_lower[network] ~ '_mtu') }}
+                  vlan_id: {{ lookup('vars', networks_lower[network] ~ '_vlan_id') }}
+                  addresses:
+                    - ip_netmask: >-
+                        {{
+                          lookup('vars', networks_lower[network] ~ '_ip')
+                        }}/{{
+                          lookup('vars', networks_lower[network] ~ '_cidr')
+                        }}
+                  routes: {{ lookup('vars', networks_lower[network] ~ '_host_routes') }}
+          {% endfor %}
+{% endraw %}
+        edpm_nodes_validation_validate_controllers_icmp: false
+        edpm_nodes_validation_validate_gateway_icmp: false
+        edpm_sshd_allowed_ranges:
+        - 192.168.32.3/32
+        - 192.168.122.0/24
+        edpm_sshd_configure_firewall: true
+        gather_facts: false
+        neutron_physical_bridge_name: br-ex
+        neutron_public_interface_name: eth0
+        # Rendered from ntp_servers (bootstrap_vars.yml).
+        timesync_ntp_servers:
+{% for server in ntp_servers %}
+        - hostname: {{ server }}
+{% endfor %}
+    ansibleSSHPrivateKeySecret: dataplane-ansible-ssh-private-key-secret
+    managementNetwork: ctlplane
+    networks:
+    - defaultRoute: true
+      name: ctlplane
+      subnetName: subnet1
+    - name: internalapi
+      subnetName: subnet1
+    - name: storage
+      subnetName: subnet1
+    - name: tenant
+      subnetName: subnet1
+    - name: storagemgmt
+      subnetName: subnet1
+  nodes:
+    edpm-compute-0:
+      ansible:
+        ansibleHost: 192.168.122.100
+      hostName: edpm-compute-0
+      networks:
+      - defaultRoute: true
+        fixedIP: 192.168.122.100
+        name: ctlplane
+        subnetName: subnet1
+      - fixedIP: 172.17.0.100
+        name: internalapi
+        subnetName: subnet1
+      - fixedIP: 172.18.0.100
+        name: storage
+        subnetName: subnet1
+      - fixedIP: 172.19.0.100
+        name: tenant
+        subnetName: subnet1
+      - fixedIP: 172.20.0.100
+        name: storagemgmt
+        subnetName: subnet1
+    edpm-compute-1:
+      ansible:
+        ansibleHost: 192.168.122.101
+      hostName: edpm-compute-1
+      networks:
+      - defaultRoute: true
+        fixedIP: 192.168.122.101
+        name: ctlplane
+        subnetName: subnet1
+      - fixedIP: 172.17.0.101
+        name: internalapi
+        subnetName: subnet1
+      - fixedIP: 172.18.0.101
+        name: storage
+        subnetName: subnet1
+      - fixedIP: 172.19.0.101
+        name: tenant
+        subnetName: subnet1
+      - fixedIP: 172.20.0.101
+        name: storagemgmt
+        subnetName: subnet1
+    edpm-compute-2:
+      ansible:
+        ansibleHost: 192.168.122.102
+      hostName: edpm-compute-2
+      networks:
+      - defaultRoute: true
+        fixedIP: 192.168.122.102
+        name: ctlplane
+        subnetName: subnet1
+      - fixedIP: 172.17.0.102
+        name: internalapi
+        subnetName: subnet1
+      - fixedIP: 172.18.0.102
+        name: storage
+        subnetName: subnet1
+      - fixedIP: 172.19.0.102
+        name: tenant
+        subnetName: subnet1
+      - fixedIP: 172.20.0.102
+        name: storagemgmt
+        subnetName: subnet1
+  preProvisioned: true
+  services:
+  - bootstrap
+  - configure-network
+  - validate-network
+  - install-os
+  - configure-os
+  - ssh-known-hosts
+  - run-os
+  - reboot-os
+  - ceph
+  - install-certs
+  - ovn
+  - neutron-metadata
+  - libvirt
+  - nova

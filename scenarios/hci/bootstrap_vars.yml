@@ -13,9 +13,11 @@ openstack_operators_image: quay.io/openstack-k8s-operators/openstack-operator-in
 openstack_operator_channel: alpha
 openstack_operator_starting_csv: null
 
-openshift_version: stable-4.18
+openshift_version: stable-4.20
 
-ntp_servers: []
+# NTP servers for the data plane nodes.
+ntp_servers:
+  - pool.ntp.org
 dns_servers:
   - 172.31.0.129
 
@@ -24,6 +26,25 @@ pull_secret_file: ~/pull-secret.txt
 ovn_k8s_gateway_config_host_routing: true
 enable_iscsi: false
 enable_multipath: false
+
+# Custom ansible-runner image for the ceph data plane service
+# (built from custom-services/ceph/)
+custom_ceph_ansibleee_image: quay.io/rhn_gps_hjensas/openstack-ansibleee-runner-cephadm:v0.0.26
+
+# Ceph cluster identity (see custom-services/ceph/)
+custom_ceph_fsid: 8532bfe1-dc55-4abe-b4ec-35fe9f0bcda0
+custom_ceph_client_key: AQA9kuJqAAAAABAAIT2jhHtEsNgAZKpoe4s+hQ==
+# The computes' storage network IPs (the Ceph mon addresses).
+custom_ceph_mon_ips:
+- 172.18.0.100
+- 172.18.0.101
+- 172.18.0.102
+# RBD pools the ceph service creates
+custom_ceph_openstack_pools:
+- vms
+- images
+- volumes
+- backups
 
 # Nova console recorder NFS settings
 nova_console_recorder_nfs_server: controller-0.openstack.lab
