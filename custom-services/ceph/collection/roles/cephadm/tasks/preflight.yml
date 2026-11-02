@@ -1,0 +1,170 @@
+---
+# Validate the configuration against the actual hosts and prepare them.
+
+- name: Gather facts about the OSD devices on the osd hosts
+  when: inventory_hostname in _ceph_osd_hosts
+  ansible.builtin.stat:
+    path: "{{ item }}"
+    get_checksum: false
+  loop: "{{ xedpm_ceph_osd_paths }}"
+  register: _ceph_osd_device_stats
+
+- name: Validate the OSD devices on the osd hosts
+  when: inventory_hostname in _ceph_osd_hosts
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isblk
+    fail_msg: >-
+      {{ item.item }} is missing or is not a block device on
+      {{ inventory_hostname }}. xedpm_ceph_osd_paths must list
+      devices present on every osd-labelled host: deploying OSDs
+      zaps them.
+  loop: "{{ _ceph_osd_device_stats.results }}"
+
+- name: Install the Ceph repository packages
+  when: xedpm_ceph_repo_packages | default([]) | length > 0
+  become: true
+  ansible.builtin.dnf:
+    name: "{{ xedpm_ceph_repo_packages }}"
+    state: present
+
+- name: Install the Ceph packages
+  become: true
+  ansible.builtin.dnf:
+    name: "{{ xedpm_ceph_packages }}"
+    state: present
+
+- name: Read the installed cephadm version
+  become: true
+  ansible.builtin.command:
+    cmd: cephadm version
+  register: _ceph_cephadm_version
+  changed_when: false
+
+- name: Validate the installed cephadm matches the container image release
+  # cephadm refuses to bootstrap when its release differs from the
+  # container image release.
+  ansible.builtin.assert:
+    that:
+      - _ceph_cephadm_version.stdout is search(_ceph_image_release ~ '[.][0-9]+[.][0-9]+')
+    fail_msg: >-
+      cephadm on {{ inventory_hostname }} is from a different Ceph
+      release than xedpm_ceph_container_image: `cephadm version`
+      reported "{{ _ceph_cephadm_version.stdout | trim }}" but the
+      image is {{ xedpm_ceph_container_image }} (Ceph release
+      {{ _ceph_image_release }}).
+
+- name: Ensure PyYAML is available for the ceph.cephadm modules
+  become: true
+  ansible.builtin.dnf:
+    name: python3-pyyaml
+    state: present
+
+- name: Check whether the Ceph container image is already present
+  become: true
+  ansible.builtin.command:
+    cmd: podman image exists {{ xedpm_ceph_container_image }}
+  register: _ceph_image_present
+  changed_when: false
+  failed_when: false
+
+- name: Pre-pull the Ceph container image
+  # Keeps the image pull off the cephadm deploy timeouts. Scoped to
+  # the daemon hosts: compute-only nodes never run ceph containers.
+  become: true
+  when:
+    - _ceph_image_present.rc != 0
+    - inventory_hostname in _ceph_daemon_hosts
+  ansible.builtin.command:
+    cmd: podman pull {{ xedpm_ceph_container_image }}
+  register: _ceph_image_pull
+  changed_when: _ceph_image_pull.rc == 0
+  until: _ceph_image_pull.rc == 0
+  retries: 5
+  delay: 60
+
+- name: Wait for the deployed cluster to be ready
+  # Join mode never bootstraps a cluster: it waits for the nodeset
+  # that deployed the monitors and manager instead. cephadm shell
+  # fails until the admin host carries the cluster config (the
+  # bootstrap wrote it), and ceph orch status fails until the
+  # monitors are in quorum and the manager's cephadm module is
+  # active - exactly the readiness a joining nodeset needs. This also
+  # absorbs the race of both nodesets deploying at the same time.
+  when: _ceph_join_mode
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ansible.builtin.command:
+    cmd: cephadm shell -- ceph orch status
+  register: _ceph_join_orch_status
+  until: _ceph_join_orch_status.rc == 0
+  retries: "{{ (xedpm_ceph_join_wait_minutes | int) * 2 }}"
+  delay: 30
+  changed_when: false
+
+- name: Check for an existing Ceph cluster on the bootstrap host
+  when: not _ceph_join_mode
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  ansible.builtin.stat:
+    path: /etc/ceph/ceph.conf
+  register: _ceph_conf_stat
+
+- name: Set whether the Ceph cluster is already deployed
+  # Join mode implies the cluster exists: the wait above verified it.
+  run_once: true
+  ansible.builtin.set_fact:
+    _ceph_cluster_deployed: >-
+      {{ true if (_ceph_join_mode | bool) else _ceph_conf_stat.stat.exists }}
+
+- name: Fail if the existing cluster's fsid does not match
+  # The admin host's ceph.conf carries the deployed cluster's
+  # identity: it must match the ceph-conf-files secret this run
+  # deploys (or joins) with.
+  when: _ceph_cluster_deployed
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ansible.builtin.command:
+    cmd: grep -qF "{{ _ceph_fsid }}" /etc/ceph/ceph.conf
+  changed_when: false
+
+- name: Ensure the cephadm ssh key directory exists on the bootstrap host
+  # Bootstrap staging only: a joining nodeset uses the key the
+  # bootstrap already deployed to the cluster.
+  when: not _ceph_join_mode
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  ansible.builtin.file:
+    path: "/home/{{ xedpm_ceph_ssh_user }}/cephadm-ssh"
+    state: directory
+    mode: "0700"
+
+- name: Stage the dataplane ssh private key for cephadm on the bootstrap host
+  when: not _ceph_join_mode
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  ansible.builtin.copy:
+    src: "{{ xedpm_ceph_config_dir }}/ssh-privatekey"
+    dest: "/home/{{ xedpm_ceph_ssh_user }}/cephadm-ssh/cephadm"
+    mode: "0600"
+
+- name: Derive the cephadm ssh public key on the bootstrap host
+  when: not _ceph_join_mode
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  ansible.builtin.command:
+    cmd: ssh-keygen -y -f /home/{{ xedpm_ceph_ssh_user }}/cephadm-ssh/cephadm
+  register: _ceph_ssh_pubkey
+  changed_when: false
+
+- name: Stage the cephadm ssh public key on the bootstrap host
+  when: not _ceph_join_mode
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  ansible.builtin.copy:
+    content: "{{ _ceph_ssh_pubkey.stdout }}\n"
+    dest: "/home/{{ xedpm_ceph_ssh_user }}/cephadm-ssh/cephadm.pub"
+    mode: "0644"

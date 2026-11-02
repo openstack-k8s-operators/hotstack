@@ -1,0 +1,210 @@
+---
+# Runs the role's validate.yml against the required network CIDR
+# lists: the multi-subnet (spine-and-leaf) and single-subnet
+# coverages, the bootstrap ceph.conf rendered from them, and the
+# failure cases (a malformed CIDR, a host outside the configured
+# networks).
+- name: Converge the spine-and-leaf topology
+  hosts: multi
+  gather_facts: false
+  vars:
+    xedpm_ceph_public_network_name: storage
+    xedpm_ceph_cluster_network_name: storagemgmt
+    # The complete NetConfig subnet lists: one subnet per leaf.
+    xedpm_ceph_public_network_cidrs:
+      - 172.18.0.0/24
+      - 172.18.1.0/24
+    xedpm_ceph_cluster_network_cidrs:
+      - 172.20.0.0/24
+      - 172.21.0.0/24
+    # The inventory order molecule generates is not the declaration
+    # order, so pin the bootstrap host instead of relying on the
+    # first-host default.
+    xedpm_ceph_bootstrap_host: leaf1-host
+    xedpm_ceph_config_dir: "{{ molecule_ephemeral_directory }}/config"
+  tasks:
+    - name: Generate the ceph-conf-files fixtures
+      # The role reads the cluster identity from the dataSources
+      # mount; the scenario generates it in the ephemeral directory
+      # instead of keeping fixture files in the tree.
+      ansible.builtin.file:
+        path: "{{ xedpm_ceph_config_dir }}"
+        state: directory
+        mode: "0755"
+    - name: Write the ceph-conf-files fixtures
+      ansible.builtin.copy:
+        dest: "{{ xedpm_ceph_config_dir }}/{{ item.key }}"
+        content: "{{ item.value }}"
+        mode: "0644"
+      loop:
+        - key: fsid
+          value: "a0b1c2d3-4e5f-6a7b-8c9d-e0f1a2b3c4d5"
+        - key: client_key
+          value: "AQBogginAAAAABAAfake-molecule-fixture-key=="
+
+    - name: Run the role's validation tasks
+      ansible.builtin.include_role:
+        name: xedpm.ceph.cephadm
+        tasks_from: validate.yml
+        public: true
+
+    - name: Assert the validated topology
+      run_once: true
+      ansible.builtin.assert:
+        that:
+          - _ceph_osd_hosts == ['leaf1-host', 'leaf1-host2', 'leaf2-host']
+          - _ceph_host_labels['leaf1-compute'] == []
+        success_msg: >-
+          the CIDR lists cover every host's subnet across the leaves
+          and the compute-only node carries no osd label
+
+    - name: Render the bootstrap ceph.conf
+      run_once: true
+      ansible.builtin.copy:
+        content: >-
+          {{ lookup('ansible.builtin.template',
+                    molecule_scenario_directory ~ '/../../templates/bootstrap-ceph.conf.j2') }}
+        dest: "{{ molecule_ephemeral_directory }}/bootstrap-ceph.conf"
+        mode: "0644"
+
+    - name: Assert the bootstrap ceph.conf carries the public networks
+      run_once: true
+      ansible.builtin.assert:
+        that:
+          - "'public_network = 172.18.0.0/24,172.18.1.0/24' in lookup('ansible.builtin.file', molecule_ephemeral_directory ~ '/bootstrap-ceph.conf')"
+        success_msg: the bootstrap ceph.conf carries the public networks
+
+    - name: Render the Ceph client ceph.conf
+      run_once: true
+      ansible.builtin.copy:
+        content: >-
+          {{ lookup('ansible.builtin.template',
+                    molecule_scenario_directory ~ '/../../templates/client-ceph.conf.j2') }}
+        dest: "{{ molecule_ephemeral_directory }}/client-ceph.conf"
+        mode: "0644"
+
+    - name: Assert the Ceph client ceph.conf carries the fsid and the mon addresses
+      # edpm_libvirt extracts the fsid from this file for the RBD
+      # volume attach secret; the mon addresses are this nodeset's
+      # mons' public-network IPs (leaf1-host 172.18.0.100,
+      # leaf1-host2 172.18.0.102, leaf2-host 172.18.1.101).
+      run_once: true
+      ansible.builtin.assert:
+        that:
+          - "'fsid = a0b1c2d3-4e5f-6a7b-8c9d-e0f1a2b3c4d5' in lookup('ansible.builtin.file', molecule_ephemeral_directory ~ '/client-ceph.conf')"
+          - "'172.18.0.100' in lookup('ansible.builtin.file', molecule_ephemeral_directory ~ '/client-ceph.conf')"
+          - "'172.18.0.102' in lookup('ansible.builtin.file', molecule_ephemeral_directory ~ '/client-ceph.conf')"
+          - "'172.18.1.101' in lookup('ansible.builtin.file', molecule_ephemeral_directory ~ '/client-ceph.conf')"
+        success_msg: the Ceph client ceph.conf carries the fsid and the mon addresses
+
+- name: Converge the single-subnet topology
+  hosts: single
+  gather_facts: false
+  vars:
+    xedpm_ceph_public_network_name: storage
+    xedpm_ceph_cluster_network_name: storagemgmt
+    xedpm_ceph_public_network_cidrs:
+      - 172.18.0.0/24
+    xedpm_ceph_cluster_network_cidrs:
+      - 172.20.0.0/24
+    # The inventory order molecule generates is not the declaration
+    # order, so pin the bootstrap host instead of relying on the
+    # first-host default.
+    xedpm_ceph_bootstrap_host: c0
+    xedpm_ceph_config_dir: "{{ molecule_ephemeral_directory }}/config"
+  tasks:
+    - name: Generate the ceph-conf-files fixtures
+      # The role reads the cluster identity from the dataSources
+      # mount; the scenario generates it in the ephemeral directory
+      # instead of keeping fixture files in the tree.
+      ansible.builtin.file:
+        path: "{{ xedpm_ceph_config_dir }}"
+        state: directory
+        mode: "0755"
+    - name: Write the ceph-conf-files fixtures
+      ansible.builtin.copy:
+        dest: "{{ xedpm_ceph_config_dir }}/{{ item.key }}"
+        content: "{{ item.value }}"
+        mode: "0644"
+      loop:
+        - key: fsid
+          value: "a0b1c2d3-4e5f-6a7b-8c9d-e0f1a2b3c4d5"
+        - key: client_key
+          value: "AQBogginAAAAABAAfake-molecule-fixture-key=="
+
+    - name: Run the role's validation tasks
+      ansible.builtin.include_role:
+        name: xedpm.ceph.cephadm
+        tasks_from: validate.yml
+        public: true
+
+    - name: Assert the single-subnet coverage passes validation
+      run_once: true
+      ansible.builtin.assert:
+        that:
+          - _ceph_osd_hosts == ['c0', 'c1', 'c2']
+        success_msg: the single-subnet CIDR lists pass validation
+
+- name: Converge a malformed network CIDR
+  # Single host with relaxed counts so the CIDR validation is reached
+  # (multi-host plays cannot rescue run_once failures without
+  # failing the playbook).
+  hosts: c0
+  gather_facts: false
+  vars:
+    xedpm_ceph_mon_count: 1
+    xedpm_ceph_mgr_count: 1
+    xedpm_ceph_public_network_name: storage
+    xedpm_ceph_cluster_network_name: storagemgmt
+    xedpm_ceph_cluster_network_cidrs:
+      - 172.20.0.0/24
+    # Host bits set: not a network address.
+    xedpm_ceph_public_network_cidrs:
+      - 172.18.0.1/24
+  tasks:
+    - name: Expect the validation to fail on the malformed CIDR
+      block:
+        - name: Run the role's validation tasks
+          ansible.builtin.include_role:
+            name: xedpm.ceph.cephadm
+            tasks_from: validate.yml
+      rescue:
+        - name: Assert the failure reports the malformed CIDR
+          # The validation is a loop, so the item's message is nested
+          # in the failed result.
+          ansible.builtin.assert:
+            that:
+              - ansible_failed_result | string is search('is not a network address')
+              - ansible_failed_result | string is search('172.18.0.1/24')
+            success_msg: malformed network CIDRs are rejected
+
+- name: Converge a host outside the configured networks
+  # Single host with relaxed counts so the coverage validation is
+  # reached: leaf2-host sits on 172.18.1.0/24, which the public CIDR
+  # list does not cover.
+  hosts: leaf2-host
+  gather_facts: false
+  vars:
+    xedpm_ceph_mon_count: 1
+    xedpm_ceph_mgr_count: 1
+    xedpm_ceph_public_network_name: storage
+    xedpm_ceph_cluster_network_name: storagemgmt
+    xedpm_ceph_public_network_cidrs:
+      - 172.18.0.0/24
+    xedpm_ceph_cluster_network_cidrs:
+      - 172.20.0.0/24
+      - 172.21.0.0/24
+  tasks:
+    - name: Expect the validation to fail on the uncovered subnet
+      block:
+        - name: Run the role's validation tasks
+          ansible.builtin.include_role:
+            name: xedpm.ceph.cephadm
+            tasks_from: validate.yml
+      rescue:
+        - name: Assert the failure reports the uncovered subnet
+          ansible.builtin.assert:
+            that:
+              - ansible_failed_result.msg is search('not one of the')
+              - ansible_failed_result.msg is search('172.18.1.0/24')
+            success_msg: hosts outside the configured networks are rejected

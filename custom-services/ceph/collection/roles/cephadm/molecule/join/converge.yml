@@ -1,0 +1,193 @@
+---
+# Runs the role's validate.yml against an OSD-only nodeset joining
+# an existing cluster: the join-mode branches (the mon/mgr count
+# checks skipped, the admin host resolved from the join host), the
+# per-nodeset OSD service spec, the osd_up_count filter the OSD wait
+# counts with, and the join-mode failure cases (a join host that is
+# part of this nodeset, per-node path overrides).
+- name: Converge a joining OSD-only nodeset
+  hosts: join
+  gather_facts: false
+  vars:
+    xedpm_ceph_public_network_name: storage
+    xedpm_ceph_cluster_network_name: storagemgmt
+    # The complete NetConfig subnet lists, covering more than this
+    # nodeset's own subnets (its hosts all sit on 172.18.0.0/24 and
+    # 172.20.0.0/24).
+    xedpm_ceph_public_network_cidrs:
+      - 172.18.0.0/24
+      - 172.18.1.0/24
+    xedpm_ceph_cluster_network_cidrs:
+      - 172.20.0.0/24
+    xedpm_ceph_config_dir: "{{ molecule_ephemeral_directory }}/config"
+  tasks:
+    - name: Generate the ceph-conf-files fixtures
+      # The role reads the cluster identity from the dataSources
+      # mount; the scenario generates it in the ephemeral directory
+      # instead of keeping fixture files in the tree.
+      ansible.builtin.file:
+        path: "{{ xedpm_ceph_config_dir }}"
+        state: directory
+        mode: "0755"
+    - name: Write the ceph-conf-files fixtures
+      ansible.builtin.copy:
+        dest: "{{ xedpm_ceph_config_dir }}/{{ item.key }}"
+        content: "{{ item.value }}"
+        mode: "0644"
+      loop:
+        - key: fsid
+          value: "a0b1c2d3-4e5f-6a7b-8c9d-e0f1a2b3c4d5"
+        - key: client_key
+          value: "AQBogginAAAAABAAfake-molecule-fixture-key=="
+
+    - name: Run the role's validation tasks
+      ansible.builtin.include_role:
+        name: xedpm.ceph.cephadm
+        tasks_from: validate.yml
+        public: true
+
+    - name: Assert the join mode derivations
+      run_once: true
+      ansible.builtin.assert:
+        that:
+          - _ceph_join_mode
+          - _ceph_admin_host == 'core-0.osptest.openstack.org'
+          - _ceph_mon_hosts == []
+          - _ceph_mgr_hosts == []
+          - _ceph_osd_hosts == ['osd2-0', 'osd2-1']
+          - _ceph_osd_spec.service_type == 'osd'
+          - _ceph_osd_spec.service_id == 'osd-osd-nodeset'
+          - _ceph_osd_spec.placement.hosts == ['osd2-0.osptest.openstack.org', 'osd2-1.osptest.openstack.org']
+          - _ceph_osd_spec.spec.data_devices.paths == ['/dev/nvme0n1']
+        success_msg: >-
+          join mode derives the admin host from the join host and
+          scopes the OSD service spec to the nodeset
+
+    - name: Assert the osd_up_count filter counts per host
+      # The filter the OSD wait counts with (ceph osd tree -f json):
+      # only the up OSDs under the given hosts count, so several
+      # nodesets can share a cluster. The crush map may name the
+      # hosts by their kernel hostname (h4, short) instead of the
+      # canonical FQDN (h4.example.com): the wait passes both forms,
+      # and a host given in both forms still counts its OSDs once.
+      run_once: true
+      ansible.builtin.assert:
+        that:
+          - _osd_tree | xedpm.ceph.osd_up_count(['h1.example.com']) == 2
+          - _osd_tree | xedpm.ceph.osd_up_count(['h1.example.com', 'h2.example.com']) == 3
+          - _osd_tree | xedpm.ceph.osd_up_count(['h2.example.com']) == 1
+          - _osd_tree | xedpm.ceph.osd_up_count(['h3.example.com']) == 0
+          - _osd_tree | xedpm.ceph.osd_up_count(['h4.example.com', 'h4']) == 1
+          - _osd_tree | xedpm.ceph.osd_up_count(['h1.example.com', 'h1']) == 2
+        success_msg: the osd_up_count filter counts the up OSDs per host
+      vars:
+        _osd_tree:
+          nodes:
+            - id: -2
+              name: h1.example.com
+              type: host
+              children:
+                - 0
+                - 1
+            - id: -3
+              name: h2.example.com
+              type: host
+              children:
+                - 2
+                - 3
+            - id: -4
+              name: h3.example.com
+              type: host
+              children: []
+            - id: -5
+              name: h4
+              type: host
+              children:
+                - 4
+            - id: 0
+              name: osd.0
+              type: osd
+              status: up
+            - id: 1
+              name: osd.1
+              type: osd
+              status: up
+            - id: 2
+              name: osd.2
+              type: osd
+              status: up
+            - id: 3
+              name: osd.3
+              type: osd
+              status: down
+            - id: 4
+              name: osd.4
+              type: osd
+              status: up
+
+- name: Converge a join host inside the nodeset
+  hosts: badjoin
+  gather_facts: false
+  tasks:
+    - name: Expect the validation to fail on the join host
+      block:
+        - name: Run the role's validation tasks
+          ansible.builtin.include_role:
+            name: xedpm.ceph.cephadm
+            tasks_from: validate.yml
+      rescue:
+        - name: Assert the failure names the join host
+          ansible.builtin.assert:
+            that:
+              - ansible_failed_result.msg is search('must name an existing cluster host')
+              - ansible_failed_result.msg is search('badjoin-0.osptest.openstack.org')
+            success_msg: join hosts that are part of the nodeset are rejected
+
+- name: Converge per-node OSD path overrides
+  # The per-node overrides make one host fail the paths validation
+  # while the other completes it, so the play carries the full valid
+  # configuration for the completing host.
+  hosts: mixed
+  gather_facts: false
+  vars:
+    xedpm_ceph_public_network_name: storage
+    xedpm_ceph_cluster_network_name: storagemgmt
+    xedpm_ceph_public_network_cidrs:
+      - 172.18.0.0/24
+    xedpm_ceph_cluster_network_cidrs:
+      - 172.20.0.0/24
+    xedpm_ceph_config_dir: "{{ molecule_ephemeral_directory }}/config"
+  tasks:
+    - name: Generate the ceph-conf-files fixtures
+      # The role reads the cluster identity from the dataSources
+      # mount; the scenario generates it in the ephemeral directory
+      # instead of keeping fixture files in the tree.
+      ansible.builtin.file:
+        path: "{{ xedpm_ceph_config_dir }}"
+        state: directory
+        mode: "0755"
+    - name: Write the ceph-conf-files fixtures
+      ansible.builtin.copy:
+        dest: "{{ xedpm_ceph_config_dir }}/{{ item.key }}"
+        content: "{{ item.value }}"
+        mode: "0644"
+      loop:
+        - key: fsid
+          value: "a0b1c2d3-4e5f-6a7b-8c9d-e0f1a2b3c4d5"
+        - key: client_key
+          value: "AQBogginAAAAABAAfake-molecule-fixture-key=="
+
+    - name: Expect the validation to fail on the path mismatch
+      block:
+        - name: Run the role's validation tasks
+          ansible.builtin.include_role:
+            name: xedpm.ceph.cephadm
+            tasks_from: validate.yml
+      rescue:
+        - name: Assert the failure reports the path mismatch
+          ansible.builtin.assert:
+            that:
+              - ansible_failed_result.msg is search('must all resolve the same non-empty')
+              - ansible_failed_result.msg is search('/dev/vdb')
+              - ansible_failed_result.msg is search('/dev/vdc')
+            success_msg: per-node path overrides are rejected

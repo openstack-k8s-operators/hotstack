@@ -1,0 +1,107 @@
+---
+dependency:
+  name: galaxy
+  enabled: false
+driver:
+  name: default
+platforms:
+  - name: leaf1-host
+    groups:
+      - multi
+  - name: leaf2-host
+    groups:
+      - multi
+  - name: leaf1-host2
+    groups:
+      - multi
+  - name: leaf1-compute
+    groups:
+      - multi
+  - name: c0
+    groups:
+      - single
+  - name: c1
+    groups:
+      - single
+  - name: c2
+    groups:
+      - single
+provisioner:
+  name: ansible
+  inventory:
+    group_vars:
+      all:
+        ansible_connection: local
+        # Nodeset-level (nodeTemplate) ansibleVars are group vars in
+        # the operator inventory; the paths are read through hostvars.
+        xedpm_ceph_osd_paths:
+          - /dev/vdb
+          - /dev/vdc
+    host_vars:
+      leaf1-host:
+        xedpm_ceph_host_labels:
+          - mon
+          - mgr
+          - osd
+        storage_ip: 172.18.0.100
+        storage_cidr: 24
+        storagemgmt_ip: 172.20.0.100
+        storagemgmt_cidr: 24
+      leaf2-host:
+        xedpm_ceph_host_labels:
+          - mon
+          - mgr
+          - osd
+        storage_ip: 172.18.1.101
+        storage_cidr: 24
+        storagemgmt_ip: 172.21.0.101
+        storagemgmt_cidr: 24
+      leaf1-host2:
+        xedpm_ceph_host_labels:
+          - mon
+          - mgr
+          - osd
+        storage_ip: 172.18.0.102
+        storage_cidr: 24
+        storagemgmt_ip: 172.20.0.102
+        storagemgmt_cidr: 24
+      # Compute-only node: no storagemgmt network, empty labels.
+      leaf1-compute:
+        xedpm_ceph_host_labels: []
+        storage_ip: 172.18.0.103
+        storage_cidr: 24
+      c0:
+        xedpm_ceph_host_labels:
+          - mon
+          - mgr
+          - osd
+        storage_ip: 172.18.0.100
+        storage_cidr: 24
+        storagemgmt_ip: 172.20.0.100
+        storagemgmt_cidr: 24
+      c1:
+        xedpm_ceph_host_labels:
+          - mon
+          - mgr
+          - osd
+        storage_ip: 172.18.0.101
+        storage_cidr: 24
+        storagemgmt_ip: 172.20.0.101
+        storagemgmt_cidr: 24
+      c2:
+        xedpm_ceph_host_labels:
+          - mon
+          - mgr
+          - osd
+        storage_ip: 172.18.0.102
+        storage_cidr: 24
+        storagemgmt_ip: 172.20.0.102
+        storagemgmt_cidr: 24
+verifier:
+  name: ansible
+scenario:
+  test_sequence:
+    - dependency
+    - syntax
+    - converge
+    - idempotence

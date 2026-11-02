@@ -1,0 +1,49 @@
+---
+# The core nodeset's cluster-wide configuration: the mon and mgr
+# service placement and the monitor settings, owned by the nodeset
+# that deployed the cluster (guarded by the include's when - a
+# joining nodeset's ansibleVars must not redefine them).
+
+- name: Apply the mon service spec
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ceph.cephadm.ceph_orch_apply:
+    image: "{{ xedpm_ceph_container_image }}"
+    spec: |
+      service_type: mon
+      placement:
+        label: mon
+
+- name: Apply the mgr service spec
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ceph.cephadm.ceph_orch_apply:
+    image: "{{ xedpm_ceph_container_image }}"
+    spec: |
+      service_type: mgr
+      placement:
+        label: mgr
+
+- name: Set the allowed client authentication ciphers
+  # Fresh Ceph clusters only allow aes256k for cephx; the classic-AES
+  # client key needs aes allowed (this raises AUTH_INSECURE_KEYS_ALLOWED,
+  # muted below).
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ansible.builtin.command:
+    cmd: cephadm shell -- ceph mon set auth_allowed_ciphers {{ xedpm_ceph_auth_allowed_ciphers }}
+  changed_when: false
+
+- name: Mute the configured health checks
+  # Runs before the health wait; sticky mutes apply whether or not the
+  # check is currently raised and persist in the monitor.
+  run_once: true
+  delegate_to: "{{ _ceph_admin_host }}"
+  become: true
+  ansible.builtin.command:
+    cmd: cephadm shell -- ceph health mute {{ item }} --sticky
+  loop: "{{ xedpm_ceph_health_mutes }}"
+  changed_when: false

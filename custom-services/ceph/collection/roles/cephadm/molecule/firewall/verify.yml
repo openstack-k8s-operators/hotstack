@@ -1,0 +1,26 @@
+---
+- name: Verify the rendered firewall rules
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Parse the rendered firewall snippet
+      run_once: true
+      ansible.builtin.set_fact:
+        _rules: >-
+          {{ lookup('ansible.builtin.file',
+                    molecule_ephemeral_directory ~ '/custom-ceph.yaml') | from_yaml }}
+
+    - name: Assert one rule set per subnet
+      run_once: true
+      ansible.builtin.assert:
+        that:
+          - _rules | length == 8
+          - _rules | map(attribute='rule_name') | select('search', '100 allow cephadm host management from 172.18.0.0/24') | list | length == 1
+          - _rules | map(attribute='rule_name') | select('search', '100 allow cephadm host management from 172.18.1.0/24') | list | length == 1
+          - _rules | map(attribute='rule_name') | select('search', '110 allow ceph mon from 172.18.0.0/24') | list | length == 1
+          - _rules | map(attribute='rule_name') | select('search', '110 allow ceph mon from 172.18.1.0/24') | list | length == 1
+          - _rules | map(attribute='rule_name') | select('search', '112 allow ceph osd replication from 172.21.0.0/24') | list | length == 1
+          - >-
+            _rules | selectattr('rule.dport', '==', '6800:7300') | map(attribute='rule.source') | unique | list
+            == ['172.18.0.0/24', '172.18.1.0/24', '172.20.0.0/24', '172.21.0.0/24']
+        success_msg: firewall rules cover every subnet of both networks

@@ -1,0 +1,256 @@
+---
+# Validation of the configuration values themselves; the preflight
+# tasks validate them against the actual hosts.
+
+- name: Resolve the effective ceph orch labels per host
+  # Runs on every host so each host resolves its own value (per-node
+  # override, nodeset-global ansibleVars, or the role default); the
+  # label map in vars/main.yml is built from these facts. Resolving
+  # on a single host instead would make hosts without their own
+  # xedpm_ceph_host_labels inherit that host's value.
+  ansible.builtin.set_fact:
+    _ceph_effective_host_labels: "{{ xedpm_ceph_host_labels }}"
+
+- name: Validate the ceph orch host labels
+  run_once: true
+  ansible.builtin.assert:
+    that:
+      - _ceph_host_labels | dict2items
+        | rejectattr('value', 'subset', ['mon', 'mgr', 'osd'])
+        | list | length == 0
+    fail_msg: >-
+      xedpm_ceph_host_labels entries may only contain mon, mgr and
+      osd; got {{ _ceph_host_labels | dict2items
+      | rejectattr('value', 'subset', ['mon', 'mgr', 'osd'])
+      | map(attribute='key') | join(', ') }} carrying unknown labels
+      ({{ _ceph_host_labels | dict2items | map(attribute='value')
+      | flatten | difference(['mon', 'mgr', 'osd']) | join(', ') }}).
+
+- name: Validate the mon and mgr label counts
+  # Join mode skips this: the mon and mgr carriers stay with the
+  # nodeset that bootstrapped the cluster.
+  when: not _ceph_join_mode
+  run_once: true
+  ansible.builtin.assert:
+    that:
+      - _ceph_mon_hosts | length == xedpm_ceph_mon_count
+      - _ceph_mgr_hosts | length == xedpm_ceph_mgr_count
+    fail_msg: >-
+      {{ xedpm_ceph_mon_count }} hosts must carry the mon label and
+      {{ xedpm_ceph_mgr_count }} the mgr label (xedpm_ceph_mon_count
+      and xedpm_ceph_mgr_count), but the per-host
+      xedpm_ceph_host_labels yield {{ _ceph_mon_hosts | length }} mon
+      hosts ({{ _ceph_mon_hosts | join(', ') }}) and
+      {{ _ceph_mgr_hosts | length }} mgr hosts
+      ({{ _ceph_mgr_hosts | join(', ') }}). The default is [] (no
+      daemons): designate the mon and mgr carriers with per-node or
+      nodeset-wide xedpm_ceph_host_labels, e.g. [mon, mgr, osd] on
+      the quorum nodes and [osd] on the remaining storage nodes. An
+      OSD-only nodeset joining an existing cluster sets
+      xedpm_ceph_join_host instead and skips this check.
+
+- name: Validate that the bootstrap host carries the mon label
+  when: not _ceph_join_mode
+  run_once: true
+  ansible.builtin.assert:
+    that:
+      - xedpm_ceph_bootstrap_host in _ceph_mon_hosts
+    fail_msg: >-
+      xedpm_ceph_bootstrap_host ({{ xedpm_ceph_bootstrap_host }}) does
+      not carry the mon label: cephadm bootstrap deploys the first
+      monitor on the bootstrap host and the mon service spec only
+      keeps monitors on mon-labelled hosts, so the bootstrapped
+      monitor would be removed again. Give the bootstrap host
+      [mon, mgr, osd] (or at least a label list containing mon).
+
+- name: Validate the join host configuration
+  # Join mode targets an existing cluster: the join host must name a
+  # host of the nodeset that deployed it (one carrying the _admin
+  # label), never a host of this nodeset, and a joining nodeset is
+  # OSD-only (the mon and mgr carriers stay with the deploying
+  # nodeset).
+  when: _ceph_join_mode
+  run_once: true
+  ansible.builtin.assert:
+    that:
+      - xedpm_ceph_join_host not in _ceph_play_hosts
+      - xedpm_ceph_join_host not in (_ceph_play_hosts
+         | map('extract', hostvars, 'canonical_hostname') | list)
+      - _ceph_host_labels | dict2items
+        | rejectattr('value', 'subset', ['osd']) | list | length == 0
+    fail_msg: >-
+      xedpm_ceph_join_host ({{ xedpm_ceph_join_host }}) is not valid
+      for a joining nodeset: it must name an existing cluster host
+      that is not part of this nodeset (the control-plane DNS serves
+      every nodeset's hosts), and the nodeset may only carry the osd
+      label (got {{ _ceph_host_labels }}). Mon and mgr carriers
+      belong to the nodeset that bootstrapped the cluster.
+
+- name: Validate that at least one host carries the osd label
+  run_once: true
+  ansible.builtin.assert:
+    that:
+      - _ceph_osd_hosts | length > 0
+    fail_msg: >-
+      No host carries the osd label: every xedpm_ceph_host_labels
+      entry is empty, so no OSDs would be deployed. Set [osd] (or
+      [mon, mgr, osd]) on the storage nodes.
+
+- name: Validate the OSD device paths
+  # xedpm_ceph_osd_paths is a nodeset-level setting: the service
+  # spec applies one data device list to every osd host of the
+  # nodeset, so every osd host must resolve the same non-empty list.
+  # Per-node overrides are intentionally not supported - nodes with
+  # different devices belong in their own nodeset. Deploying OSDs
+  # zaps the listed devices. Evaluated per host against the first
+  # osd host so the failure names the offending host.
+  when: inventory_hostname in _ceph_osd_hosts
+  ansible.builtin.assert:
+    that:
+      - xedpm_ceph_osd_paths | length > 0
+      - xedpm_ceph_osd_paths == hostvars[_ceph_osd_hosts | first].xedpm_ceph_osd_paths
+    fail_msg: >-
+      The osd hosts of a nodeset must all resolve the same non-empty
+      xedpm_ceph_osd_paths, but {{ inventory_hostname }} resolves
+      {{ xedpm_ceph_osd_paths }} while {{ _ceph_osd_hosts | first }}
+      resolves {{ hostvars[_ceph_osd_hosts | first].xedpm_ceph_osd_paths
+      }}. Set it once in the nodeset ansibleVars (nodeTemplate) -
+      per-node overrides are not supported, put nodes with different
+      devices in their own nodeset.
+
+- name: Validate that the Ceph network names are configured
+  run_once: true
+  ansible.builtin.assert:
+    that:
+      - xedpm_ceph_public_network_name | default('') | length > 0
+      - xedpm_ceph_cluster_network_name | default('') | length > 0
+    fail_msg: >-
+      xedpm_ceph_public_network_name and xedpm_ceph_cluster_network_name
+      must both be set in the nodeset ansibleVars to NetConfig network
+      names, e.g. xedpm_ceph_public_network_name: storage and
+      xedpm_ceph_cluster_network_name: storagemgmt. Set the cluster
+      network name to the same network as the public network to run
+      without a separate cluster network.
+
+- name: Validate that the network CIDRs are configured
+  run_once: true
+  ansible.builtin.assert:
+    that:
+      - xedpm_ceph_public_network_cidrs | length > 0
+      - xedpm_ceph_cluster_network_cidrs | length > 0
+    fail_msg: >-
+      xedpm_ceph_public_network_cidrs and
+      xedpm_ceph_cluster_network_cidrs must both be set to the
+      network CIDRs of the NetConfig networks (the complete subnet
+      lists, e.g. [172.18.0.0/24, 172.18.1.0/24]).
+
+- name: Validate the network CIDR entries
+  # Every entry must be a network address with prefix, not a host
+  # address or a bare IP.
+  run_once: true
+  ansible.builtin.assert:
+    that:
+      - item | xedpm.ceph.mask_host_bits == item
+    fail_msg: >-
+      {{ item }} is not a network address: every
+      xedpm_ceph_*_network_cidrs entry must be a network CIDR (e.g.
+      172.18.0.0/24), take the subnets from the NetConfig networks.
+  loop: "{{ xedpm_ceph_public_network_cidrs + xedpm_ceph_cluster_network_cidrs }}"
+
+- name: Validate that the Ceph public network is present on all hosts
+  run_once: true
+  ansible.builtin.assert:
+    that:
+      - hostvars[item][_ceph_public_net_prefix ~ '_ip'] is defined
+    fail_msg: >-
+      The network '{{ xedpm_ceph_public_network_name }}'
+      (xedpm_ceph_public_network_name) is not present on host {{ item }}:
+      the dataplane operator generates <network-name>_ip inventory
+      hostvars only for networks referenced by the nodeset. Check the
+      NetConfig networks and the nodeset networks list.
+  loop: "{{ _ceph_play_hosts }}"
+
+- name: Validate that the Ceph cluster network is present on the osd hosts
+  # Scoped to the osd-labelled hosts: the cluster network only carries
+  # OSD replication traffic, so hosts without OSDs (e.g. compute-only
+  # nodes) do not need to carry it.
+  run_once: true
+  ansible.builtin.assert:
+    that:
+      - hostvars[item][_ceph_cluster_net_prefix ~ '_ip'] is defined
+    fail_msg: >-
+      The network '{{ xedpm_ceph_cluster_network_name }}'
+      (xedpm_ceph_cluster_network_name) is not present on the
+      osd-labelled host {{ item }}: the dataplane operator generates
+      <network-name>_ip inventory hostvars only for networks
+      referenced by the nodeset. Check the NetConfig networks and the
+      nodeset networks list, or set xedpm_ceph_cluster_network_name
+      to the public network name to run without a separate cluster
+      network.
+  loop: "{{ _ceph_osd_hosts }}"
+
+- name: Validate the public network CIDRs cover the hosts
+  # Every host is registered with its public-network address and the
+  # monitors bind there: each host's subnet must be one of the
+  # configured public network CIDRs. Evaluated per host so the
+  # failure names the offending host.
+  ansible.builtin.assert:
+    that:
+      - (hostvars[inventory_hostname][_ceph_public_net_prefix ~ '_ip'] ~ '/'
+         ~ hostvars[inventory_hostname][_ceph_public_net_prefix ~ '_cidr'])
+        | xedpm.ceph.mask_host_bits in xedpm_ceph_public_network_cidrs
+    fail_msg: >-
+      {{ inventory_hostname }} sits on
+      {{ (hostvars[inventory_hostname][_ceph_public_net_prefix ~ '_ip'] ~ '/'
+          ~ hostvars[inventory_hostname][_ceph_public_net_prefix ~ '_cidr'])
+         | xedpm.ceph.mask_host_bits }}, which is not one of the
+      xedpm_ceph_public_network_cidrs
+      ({{ xedpm_ceph_public_network_cidrs }}): the CIDR lists must
+      cover every subnet the nodeset's hosts sit on - set them to the
+      complete subnet lists of the NetConfig networks.
+
+- name: Validate the cluster network CIDRs cover the osd hosts
+  # cephadm picks each OSD's cluster address from the host's
+  # addresses matching the configured cluster_network: an osd host
+  # whose subnet is not listed cannot match, and its replication
+  # degrades onto the public network.
+  when: inventory_hostname in _ceph_osd_hosts
+  ansible.builtin.assert:
+    that:
+      - (hostvars[inventory_hostname][_ceph_cluster_net_prefix ~ '_ip'] ~ '/'
+         ~ hostvars[inventory_hostname][_ceph_cluster_net_prefix ~ '_cidr'])
+        | xedpm.ceph.mask_host_bits in xedpm_ceph_cluster_network_cidrs
+    fail_msg: >-
+      {{ inventory_hostname }} sits on
+      {{ (hostvars[inventory_hostname][_ceph_cluster_net_prefix ~ '_ip'] ~ '/'
+          ~ hostvars[inventory_hostname][_ceph_cluster_net_prefix ~ '_cidr'])
+         | xedpm.ceph.mask_host_bits }}, which is not one of the
+      xedpm_ceph_cluster_network_cidrs
+      ({{ xedpm_ceph_cluster_network_cidrs }}): the CIDR lists must
+      cover every subnet the osd hosts sit on - set them to the
+      complete subnet lists of the NetConfig networks.
+
+- name: Validate that the Ceph fsid is provided
+  run_once: true
+  ansible.builtin.assert:
+    that:
+      - _ceph_fsid | length > 0
+    fail_msg: >-
+      The cluster fsid is empty: the ceph-conf-files secret (the
+      service dataSources entry) must provide an fsid key, mounted at
+      {{ xedpm_ceph_config_dir }}/fsid in the ansible-runner pod. It
+      is passed to cephadm bootstrap and must match the OpenStack
+      configuration (rbd_secret_uuid).
+
+- name: Validate that the client.openstack key is provided
+  run_once: true
+  ansible.builtin.assert:
+    that:
+      - _ceph_client_key | length > 0
+    fail_msg: >-
+      The client.openstack cephx key is empty: the ceph-conf-files
+      secret (the service dataSources entry) must provide a
+      client_key key, mounted at {{ xedpm_ceph_config_dir
+      }}/client_key in the ansible-runner pod. It is registered as
+      the client.openstack user with caps built from
+      xedpm_ceph_openstack_pools.

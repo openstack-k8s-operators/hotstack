@@ -1,0 +1,32 @@
+---
+# The ceph custom data plane service: deploys and grows a Ceph
+# cluster on the data plane nodes with cephadm. The deployment logic
+# lives in the xedpm.ceph collection (collection/ in this
+# directory), run via spec.playbook: xedpm.ceph.deploy from the
+# custom ansible-runner image built in ansibleee-cephadm/ (point
+# spec.openStackAnsibleEERunnerImage at a built image).
+#
+# The service requires two dataSources secrets, pre-created in the
+# dataplane's namespace before the deployment runs:
+# - dataplane-ansible-ssh-private-key-secret: the dataplane ssh key
+#   (ssh-privatekey), passed to cephadm for host management
+# - ceph-conf-files: the cluster identity as flat keys (fsid,
+#   client_key) plus the ceph.conf and the key-only client.openstack
+#   keyring for the control plane (extraMounts)
+#
+# Configuration, requirements and behavior are documented in the
+# cephadm role README (collection/roles/cephadm/README.md).
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneService
+metadata:
+  name: ceph
+spec:
+  label: dataplane-deployment-ceph
+  edpmServiceType: ceph
+  playbook: xedpm.ceph.deploy
+  openStackAnsibleEERunnerImage: quay.io/openstack-k8s-operators/openstack-ansibleee-runner-cephadm:latest
+  dataSources:
+    - secretRef:
+        name: dataplane-ansible-ssh-private-key-secret
+    - secretRef:
+        name: ceph-conf-files

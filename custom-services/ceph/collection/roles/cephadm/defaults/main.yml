@@ -1,0 +1,105 @@
+---
+# Ceph container image used for cephadm and all Ceph daemons.
+xedpm_ceph_container_image: quay.io/ceph/ceph:v20.2.4
+
+# NetConfig network for the Ceph public network (mon and client
+# traffic). REQUIRED, no default.
+xedpm_ceph_public_network_name: ""
+
+# NetConfig network for the Ceph cluster network (OSD replication).
+# REQUIRED; set to the public network name to share it.
+xedpm_ceph_cluster_network_name: ""
+
+# The public and cluster networks as complete CIDR lists: every
+# subnet of the NetConfig networks (e.g. [172.18.0.0/24,
+# 172.18.1.0/24] for a network with one subnet per leaf). REQUIRED,
+# no default: they configure the cephadm bootstrap (public_network,
+# cluster_network) and the firewall rule sources, so the same values
+# must be set on every ceph nodeset. Validated to cover every host's
+# subnet.
+xedpm_ceph_public_network_cidrs: []
+xedpm_ceph_cluster_network_cidrs: []
+
+# Packages enabling the dnf repositories providing cephadm (e.g.
+# centos-release-ceph-tentacle), installed before xedpm_ceph_packages.
+xedpm_ceph_repo_packages: []
+
+# Packages installed to get cephadm.
+xedpm_ceph_packages:
+  - cephadm
+
+# Block devices to use as OSDs. REQUIRED, no default; deploying OSDs
+# zaps the listed devices. A nodeset-level setting: the osd hosts of
+# a nodeset must all resolve the same list, and different nodesets
+# may set different lists.
+xedpm_ceph_osd_paths: []
+
+# Cephx ciphers the monitors accept for client authentication. Fresh
+# Ceph clusters only allow aes256k (secure default); the
+# client.openstack key uses classic AES for compatibility with the
+# OpenStack client libraries, so deployments using it must override
+# this to also allow aes (and mute the AUTH_INSECURE_KEYS_ALLOWED
+# health check it raises).
+xedpm_ceph_auth_allowed_ciphers: aes256k
+
+# Health checks to mute (ceph health mute). The role registers the
+# client.openstack key with the classic AES cipher for client
+# compatibility, which current Ceph releases flag as
+# AUTH_INSECURE_CLIENT_KEY_TYPE; muting that check is the documented
+# handling while legacy clients exist.
+xedpm_ceph_health_mutes: []
+
+# RBD pools created for the OpenStack services.
+xedpm_ceph_openstack_pools:
+  - vms
+  - images
+  - volumes
+  - backups
+
+# Directory the service dataSources secrets are mounted in by the
+# dataplane operator (below /var/lib/openstack/configs/
+# <edpmServiceType>). The role reads the fsid, client_key and
+# ssh-privatekey keys from it.
+xedpm_ceph_config_dir: /var/lib/openstack/configs/ceph
+
+# Host to bootstrap the cluster on. Must carry the mon label
+# (validated): cephadm bootstrap deploys the first monitor there.
+xedpm_ceph_bootstrap_host: "{{ ansible_play_hosts | first }}"
+
+# User cephadm connects to the hosts with over SSH.
+xedpm_ceph_ssh_user: cloud-admin
+
+# ceph orch labels applied to a host when it does not define its own
+# xedpm_ceph_host_labels (per-node ansibleVars override this).
+# Default is no daemons: a nodeset without label configuration is
+# only registered as a ceph orch host, and deployments must
+# explicitly designate the daemon carriers via per-node or
+# nodeset-wide xedpm_ceph_host_labels (e.g. [mon, mgr, osd] on the
+# quorum nodes, [osd] on the remaining storage nodes); the count
+# validations fail otherwise.
+xedpm_ceph_host_labels: []
+
+# Admin host of an existing cluster a joining (OSD-only) nodeset
+# deploys through: the FQDN of any host of the deploying nodeset
+# that carries the _admin label (the bootstrap host always does).
+# Setting this enables join mode: this nodeset never bootstraps a
+# cluster, and every cluster-global task (host registration, service
+# specs, pool creation) runs on this host instead of the bootstrap
+# host. The name must resolve from the ansibleee pod: the
+# control-plane dnsmasq serves every nodeset's hosts. Leave empty on
+# the nodeset that bootstraps the cluster.
+xedpm_ceph_join_host: ""
+
+# Minutes a joining nodeset waits for the deployed cluster to become
+# ready (the monitors in quorum and the manager's cephadm module
+# active) on the join host before failing.
+xedpm_ceph_join_wait_minutes: 30
+
+# Number of hosts expected to carry the mon (mgr) label. Validated
+# exactly against the per-host labels; mons and mgrs run only on
+# labeled hosts. Odd mon counts are recommended (quorum).
+xedpm_ceph_mon_count: 3
+xedpm_ceph_mgr_count: 3
+
+# Health the role waits for.
+xedpm_ceph_expected_health: HEALTH_OK

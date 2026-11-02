@@ -1,0 +1,31 @@
+---
+# Ceph firewall rules, applied through the edpm_nftables role like
+# the stock edpm services do.
+
+- name: Ensure the edpm firewall snippet directory exists
+  become: true
+  ansible.builtin.file:
+    path: /var/lib/edpm-config/firewall
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Write the ceph firewall rules snippet
+  become: true
+  ansible.builtin.template:
+    src: firewall.yaml.j2
+    dest: /var/lib/edpm-config/firewall/custom-ceph.yaml
+    owner: root
+    group: root
+    mode: "0640"
+
+- name: Configure nftables with the ceph firewall rules
+  ansible.builtin.include_role:
+    name: osp.edpm.edpm_nftables
+    tasks_from: configure.yml
+
+- name: Apply the nftables rules
+  ansible.builtin.include_role:
+    name: osp.edpm.edpm_nftables
+    tasks_from: run.yml

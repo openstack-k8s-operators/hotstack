@@ -1,0 +1,10 @@
+# Managed by the ceph data plane service (xedpm.ceph); the Ceph
+# client configuration for the services running on this host (qemu
+# and libvirt RBD volume attach). The fsid line is load-bearing:
+# edpm_libvirt extracts it for the RBD attach secret it registers
+# (cinder's rbd_secret_uuid).
+[global]
+fsid = {{ _ceph_fsid }}
+mon_host = {{ _ceph_mon_hosts
+              | map('extract', hostvars, _ceph_public_net_prefix ~ '_ip')
+              | join(',') }}

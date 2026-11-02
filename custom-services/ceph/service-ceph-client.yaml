@@ -1,0 +1,35 @@
+---
+# The ceph-client companion service: distributes the Ceph client
+# files (ceph.conf and ceph.client.openstack.keyring) from the
+# ceph-conf-files secret to /var/lib/openstack/config/ceph on the
+# nodeset's hosts, where the libvirt service's post-install picks
+# them up to register the RBD volume attach secret (rbd_secret_uuid
+# = the fsid).
+#
+# List this service on nodesets that run libvirt and attach RBD
+# volumes but do not run the ceph service - compute-only nodesets:
+# the ceph service distributes the same files to its own nodeset's
+# hosts itself, so a nodeset listing the ceph service does not need
+# this one. Place it before the libvirt service in the services
+# list.
+#
+# The service runs the stock edpm_ceph_client_files playbook from
+# the base runner image (osp.edpm collection), reading the files
+# from the dataSources mount. The nodeset must therefore set:
+#   edpm_ceph_client_files_source: /var/lib/openstack/configs/ceph-client
+# and the ceph.conf key of the ceph-conf-files secret must carry the
+# fsid (edpm_libvirt extracts it for the secret uuid). The secret's
+# other keys riding along in the mount (fsid, client_key) are inert:
+# nothing globs them.
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneService
+metadata:
+  name: ceph-client-xedpm
+spec:
+  # Not 'ceph-client': that name is owned by the operator-ensured
+  # stock service, which cannot carry dataSources.
+  edpmServiceType: ceph-client
+  playbook: osp.edpm.ceph_client
+  dataSources:
+    - secretRef:
+        name: ceph-conf-files

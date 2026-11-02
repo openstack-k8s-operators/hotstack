@@ -1,0 +1,33 @@
+---
+# Distribute the Ceph client files to this nodeset's hosts (all
+# modes: any host of any ceph nodeset may run libvirt and attach RBD
+# volumes, not just the core nodeset's).
+
+- name: Ensure the Ceph client config directory exists
+  become: true
+  ansible.builtin.file:
+    path: /var/lib/openstack/config/ceph
+    state: directory
+    mode: "0755"
+
+- name: Distribute the Ceph client files
+  # libvirt (the edpm_libvirt post-install tasks) builds the RBD
+  # volume attach secret from the files in this directory: the fsid
+  # line of ceph.conf becomes the secret uuid (cinder's
+  # rbd_secret_uuid), the keyring filename names the cephx user and
+  # its key the secret value. Running the ceph service before the
+  # libvirt service therefore configures RBD volume attach on every
+  # host of the nodeset; the files are inert where libvirt does not
+  # run.
+  become: true
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/var/lib/openstack/config/ceph/{{ item.dest }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - src: client-ceph.conf.j2
+      dest: ceph.conf
+      mode: "0644"
+    - src: client.openstack.keyring.j2
+      dest: ceph.client.openstack.keyring
+      mode: "0600"

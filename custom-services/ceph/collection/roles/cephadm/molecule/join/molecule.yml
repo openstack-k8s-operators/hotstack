@@ -1,0 +1,99 @@
+---
+dependency:
+  name: galaxy
+  enabled: false
+driver:
+  name: default
+platforms:
+  - name: osd2-0
+    groups:
+      - join
+  - name: osd2-1
+    groups:
+      - join
+  - name: badjoin-0
+    groups:
+      - badjoin
+  - name: mixed-0
+    groups:
+      - mixed
+  - name: mixed-1
+    groups:
+      - mixed
+provisioner:
+  name: ansible
+  inventory:
+    group_vars:
+      all:
+        ansible_connection: local
+      # What the dataplane operator generates for a nodeset: the
+      # nodeset name as a group var and the nodeset-level
+      # (nodeTemplate) ansibleVars. All three plays are OSD-only
+      # nodesets joining an existing cluster (join mode skips the
+      # mon/mgr count checks so they are reachable without
+      # mon-labelled hosts).
+      join:
+        edpm_nodeset_name: osd-nodeset
+        xedpm_ceph_host_labels:
+          - osd
+        xedpm_ceph_osd_paths:
+          - /dev/nvme0n1
+        xedpm_ceph_join_host: core-0.osptest.openstack.org
+      badjoin:
+        edpm_nodeset_name: badjoin
+        xedpm_ceph_host_labels:
+          - osd
+        xedpm_ceph_osd_paths:
+          - /dev/vdb
+        # Join host pointing at a host of this very nodeset.
+        xedpm_ceph_join_host: badjoin-0.osptest.openstack.org
+      mixed:
+        edpm_nodeset_name: mixed
+        xedpm_ceph_host_labels:
+          - osd
+        xedpm_ceph_join_host: core-0.osptest.openstack.org
+    host_vars:
+      osd2-0:
+        canonical_hostname: osd2-0.osptest.openstack.org
+        storage_ip: 172.18.0.110
+        storage_cidr: 24
+        storagemgmt_ip: 172.20.0.110
+        storagemgmt_cidr: 24
+      osd2-1:
+        canonical_hostname: osd2-1.osptest.openstack.org
+        storage_ip: 172.18.0.111
+        storage_cidr: 24
+        storagemgmt_ip: 172.20.0.111
+        storagemgmt_cidr: 24
+      badjoin-0:
+        canonical_hostname: badjoin-0.osptest.openstack.org
+        storage_ip: 172.18.0.120
+        storage_cidr: 24
+        storagemgmt_ip: 172.20.0.120
+        storagemgmt_cidr: 24
+      # Per-node path overrides on the mixed nodeset: not supported,
+      # the OSD paths are a per-nodeset setting.
+      mixed-0:
+        canonical_hostname: mixed-0.osptest.openstack.org
+        storage_ip: 172.18.0.130
+        storage_cidr: 24
+        storagemgmt_ip: 172.20.0.130
+        storagemgmt_cidr: 24
+        xedpm_ceph_osd_paths:
+          - /dev/vdb
+      mixed-1:
+        canonical_hostname: mixed-1.osptest.openstack.org
+        storage_ip: 172.18.0.131
+        storage_cidr: 24
+        storagemgmt_ip: 172.20.0.131
+        storagemgmt_cidr: 24
+        xedpm_ceph_osd_paths:
+          - /dev/vdc
+verifier:
+  name: ansible
+scenario:
+  test_sequence:
+    - dependency
+    - syntax
+    - converge
+    - idempotence

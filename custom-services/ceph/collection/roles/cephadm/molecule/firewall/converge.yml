@@ -1,0 +1,55 @@
+---
+# Runs the role's validate.yml, then renders the firewall rules
+# snippet template with the derived networks. The verify playbook
+# parses the rendered snippet and asserts the rules.
+- name: Converge the firewall rules topology
+  hosts: multi
+  gather_facts: false
+  vars:
+    xedpm_ceph_public_network_name: storage
+    xedpm_ceph_cluster_network_name: storagemgmt
+    xedpm_ceph_public_network_cidrs:
+      - 172.18.0.0/24
+      - 172.18.1.0/24
+    xedpm_ceph_cluster_network_cidrs:
+      - 172.20.0.0/24
+      - 172.21.0.0/24
+    # The inventory order molecule generates is not the declaration
+    # order, so pin the bootstrap host instead of relying on the
+    # first-host default.
+    xedpm_ceph_bootstrap_host: leaf1-host
+    xedpm_ceph_config_dir: "{{ molecule_ephemeral_directory }}/config"
+  tasks:
+    - name: Generate the ceph-conf-files fixtures
+      # The role reads the cluster identity from the dataSources
+      # mount; the scenario generates it in the ephemeral directory
+      # instead of keeping fixture files in the tree.
+      ansible.builtin.file:
+        path: "{{ xedpm_ceph_config_dir }}"
+        state: directory
+        mode: "0755"
+    - name: Write the ceph-conf-files fixtures
+      ansible.builtin.copy:
+        dest: "{{ xedpm_ceph_config_dir }}/{{ item.key }}"
+        content: "{{ item.value }}"
+        mode: "0644"
+      loop:
+        - key: fsid
+          value: "a0b1c2d3-4e5f-6a7b-8c9d-e0f1a2b3c4d5"
+        - key: client_key
+          value: "AQBogginAAAAABAAfake-molecule-fixture-key=="
+
+    - name: Run the role's validation tasks
+      ansible.builtin.include_role:
+        name: xedpm.ceph.cephadm
+        tasks_from: validate.yml
+        public: true
+
+    - name: Render the ceph firewall rules snippet
+      run_once: true
+      ansible.builtin.copy:
+        content: >-
+          {{ lookup('ansible.builtin.template',
+                    molecule_scenario_directory ~ '/../../templates/firewall.yaml.j2') }}
+        dest: "{{ molecule_ephemeral_directory }}/custom-ceph.yaml"
+        mode: "0644"
