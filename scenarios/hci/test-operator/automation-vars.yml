@@ -105,7 +105,7 @@ stages:
     wait_conditions:
       - >-
         oc wait -n openstack tempests.test.openstack.org tempest-tests
-        --for condition=ServiceConfigReady --timeout=120s
+        --for condition=ServiceConfigReady --timeout=600s
     wait_pod_completion:
       - namespace: openstack
         labels:
