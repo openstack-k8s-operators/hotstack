@@ -5,6 +5,10 @@
   when: inventory_hostname in _ceph_osd_hosts
   ansible.builtin.stat:
     path: "{{ item }}"
+    # Follow symlinks: by-path entries (the supported form, stable
+    # across the fleet) are symlinks - without follow the stat sees
+    # the link itself, which is never a block device.
+    follow: true
     get_checksum: false
   loop: "{{ xedpm_ceph_osd_paths }}"
   register: _ceph_osd_device_stats
