@@ -40,6 +40,8 @@
     state: present
 
 - name: Read the installed cephadm version
+  # Read for the release check below alone: skipped with it.
+  when: not (xedpm_ceph_skip_release_check | default(false) | bool)
   become: true
   ansible.builtin.command:
     cmd: cephadm version
@@ -49,6 +51,7 @@
 - name: Validate the installed cephadm matches the container image release
   # cephadm refuses to bootstrap when its release differs from the
   # container image release.
+  when: not (xedpm_ceph_skip_release_check | default(false) | bool)
   ansible.builtin.assert:
     that:
       - _ceph_cephadm_version.stdout is search(_ceph_image_release ~ '[.][0-9]+[.][0-9]+')

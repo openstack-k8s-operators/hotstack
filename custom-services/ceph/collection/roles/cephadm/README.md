@@ -76,6 +76,9 @@ Variables:
 - `xedpm_ceph_packages` - packages installed to get cephadm (default
   `[cephadm]`); must be from the same release line as
   `xedpm_ceph_container_image` (asserted by the role)
+- `xedpm_ceph_skip_release_check` - set to `true` to skip the check
+  that the installed cephadm is from the same Ceph release as
+  `xedpm_ceph_container_image` (default `false`)
 - `xedpm_ceph_repo_packages` - packages enabling the dnf repositories
   providing cephadm, installed before `xedpm_ceph_packages` (default
   `[]`), e.g. `[centos-release-ceph-tentacle]` on CentOS Stream; on

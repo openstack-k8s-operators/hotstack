@@ -28,6 +28,10 @@ xedpm_ceph_repo_packages: []
 xedpm_ceph_packages:
   - cephadm
 
+# Skip the preflight check that the installed cephadm is from the
+# same Ceph release as xedpm_ceph_container_image.
+xedpm_ceph_skip_release_check: false
+
 # Block devices to use as OSDs. REQUIRED, no default; deploying OSDs
 # zaps the listed devices. A nodeset-level setting: the osd hosts of
 # a nodeset must all resolve the same list, and different nodesets
