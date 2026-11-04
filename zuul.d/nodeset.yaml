@@ -9,3 +9,8 @@
     nodes:
       - name: hotstack
         label: cloud-centos-9-stream-tripleo-vexxhost
+- nodeset:
+    name: hotstack-content-provider-consumer
+    nodes:
+      - name: consumer
+        label: cloud-centos-10-stream-tripleo-medium
