@@ -83,7 +83,7 @@ stages:
 
       echo "Waiting for all nodes to reach 'enroll' state..."
 
-      until ! openstack --os-cloud devstack-admin baremetal node list -f value -c "Provisioning State" | grep -v "enroll"; do
+      until ! openstack --os-cloud devstack-admin baremetal node list -f value -c "provision_state" | grep -v "enroll"; do
         ((counter++))
         if (( counter > max_retries )); then
           echo "ERROR: Timeout waiting for nodes to reach enroll state"

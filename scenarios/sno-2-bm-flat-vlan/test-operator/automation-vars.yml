@@ -149,7 +149,7 @@ stages:
       counter=0
       max_retries=100
       node_state=enroll
-      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"
+      until ! oc rsh openstackclient openstack baremetal node list -f value -c "provision_state" | grep -P "^(?!${node_state}).*$"
       do
         ((counter++))
         if (( counter > max_retries )); then
@@ -174,7 +174,7 @@ stages:
       counter=0
       max_retries=100
       node_state=manageable
-      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State" | grep -P "^(?!${node_state}).*$"
+      until ! oc rsh openstackclient openstack baremetal node list -f value -c "provision_state" | grep -P "^(?!${node_state}).*$"
       do
         ((counter++))
         if (( counter > max_retries )); then
@@ -206,7 +206,7 @@ stages:
       counter=0
       max_retries=100
       power_state="off"
-      until ! oc rsh openstackclient openstack baremetal node list -f value -c "Power State" | grep -P "^power.(?!${power_state}).*$"
+      until ! oc rsh openstackclient openstack baremetal node list -f value -c "power_state" | grep -P "^power.(?!${power_state}).*$"
       do
         ((counter++))
         if (( counter > max_retries )); then
@@ -232,7 +232,7 @@ stages:
       max_retries=100
       node_state=available
       while true; do
-        node_states=$(oc rsh openstackclient openstack baremetal node list -f value -c "Provisioning State")
+        node_states=$(oc rsh openstackclient openstack baremetal node list -f value -c "provision_state")
 
         # Check if all nodes are in available state
         if ! echo "$node_states" | grep -P "^(?!${node_state}).*$" > /dev/null; then
