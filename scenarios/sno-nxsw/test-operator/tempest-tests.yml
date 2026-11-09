@@ -18,6 +18,7 @@ spec:
           baremetal.available_nodes 2
           baremetal.max_microversion 1.82
           baremetal.use_provision_network true
+          compute-feature-enabled.console_output false
           compute-feature-enabled.disk_config false
           compute-feature-enabled.interface_attach false
           compute.fixed_network_name provisioning
