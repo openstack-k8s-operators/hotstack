@@ -30,6 +30,10 @@ RUN microdnf install -y --nodocs \
     util-linux \
     && microdnf clean all
 
+# Set UTF-8 locale so Erlang/Elixir (RabbitMQ CLI) uses utf8 native name
+# encoding instead of latin1 (C.UTF-8 is built into glibc, no extra packages)
+ENV LANG=C.UTF-8
+
 # Create necessary directories
 RUN mkdir -p /etc/dnsmasq.d /run/mysqld && chmod 755 /run/mysqld
 
