@@ -1,0 +1,43 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: neutron-switch-config
+  namespace: openstack
+stringData:
+  03-ml2-genericswitch.conf: |
+    [ngs]
+    session_log_file = /var/log/neutron/ngs.log
+
+    # leaf01 faces the OCP/SNO node (VLAN trunk on Ethernet4), leaf02 faces
+    # the ironic nodes (Ethernet4/Ethernet8). Both are SONiC virtual
+    # switches; the netmiko_sonic driver creates VLANs and plugs ports via
+    # the SONiC CLI over SSH to the switch management IP.
+    # The 'vtep_name' and 'ngs_bgp_asn' options enable the L2VNI support:
+    # the networking-generic-switch / networking-baremetal combo creates the
+    # VLAN and VNI-to-VLAN maps dynamically on both leaves as ports bind
+    # (no static VLAN/VNI config in the leaf config_db.json).
+    [genericswitch:leaf01]
+    device_type = netmiko_sonic
+    ip = leaf01.openstack.lab
+    username = admin
+    password = password
+    secret = password
+    ngs_mac_address = 22:57:f8:de:03:10
+    ngs_disable_inactive_ports = true
+    ngs_physical_networks = bmnet
+    vtep_name = vtep
+    ngs_bgp_asn = 65001
+
+    [genericswitch:leaf02]
+    device_type = netmiko_sonic
+    ip = leaf02.openstack.lab
+    username = admin
+    password = password
+    secret = password
+    ngs_mac_address = 22:57:f8:de:04:10
+    ngs_disable_inactive_ports = true
+    ngs_physical_networks = bmnet
+    vtep_name = vtep
+    ngs_bgp_asn = 65001
+type: Opaque
