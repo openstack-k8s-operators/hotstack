@@ -9,11 +9,12 @@
     - package-installs
     - hotstack-sonic-vs
   environment:
-    DIB_RELEASE: '9-stream'
+    DIB_RELEASE: '10-stream'
     DIB_PYTHON_VERSION: '3'
     DIB_IMAGE_SIZE: '15'
     DIB_TIMEZONE: 'UTC'
     COMPRESS_IMAGE: '1'
+    DIB_BOOTLOADER_DEFAULT_CMDLINE: 'nofb nomodeset gfxpayload=text net.ifnames=0'
     # DIB_SONIC_IMAGE set via Makefile (SONIC_DOCKER_IMAGE)
     DIB_BLOCK_DEVICE_CONFIG: |
       - local_loop:
