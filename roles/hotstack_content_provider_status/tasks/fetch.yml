@@ -1,0 +1,61 @@
+---
+# Copyright Red Hat, Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+# 4. Fetch the status document and write the vars file.
+
+- name: Fetch and write the content provider status document
+  vars:
+    # The provider serves the document with busybox httpd, which sends
+    # no content type, so the uri module leaves the body unparsed in
+    # `content`.
+    _cp_document: "{{ _cp_content_raw.content | default('') | from_json }}"
+  block:
+    - name: Fetch the content provider status document until it is ready
+      ansible.builtin.uri:
+        url: "{{ _cp_status_uri.status_uri }}"
+        return_content: true
+      register: _cp_content_raw
+      # _cp_content_raw.status is the HTTP code, _cp_document.status is
+      # the document status field. The HTTP check must run first: it
+      # guards the document parse on failed attempts, where the
+      # register has neither status nor content.
+      until: >-
+        _cp_content_raw.status | default(0) == 200
+        and _cp_document.status | default('') == 'ready'
+      retries: "{{ hotstack_content_provider_status_ready_retries | int }}"
+      delay: "{{ hotstack_content_provider_status_ready_delay | int }}"
+
+    - name: Ensure the vars file directory exists
+      ansible.builtin.file:
+        path: "{{ hotstack_content_provider_status_vars_file | dirname }}"
+        state: directory
+        mode: "0755"
+
+    - name: Write the content provider status vars file
+      ansible.builtin.copy:
+        dest: "{{ hotstack_content_provider_status_vars_file }}"
+        mode: "0644"
+        content: |
+          # Content provider status of job {{ hotstack_content_provider_status_job_name }},
+          # written by the hotstack_content_provider_status role. Load it in the
+          # consuming playbook with ansible.builtin.include_vars.
+          hotstack_content_provider_status_url: "{{ _cp_status_uri.status_uri }}"
+          hotstack_content_provider_status_build_uuid: "{{ _cp_build_state.uuid }}"
+          hotstack_content_provider_status_build_url: "{{ _cp_build_state.report_url }}"
+          hotstack_content_provider_status_registry_ip: "{{ (_cp_document.registry | split(':'))[0] }}"
+          hotstack_content_provider_status_registry_ip_port: "{{ _cp_document.registry }}"
+          hotstack_content_provider_status_custom_container_images:
+          {{ _cp_document.custom_container_images | to_nice_yaml(indent=2) | indent(2, true) }}
