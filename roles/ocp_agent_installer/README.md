@@ -10,6 +10,9 @@
   * Image Content Source Policy
   * Insecure registries
   * Additional trusted CA
+  * Mask agent-tui services (agent-interactive-console.service and
+    agent-interactive-console-serial@.service), see
+    `disable_agent_tui`
 
 Example:
 

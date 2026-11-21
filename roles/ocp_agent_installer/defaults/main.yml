@@ -59,6 +59,12 @@ disable_net_ifnames: true
 net_ifnames_roles:
   - master
 
+# Mask the agent-tui services, they block boot (including sshd and the
+# installation itself) until someone interacts with the TUI on the
+# console. Masked with systemd.mask= kernel arguments in the iPXE
+# script, the only way to customize the live environment.
+disable_agent_tui: true
+
 # OVN Configuration
 enable_ovn_k8s_overrides: true
 ovn_k8s_gateway_config_ip_forwarding: true
