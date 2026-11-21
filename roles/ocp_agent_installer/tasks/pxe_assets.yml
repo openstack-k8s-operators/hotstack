@@ -42,6 +42,14 @@
     regexp: "^(kernel.*)$"
     line: '\1 net.ifnames=0'
 
+- name: Mask agent-tui services in ipxe
+  when: disable_agent_tui | bool
+  ansible.builtin.lineinfile:
+    path: "{{ ocp_agent_installer_cluster_dir }}/boot-artifacts/agent.x86_64.ipxe"
+    backrefs: true
+    regexp: "^(kernel.*)$"
+    line: '\1 systemd.mask=agent-interactive-console.service systemd.mask=agent-interactive-console-serial@.service'
+
 - name: Copy boot-artifacts to the web server - (ocp_agent_installer_boot_artifacts_dir)
   become: true
   ansible.builtin.copy:
