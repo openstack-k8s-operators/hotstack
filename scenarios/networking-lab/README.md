@@ -42,4 +42,3 @@ When adding new networking lab scenarios:
 
 - [Main Scenarios README](../README.md)
 - [Hotstack Documentation](../../README.md)
-- [Switch Configuration Guide](../../docs/virtual_switches.md)
