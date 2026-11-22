@@ -2,7 +2,7 @@
 hotstack-sonic-vs
 ==================
 
-This element creates a CentOS 9 Stream image that runs SONiC
+This element creates a CentOS 10 Stream image that runs SONiC
 (Software for Open Networking in the Cloud) using systemd-nspawn
 with a persistent network namespace.
 

@@ -2,7 +2,7 @@
 hotstack-ceos
 ==============
 
-This element creates a CentOS 9 Stream image that runs Arista cEOS
+This element creates a CentOS 10 Stream image that runs Arista cEOS
 (containerized EOS) in a privileged Podman container. Dataplane NICs on the
 guest are moved into the cEOS container's network namespace so the switch
 sees them as its own interfaces.

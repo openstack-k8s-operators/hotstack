@@ -2,7 +2,7 @@
 hotstack-vjunos
 ================
 
-This element creates a CentOS 9 Stream image that runs Juniper vJunos-switch
+This element creates a CentOS 10 Stream image that runs Juniper vJunos-switch
 as a nested KVM virtual machine. The vendor QCOW2 is used unmodified --
 configuration is injected via a USB config disk containing ``vmm-config.tgz``
 (the same mechanism used by vrnetlab/containerlab and Juniper's official KVM

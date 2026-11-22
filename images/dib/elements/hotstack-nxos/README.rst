@@ -2,7 +2,7 @@
 hotstack-nxos
 =============
 
-This element creates a CentOS 9 Stream image that runs Cisco NXOS
+This element creates a CentOS 10 Stream image that runs Cisco NXOS
 (Nexus 9300v) as a nested KVM virtual machine. NXOS v64.10.x cannot boot
 directly as an OpenStack VM due to UEFI firmware requirements -- it needs
 GNS3's custom OVMF firmware (``OVMF-edk2-stable202305.fd``). Dataplane NICs
