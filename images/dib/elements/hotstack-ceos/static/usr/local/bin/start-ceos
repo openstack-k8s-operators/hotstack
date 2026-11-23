@@ -45,6 +45,20 @@ FLASH_IF_WAIT = "/var/lib/ceos/flash/if-wait"
 DEFAULT_STARTUP_CONFIG = "/usr/share/hotstack-ceos/default-startup.cfg"
 IF_WAIT_SCRIPT = "/usr/share/hotstack-ceos/if-wait"
 
+# Netfilter match modules required by the cEOS container. cEOS programs its
+# control-plane ACLs as iptables rules inside the container's network
+# namespace; the match extensions are host kernel modules. If they are not
+# loaded, rule installation fails and all IPv4 traffic to and from the
+# switch is dropped. Also listed in /etc/modules-load.d/hotstack-ceos.conf
+# for loading at boot.
+NETFILTER_MODULES = [
+    "xt_tcpudp",
+    "xt_conntrack",
+    "xt_multiport",
+    "xt_addrtype",
+    "xt_owner",
+]
+
 
 class CeosConfig:
     """Configuration for cEOS switch host."""
@@ -198,6 +212,29 @@ def prepare_flash_directory(config: CeosConfig) -> None:
     LOG.info("Flash directory prepared successfully")
 
 
+def ensure_netfilter_modules() -> None:
+    """Load host kernel modules required by the cEOS container.
+
+    cEOS programs its control-plane ACLs as iptables rules inside the
+    container's network namespace. The iptables match extensions are
+    host kernel modules; when they are not loaded, rule installation
+    inside the container fails and all IPv4 traffic to and from the
+    switch is dropped.
+
+    :returns: None
+    """
+    if not shutil.which("modprobe"):
+        LOG.warning("modprobe not found, skipping kernel module loading")
+        return
+
+    for module in NETFILTER_MODULES:
+        result = run_command(["modprobe", module], check=False)
+        if result.returncode != 0:
+            LOG.warning(f"Failed to load kernel module: {module}")
+        else:
+            LOG.info(f"Kernel module loaded: {module}")
+
+
 def get_container_pid() -> Optional[int]:
     """Get the PID of the cEOS container.
 
@@ -329,6 +366,56 @@ def attach_interface_to_container(
                 "on",
             ]
         )
+
+
+def interface_exists(interface: str) -> bool:
+    """Check whether a network interface exists on the host.
+
+    :param interface: Network interface name (e.g., 'eth1')
+    :returns: True if the interface exists, False otherwise
+    """
+    result = run_command(["ip", "link", "show", interface], check=False)
+    return result.returncode == 0
+
+
+def wait_for_host_interfaces(config: CeosConfig, timeout: int = 30) -> None:
+    """Wait for the expected host switch interfaces to be present.
+
+    When the ceos service restarts, the previous container's network
+    namespace is torn down and the kernel asynchronously moves the
+    interfaces that were moved into it back to the host's root network
+    namespace. Wait for all expected switch interfaces to (re)appear
+    before starting the new container, otherwise interfaces may be
+    missed and the switch comes up without them.
+
+    :param config: CeosConfig instance with network configuration
+    :param timeout: Maximum time to wait in seconds
+    :returns: None
+    """
+    if_base, if_start_num = parse_interface_name(config.switch_interface_start)
+    expected = [
+        f"{if_base}{if_start_num + i}" for i in range(config.switch_interface_count)
+    ]
+
+    missing = [name for name in expected if not interface_exists(name)]
+    if not missing:
+        return
+
+    LOG.info(
+        f"Waiting up to {timeout}s for host interfaces to settle "
+        f"(missing: {', '.join(missing)})"
+    )
+
+    elapsed = 0
+    while missing and elapsed < timeout:
+        time.sleep(1)
+        elapsed += 1
+        missing = [name for name in expected if not interface_exists(name)]
+
+    if missing:
+        LOG.warning(f"Timed out waiting for host interfaces: {', '.join(missing)}")
+    else:
+        LOG.info("All expected host interfaces are present")
 
 
 def start_ceos_container(config: CeosConfig):
@@ -475,6 +562,10 @@ def main():
     except (FileNotFoundError, RuntimeError, OSError) as e:
         LOG.error(f"Failed to prepare flash directory: {e}")
         return 1
+
+    ensure_netfilter_modules()
+
+    wait_for_host_interfaces(config)
 
     if not start_ceos_container(config):
         LOG.error("Failed to start cEOS container")
