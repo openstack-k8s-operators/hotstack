@@ -9,7 +9,14 @@
     - package-installs
     - hotstack-ceos
   environment:
-    DIB_RELEASE: '10-stream'
+    # CentOS 10 Stream (kernel 6.12) is incompatible with the cEOS 4.35
+    # userspace: the EOS Acl agent fails to program its kernel ACL rules
+    # (iptables-restore fails, iptables 1.8.8 nf_tables cannot translate
+    # the rule matches), leaving empty chains with DROP policies that
+    # silently drop all IPv4 traffic to and from the switch. Stay on
+    # 9 Stream (kernel 5.14) until a cEOS release supporting newer
+    # kernels is available.
+    DIB_RELEASE: '9-stream'
     DIB_PYTHON_VERSION: '3'
     DIB_IMAGE_SIZE: '15'
     DIB_TIMEZONE: 'UTC'

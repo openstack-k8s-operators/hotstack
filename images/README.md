@@ -22,7 +22,7 @@ deployments. The tasks are executed using the `make` utility.
   Redfish virtual BMC
 - **nat64**: A NAT64 appliance image built using ci-framework for IPv6-only
   environments
-- **ceos**: A CentOS 10 Stream image that runs Arista cEOS (containerized EOS) as
+- **ceos**: A CentOS 9 Stream image that runs Arista cEOS (containerized EOS) as
   a podman container with macvlan networking. Built using diskimage-builder (DIB)
   with the `hotstack-ceos` element
 - **nxos**: A CentOS 10 Stream image that runs Cisco NXOS (Nexus 9300v) as a
