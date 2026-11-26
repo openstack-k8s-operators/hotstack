@@ -57,6 +57,10 @@ For detailed information, see:
   video files for troubleshooting and auditing. Uses NFS-backed storage for
   persistence. Deployed automatically by redfish_virtual_bmc role.
   See [README](roles/nova_console_recorder/README.md).
+- **content_provider_status**: Discover a content provider job running in
+  parallel in the same Zuul buildset (status API + console stream marker),
+  wait for it to pause, and consume its published status page.
+  See [README](roles/content_provider_status/README.md).
 
 ## Scenarios
 
